@@ -1,0 +1,556 @@
+{
+  "meta": {
+    "name": "Lopes Digital Signage — Design System Tokens",
+    "version": "1.0.0",
+    "description": "Tokens extraídos das referências Netflix/Flix.id para o sistema de TV (Digital Signage) da Imobiliária Lopes. Compatível com Tailwind CSS v3+.",
+    "brand": {
+      "primary-red": "#E30613",
+      "black": "#000000",
+      "white": "#FFFFFF"
+    }
+  },
+
+  "tokens": {
+
+    "colors": {
+
+      "brand": {
+        "accent": "#E30613",
+        "accent-hover": "#FF1A27",
+        "accent-muted": "#B8040F",
+        "accent-subtle": "rgba(227, 6, 19, 0.15)",
+        "black": "#000000",
+        "white": "#FFFFFF"
+      },
+
+      "light": {
+        "bg-primary":        "#F2F4F7",
+        "bg-secondary":      "#FFFFFF",
+        "bg-tertiary":       "#E8ECF1",
+        "bg-card":           "#FFFFFF",
+        "bg-card-hover":     "#F0F3F8",
+        "bg-overlay":        "rgba(255,255,255,0.85)",
+        "bg-glass":          "rgba(255,255,255,0.60)",
+        "bg-navbar":         "rgba(242,244,247,0.95)",
+        "bg-badge":          "#E8ECF1",
+        "bg-badge-active":   "#1A1A2E",
+
+        "text-primary":      "#0A0A0F",
+        "text-secondary":    "#3A3D4A",
+        "text-tertiary":     "#6B7080",
+        "text-placeholder":  "#9BA3B2",
+        "text-inverse":      "#FFFFFF",
+        "text-on-accent":    "#FFFFFF",
+        "text-label":        "#4A4F60",
+
+        "border-default":    "#D8DDE8",
+        "border-subtle":     "#E8ECF1",
+        "border-focus":      "#E30613",
+        "border-card":       "rgba(0,0,0,0.08)",
+
+        "state-hover":       "rgba(0,0,0,0.04)",
+        "state-active":      "rgba(227,6,19,0.08)",
+        "state-selected":    "rgba(227,6,19,0.12)",
+        "state-disabled":    "rgba(0,0,0,0.25)",
+
+        "rating-star":       "#F5A623",
+        "tag-bg":            "#E8ECF1",
+        "tag-text":          "#3A3D4A",
+        "skeleton":          "#E2E6ED",
+        "skeleton-shine":    "#F0F3F8"
+      },
+
+      "dark": {
+        "bg-primary":        "#0A0A0F",
+        "bg-secondary":      "#141418",
+        "bg-tertiary":       "#1C1C24",
+        "bg-card":           "#1C1C24",
+        "bg-card-hover":     "#242430",
+        "bg-overlay":        "rgba(10,10,15,0.90)",
+        "bg-glass":          "rgba(28,28,36,0.75)",
+        "bg-navbar":         "rgba(10,10,15,0.97)",
+        "bg-badge":          "#242430",
+        "bg-badge-active":   "#FFFFFF",
+
+        "text-primary":      "#F0F2F8",
+        "text-secondary":    "#B8BDCC",
+        "text-tertiary":     "#72788A",
+        "text-placeholder":  "#4A4F60",
+        "text-inverse":      "#0A0A0F",
+        "text-on-accent":    "#FFFFFF",
+        "text-label":        "#9BA3B2",
+
+        "border-default":    "#2A2A36",
+        "border-subtle":     "#1E1E28",
+        "border-focus":      "#E30613",
+        "border-card":       "rgba(255,255,255,0.06)",
+
+        "state-hover":       "rgba(255,255,255,0.05)",
+        "state-active":      "rgba(227,6,19,0.15)",
+        "state-selected":    "rgba(227,6,19,0.20)",
+        "state-disabled":    "rgba(255,255,255,0.20)",
+
+        "rating-star":       "#F5A623",
+        "tag-bg":            "#242430",
+        "tag-text":          "#B8BDCC",
+        "skeleton":          "#1C1C24",
+        "skeleton-shine":    "#242430"
+      }
+    },
+
+    "typography": {
+      "_note": "Escala otimizada para displays de TV (min 40\"). Base = 16px → root 20px em TV.",
+
+      "fontFamily": {
+        "display":  "'Barlow Condensed', 'Arial Narrow', sans-serif",
+        "heading":  "'Barlow', 'Helvetica Neue', sans-serif",
+        "body":     "'DM Sans', 'Helvetica Neue', sans-serif",
+        "mono":     "'JetBrains Mono', 'Courier New', monospace",
+        "label":    "'Barlow', sans-serif"
+      },
+
+      "fontSize": {
+        "xs":   { "px": "12px",  "rem": "0.75rem",  "use": "Metadados, timestamps, legenda menor" },
+        "sm":   { "px": "14px",  "rem": "0.875rem", "use": "Labels, tags, badges" },
+        "base": { "px": "16px",  "rem": "1rem",     "use": "Corpo de texto padrão" },
+        "md":   { "px": "18px",  "rem": "1.125rem", "use": "Texto de card, descrições" },
+        "lg":   { "px": "20px",  "rem": "1.25rem",  "use": "Subtítulos de seção" },
+        "xl":   { "px": "24px",  "rem": "1.5rem",   "use": "Títulos de card" },
+        "2xl":  { "px": "30px",  "rem": "1.875rem", "use": "Títulos de seção (ex: 'Trending')" },
+        "3xl":  { "px": "36px",  "rem": "2.25rem",  "use": "Headline de hero banner" },
+        "4xl":  { "px": "48px",  "rem": "3rem",     "use": "Hero principal em TV 4K" },
+        "5xl":  { "px": "60px",  "rem": "3.75rem",  "use": "Display / Destaque máximo" },
+        "6xl":  { "px": "72px",  "rem": "4.5rem",   "use": "Fullscreen TV — título do imóvel" },
+        "tv-hero": { "px": "80px", "rem": "5rem",   "use": "Digital Signage fullscreen hero" }
+      },
+
+      "fontWeight": {
+        "regular":    "400",
+        "medium":     "500",
+        "semibold":   "600",
+        "bold":       "700",
+        "extrabold":  "800"
+      },
+
+      "lineHeight": {
+        "tight":   "1.1",
+        "snug":    "1.25",
+        "normal":  "1.4",
+        "relaxed": "1.6",
+        "loose":   "1.8"
+      },
+
+      "letterSpacing": {
+        "tighter": "-0.04em",
+        "tight":   "-0.02em",
+        "normal":  "0em",
+        "wide":    "0.04em",
+        "wider":   "0.08em",
+        "widest":  "0.16em"
+      }
+    },
+
+    "spacing": {
+      "_note": "Escala 4px base. Em TV, padding mínimo de unidades maiores para legibilidade a distância.",
+      "0":   "0px",
+      "1":   "4px",
+      "2":   "8px",
+      "3":   "12px",
+      "4":   "16px",
+      "5":   "20px",
+      "6":   "24px",
+      "7":   "28px",
+      "8":   "32px",
+      "10":  "40px",
+      "12":  "48px",
+      "14":  "56px",
+      "16":  "64px",
+      "20":  "80px",
+      "24":  "96px",
+      "32":  "128px",
+      "tv-safe-zone": "80px",
+      "tv-section-gap": "56px",
+      "tv-card-gap":    "20px"
+    },
+
+    "borderRadius": {
+      "none":    "0px",
+      "sm":      "6px",
+      "DEFAULT": "10px",
+      "md":      "12px",
+      "lg":      "16px",
+      "xl":      "20px",
+      "2xl":     "24px",
+      "3xl":     "32px",
+      "card":    "16px",
+      "card-lg": "20px",
+      "hero":    "20px",
+      "pill":    "9999px",
+      "badge":   "8px",
+      "avatar":  "12px",
+      "full":    "9999px"
+    },
+
+    "shadows": {
+      "_note": "Sombras calibradas para UI sobre fundo escuro (Digital Signage padrão dark).",
+
+      "sm":          "0 1px 3px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.12)",
+      "DEFAULT":     "0 4px 12px rgba(0,0,0,0.20), 0 2px 4px rgba(0,0,0,0.14)",
+      "md":          "0 6px 20px rgba(0,0,0,0.28), 0 3px 8px rgba(0,0,0,0.16)",
+      "lg":          "0 12px 40px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.20)",
+      "xl":          "0 20px 60px rgba(0,0,0,0.45), 0 10px 24px rgba(0,0,0,0.25)",
+      "2xl":         "0 32px 80px rgba(0,0,0,0.55)",
+      "card":        "0 8px 28px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.18)",
+      "card-hover":  "0 16px 48px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.25)",
+      "hero":        "0 24px 64px rgba(0,0,0,0.50)",
+      "accent":      "0 0 0 3px rgba(227,6,19,0.40)",
+      "accent-glow": "0 0 24px rgba(227,6,19,0.35), 0 0 48px rgba(227,6,19,0.15)",
+      "glass":       "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.32)",
+      "none":        "none"
+    },
+
+    "opacity": {
+      "0":   "0",
+      "5":   "0.05",
+      "10":  "0.10",
+      "20":  "0.20",
+      "30":  "0.30",
+      "40":  "0.40",
+      "50":  "0.50",
+      "60":  "0.60",
+      "70":  "0.70",
+      "75":  "0.75",
+      "80":  "0.80",
+      "90":  "0.90",
+      "95":  "0.95",
+      "100": "1"
+    },
+
+    "blur": {
+      "sm":      "4px",
+      "DEFAULT": "8px",
+      "md":      "12px",
+      "lg":      "20px",
+      "xl":      "32px",
+      "glass":   "16px",
+      "navbar":  "24px"
+    },
+
+    "transitions": {
+      "duration": {
+        "fast":     "150ms",
+        "DEFAULT":  "250ms",
+        "slow":     "400ms",
+        "slower":   "600ms",
+        "tv-slide": "500ms"
+      },
+      "easing": {
+        "linear":       "linear",
+        "in":           "cubic-bezier(0.4, 0, 1, 1)",
+        "out":          "cubic-bezier(0, 0, 0.2, 1)",
+        "in-out":       "cubic-bezier(0.4, 0, 0.2, 1)",
+        "spring":       "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "tv-smooth":    "cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+      }
+    },
+
+    "grid": {
+
+      "profile-selector": {
+        "_ref": "Tela de seleção de perfil — estilo Netflix (image 2)",
+        "columns":          "5",
+        "gap":              "32px",
+        "avatar-size":      "160px",
+        "avatar-size-tv":   "200px",
+        "avatar-radius":    "12px",
+        "label-font-size":  "18px",
+        "label-mt":         "16px",
+        "max-width":        "900px",
+        "align":            "center"
+      },
+
+      "catalog-hero": {
+        "_ref": "Banner duplo de destaque — estilo Flix.id (image 1)",
+        "columns":         "2",
+        "gap":             "20px",
+        "height":          "300px",
+        "height-tv":       "420px",
+        "border-radius":   "20px",
+        "padding":         "40px"
+      },
+
+      "category-pills": {
+        "_ref": "Filtros de categoria horizontal (image 1)",
+        "layout":          "flex-row",
+        "gap":             "12px",
+        "pill-height":     "48px",
+        "pill-px":         "24px",
+        "pill-radius":     "9999px",
+        "pill-min-width":  "120px"
+      },
+
+      "card-grid-streaming": {
+        "_ref": "Grade de cards de conteúdo — estilo Flix.id (image 1)",
+        "columns-default": "6",
+        "columns-xl":      "5",
+        "columns-lg":      "4",
+        "columns-md":      "3",
+        "gap":             "20px",
+        "card-aspect":     "2/3",
+        "card-radius":     "16px",
+        "card-min-width":  "160px",
+        "card-max-width":  "220px"
+      },
+
+      "card-imovel": {
+        "_ref": "Card de imóvel para Digital Signage TV",
+        "columns-tv-4k":   "4",
+        "columns-tv-1080": "3",
+        "gap":             "32px",
+        "card-aspect":     "16/10",
+        "card-radius":     "20px",
+        "card-min-width":  "380px"
+      },
+
+      "fullscreen-slide": {
+        "_ref": "Slide fullscreen para TV — apresentação de imóvel",
+        "columns": "1",
+        "padding": "80px",
+        "safe-zone": "80px"
+      }
+    },
+
+    "components": {
+
+      "navbar": {
+        "height":          "72px",
+        "height-tv":       "88px",
+        "padding-x":       "40px",
+        "backdrop-blur":   "24px",
+        "border-bottom":   "1px solid var(--border-subtle)",
+        "logo-height":     "32px"
+      },
+
+      "hero-banner": {
+        "border-radius":   "20px",
+        "padding":         "40px",
+        "min-height":      "300px",
+        "gradient-overlay":"linear-gradient(to right, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.25) 60%, transparent 100%)",
+        "title-size":      "36px",
+        "title-weight":    "700",
+        "play-btn-size":   "44px"
+      },
+
+      "content-card": {
+        "border-radius":   "16px",
+        "overflow":        "hidden",
+        "transition":      "transform 250ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 250ms ease",
+        "hover-scale":     "1.05",
+        "hover-shadow":    "0 16px 48px rgba(0,0,0,0.45)",
+        "label-padding":   "12px 0 4px",
+        "meta-gap":        "8px",
+        "rating-size":     "14px"
+      },
+
+      "profile-avatar": {
+        "size":            "160px",
+        "size-tv":         "200px",
+        "border-radius":   "12px",
+        "border-focus":    "3px solid #E30613",
+        "hover-scale":     "1.08",
+        "hover-brightness":"1.15",
+        "label-size":      "18px",
+        "label-weight":    "500",
+        "label-color":     "var(--text-secondary)"
+      },
+
+      "category-pill": {
+        "height":          "48px",
+        "padding":         "0 24px",
+        "border-radius":   "9999px",
+        "font-size":       "15px",
+        "font-weight":     "600",
+        "gap-icon":        "8px",
+        "active-bg-dark":  "#FFFFFF",
+        "active-text-dark":"#0A0A0F",
+        "active-bg-light": "#1A1A2E",
+        "active-text-light":"#FFFFFF",
+        "transition":      "all 200ms ease"
+      },
+
+      "badge-rating": {
+        "icon":            "star-fill",
+        "icon-color":      "#F5A623",
+        "font-size":       "13px",
+        "font-weight":     "700",
+        "gap":             "4px"
+      },
+
+      "play-button": {
+        "size":            "44px",
+        "border-radius":   "9999px",
+        "bg":              "rgba(255,255,255,0.20)",
+        "bg-hover":        "#E30613",
+        "backdrop-blur":   "8px",
+        "icon-size":       "18px",
+        "transition":      "background 200ms ease, transform 150ms ease",
+        "hover-scale":     "1.1"
+      },
+
+      "search-bar": {
+        "height":          "44px",
+        "border-radius":   "9999px",
+        "padding":         "0 20px",
+        "font-size":       "15px",
+        "border":          "none",
+        "bg-dark":         "rgba(255,255,255,0.10)",
+        "bg-light":        "rgba(0,0,0,0.07)"
+      },
+
+      "section-header": {
+        "title-size":      "24px",
+        "title-weight":    "700",
+        "title-tracking":  "-0.01em",
+        "margin-bottom":   "20px",
+        "filter-gap":      "8px"
+      },
+
+      "tv-fullscreen-card": {
+        "_note": "Card de imóvel em modo fullscreen para Digital Signage",
+        "padding":         "80px",
+        "title-size":      "72px",
+        "price-size":      "48px",
+        "meta-size":       "28px",
+        "badge-size":      "20px",
+        "gradient-overlay":"linear-gradient(135deg, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.30) 100%)",
+        "logo-height":     "48px"
+      }
+    },
+
+    "animation": {
+      "card-enter":    "fadeSlideUp 400ms cubic-bezier(0.25,0.46,0.45,0.94) both",
+      "skeleton-pulse":"pulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite",
+      "tv-slide-in":   "slideFromRight 500ms cubic-bezier(0.25,0.46,0.45,0.94) both",
+      "hero-reveal":   "fadeIn 600ms ease both",
+      "scale-pop":     "scalePop 300ms cubic-bezier(0.34,1.56,0.64,1) both",
+
+      "keyframes": {
+        "fadeSlideUp":    "from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) }",
+        "slideFromRight": "from { opacity:0; transform:translateX(40px) } to { opacity:1; transform:translateX(0) }",
+        "fadeIn":         "from { opacity:0 } to { opacity:1 }",
+        "scalePop":       "from { opacity:0; transform:scale(0.88) } to { opacity:1; transform:scale(1) }",
+        "pulse":          "0%,100% { opacity:1 } 50% { opacity:0.5 }"
+      }
+    }
+  },
+
+  "tailwind": {
+    "_note": "Cole em tailwind.config.js > theme.extend para consumir os tokens.",
+    "extend": {
+      "colors": {
+        "accent":         "#E30613",
+        "accent-hover":   "#FF1A27",
+        "accent-muted":   "#B8040F",
+        "accent-subtle":  "rgba(227,6,19,0.15)",
+        "lopes-black":    "#000000",
+        "lopes-white":    "#FFFFFF",
+        "rating":         "#F5A623",
+
+        "dark": {
+          "bg":           "#0A0A0F",
+          "bg-2":         "#141418",
+          "bg-3":         "#1C1C24",
+          "bg-4":         "#242430",
+          "text":         "#F0F2F8",
+          "text-2":       "#B8BDCC",
+          "text-3":       "#72788A",
+          "border":       "#2A2A36",
+          "border-2":     "#1E1E28"
+        },
+
+        "light": {
+          "bg":           "#F2F4F7",
+          "bg-2":         "#FFFFFF",
+          "bg-3":         "#E8ECF1",
+          "bg-4":         "#F0F3F8",
+          "text":         "#0A0A0F",
+          "text-2":       "#3A3D4A",
+          "text-3":       "#6B7080",
+          "border":       "#D8DDE8",
+          "border-2":     "#E8ECF1"
+        }
+      },
+
+      "fontFamily": {
+        "display": ["'Barlow Condensed'", "'Arial Narrow'", "sans-serif"],
+        "heading":  ["'Barlow'", "'Helvetica Neue'", "sans-serif"],
+        "body":     ["'DM Sans'", "'Helvetica Neue'", "sans-serif"],
+        "mono":     ["'JetBrains Mono'", "'Courier New'", "monospace"]
+      },
+
+      "fontSize": {
+        "tv-xs":   ["12px",  { "lineHeight": "1.4" }],
+        "tv-sm":   ["14px",  { "lineHeight": "1.4" }],
+        "tv-base": ["16px",  { "lineHeight": "1.5" }],
+        "tv-md":   ["18px",  { "lineHeight": "1.4" }],
+        "tv-lg":   ["20px",  { "lineHeight": "1.35" }],
+        "tv-xl":   ["24px",  { "lineHeight": "1.3" }],
+        "tv-2xl":  ["30px",  { "lineHeight": "1.25" }],
+        "tv-3xl":  ["36px",  { "lineHeight": "1.2" }],
+        "tv-4xl":  ["48px",  { "lineHeight": "1.1" }],
+        "tv-5xl":  ["60px",  { "lineHeight": "1.05" }],
+        "tv-6xl":  ["72px",  { "lineHeight": "1.0" }],
+        "tv-hero": ["80px",  { "lineHeight": "0.95" }]
+      },
+
+      "borderRadius": {
+        "card":     "16px",
+        "card-lg":  "20px",
+        "hero":     "20px",
+        "avatar":   "12px",
+        "badge":    "8px"
+      },
+
+      "boxShadow": {
+        "card":         "0 8px 28px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.18)",
+        "card-hover":   "0 16px 48px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.25)",
+        "hero":         "0 24px 64px rgba(0,0,0,0.50)",
+        "accent":       "0 0 0 3px rgba(227,6,19,0.40)",
+        "accent-glow":  "0 0 24px rgba(227,6,19,0.35), 0 0 48px rgba(227,6,19,0.15)",
+        "glass":        "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.32)"
+      },
+
+      "backdropBlur": {
+        "glass":  "16px",
+        "navbar": "24px"
+      },
+
+      "spacing": {
+        "safe":        "80px",
+        "section-gap": "56px",
+        "card-gap":    "20px"
+      },
+
+      "transitionTimingFunction": {
+        "spring":    "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "tv-smooth": "cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+      },
+
+      "transitionDuration": {
+        "fast":     "150ms",
+        "DEFAULT":  "250ms",
+        "slow":     "400ms",
+        "slower":   "600ms",
+        "tv-slide": "500ms"
+      },
+
+      "gridTemplateColumns": {
+        "profiles":          "repeat(5, 160px)",
+        "catalog-6":         "repeat(6, 1fr)",
+        "catalog-4":         "repeat(4, 1fr)",
+        "catalog-3":         "repeat(3, 1fr)",
+        "hero-2":            "repeat(2, 1fr)"
+      }
+    }
+  }
+}
