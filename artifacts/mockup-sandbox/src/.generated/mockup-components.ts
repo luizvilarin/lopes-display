@@ -3,5 +3,6 @@ type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/lopes-tv/PlayerFullscreen.tsx": () => import("../components/mockups/lopes-tv/PlayerFullscreen.tsx"),
   "./components/mockups/lopes-tv/ProfileSelection.tsx": () => import("../components/mockups/lopes-tv/ProfileSelection.tsx"),
-  "./components/mockups/lopes-tv/StreamingInterface.tsx": () => import("../components/mockups/lopes-tv/StreamingInterface.tsx")
+  "./components/mockups/lopes-tv/StreamingInterface.tsx": () => import("../components/mockups/lopes-tv/StreamingInterface.tsx"),
+  "./components/mockups/lopes-tv/TimerOfertao.tsx": () => import("../components/mockups/lopes-tv/TimerOfertao.tsx")
 };

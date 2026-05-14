@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador Lopes - Precisão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Flatpickr (Calendário Moderno) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            color: white;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://i.imgur.com/nAfga0u.png');
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+        }
+
+        /* Área do Temporizador */
+        .timer-area {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 100%;
+        }
+
+        .timer-display {
+            font-size: 18vw;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            line-height: 1;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            user-select: none;
+        }
+
+        /* Blocos Inferiores */
+        .blocks-container {
+            position: absolute;
+            bottom: 8%;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 0 5%;
+        }
+
+        .info-block {
+            width: 28%;
+            height: 100px;
+            background: #333333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .info-label {
+            font-size: 1.4vw;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #ffffff;
+        }
+
+        /* Menu Suspenso */
+        .menu-wrapper {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .menu-trigger {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 110;
+        }
+
+        .menu-wrapper.active .menu-items {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(65px);
+        }
+
+        .menu-items {
+            position: absolute;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(0);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .menu-item {
+            width: 45px;
+            height: 45px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+
+        .menu-item:hover {
+            background: white;
+            color: black;
+        }
+
+        /* Painel Config */
+        #control-panel {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(25px);
+        }
+
+        .hidden { display: none; }
+        
+        /* Ajustes nos inputs para evitar corte de texto e remover setas de número */
+        input {
+            background: #111;
+            border: 1px solid #333;
+            color: white;
+            padding: 14px 12px; /* Aumento do padding vertical para centralizar texto */
+            border-radius: 12px;
+            width: 100%;
+            line-height: 1.2;
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        /* Remover setas de scroll nos inputs de número */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Estilização do Flatpickr para combinar com o sistema */
+        .flatpickr-calendar {
+            background: #18181b !important;
+            border: 1px solid #3f3f46 !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+        }
+        .flatpickr-day.selected {
+            background: #ffffff !important;
+            color: #000 !important;
+            border-color: #ffffff !important;
+        }
+
+        @media (max-width: 1024px) {
+            .info-block { height: 70px; }
+            .info-label { font-size: 2vw; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-container"></div>
+
+    <!-- Menu Suspenso -->
+    <div class="menu-wrapper" id="menu-wrapper">
+        <div class="menu-trigger" onclick="toggleMenu()">
+            <i data-lucide="more-vertical"></i>
+        </div>
+        <div class="menu-items">
+            <button class="menu-item" onclick="toggleTimer()" title="Iniciar/Pausar">
+                <i id="icon-play" data-lucide="play"></i>
+            </button>
+            <button class="menu-item" onclick="resetTimer()" title="Reiniciar">
+                <i data-lucide="refresh-cw"></i>
+            </button>
+            <button class="menu-item" onclick="openConfig()" title="Ajustes">
+                <i data-lucide="settings"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Temporizador Central -->
+    <div class="timer-area">
+        <div id="display" class="timer-display">00:10:00</div>
+    </div>
+
+    <!-- Blocos de Texto -->
+    <div class="blocks-container">
+        <div class="info-block">
+            <span id="block-1-display" class="info-label">VENDAS</span>
+        </div>
+        <div class="info-block">
+            <span id="block-2-display" class="info-label">META DIÁRIA</span>
+        </div>
+        <div class="info-block">
+            <span id="block-3-display" class="info-label">27/04/2026</span>
+        </div>
+    </div>
+
+    <!-- Painel de Configuração -->
+    <div id="control-panel" class="fixed inset-0 z-[200] flex items-center justify-center hidden p-6">
+        <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-[2rem] w-full max-w-md shadow-2xl">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-xl font-black text-white flex items-center gap-3">
+                    <i data-lucide="settings-2"></i> AJUSTES DO PAINEL
+                </h2>
+            </div>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-black mb-2 uppercase tracking-widest">Tempo do Cronômetro</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input type="number" id="input-h" placeholder="HH" min="0" value="0">
+                        <input type="number" id="input-m" placeholder="MM" min="0" max="59" value="10">
+                        <input type="number" id="input-s" placeholder="SS" min="0" max="59" value="0">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-black mb-2 uppercase tracking-widest">Texto Bloco 1</label>
+                    <input type="text" id="input-b1" value="Vendas">
+                </div>
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-black mb-2 uppercase tracking-widest">Texto Bloco 2</label>
+                    <input type="text" id="input-b2" value="Meta Diária">
+                </div>
+                <div class="relative">
+                    <label class="block text-zinc-500 text-[10px] font-black mb-2 uppercase tracking-widest">Data Exibida (Bloco 3)</label>
+                    <div class="relative">
+                        <input type="text" id="input-date" class="pr-10 cursor-pointer" placeholder="Selecione a data">
+                        <i data-lucide="calendar" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-10 flex gap-4">
+                <button onclick="applySettings()" class="flex-1 bg-white text-black py-4 rounded-xl font-black hover:bg-zinc-200 transition-all uppercase text-xs tracking-widest">Salvar</button>
+                <button onclick="closeConfig()" class="flex-1 bg-zinc-800 text-white py-4 rounded-xl font-bold hover:bg-zinc-700 transition-all uppercase text-xs tracking-widest">Voltar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Inicializar Calendário Moderno
+        const fp = flatpickr("#input-date", {
+            dateFormat: "d/m/Y",
+            defaultDate: "today",
+            locale: "pt",
+            disableMobile: true
+        });
+
+        let timerSeconds = 600;
+        let initialSeconds = 600;
+        let interval = null;
+        let isRunning = false;
+
+        const display = document.getElementById('display');
+        const menuWrapper = document.getElementById('menu-wrapper');
+        const iconPlay = document.getElementById('icon-play');
+
+        function toggleMenu() {
+            menuWrapper.classList.toggle('active');
+        }
+
+        function updateDisplay() {
+            const h = Math.floor(timerSeconds / 3600);
+            const m = Math.floor((timerSeconds % 3600) / 60);
+            const s = timerSeconds % 60;
+            display.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            
+            if (timerSeconds <= 0) {
+                stopTimer();
+                display.style.color = '#ff4444';
+            } else {
+                display.style.color = '#ffffff';
+            }
+        }
+
+        function toggleTimer() {
+            isRunning ? pauseTimer() : startTimer();
+        }
+
+        function startTimer() {
+            if (timerSeconds <= 0) return;
+            isRunning = true;
+            iconPlay.setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+            
+            interval = setInterval(() => {
+                timerSeconds--;
+                updateDisplay();
+                if (timerSeconds <= 0) clearInterval(interval);
+            }, 1000);
+            
+            if(menuWrapper.classList.contains('active')) toggleMenu();
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            iconPlay.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+            clearInterval(interval);
+        }
+
+        function stopTimer() {
+            isRunning = false;
+            clearInterval(interval);
+            iconPlay.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+        }
+
+        function resetTimer() {
+            stopTimer();
+            timerSeconds = initialSeconds;
+            updateDisplay();
+            if(menuWrapper.classList.contains('active')) toggleMenu();
+        }
+
+        function openConfig() {
+            pauseTimer();
+            document.getElementById('control-panel').classList.remove('hidden');
+            if(menuWrapper.classList.contains('active')) toggleMenu();
+        }
+
+        function closeConfig() {
+            document.getElementById('control-panel').classList.add('hidden');
+        }
+
+        function applySettings() {
+            const h = parseInt(document.getElementById('input-h').value) || 0;
+            const m = parseInt(document.getElementById('input-m').value) || 0;
+            const s = parseInt(document.getElementById('input-s').value) || 0;
+            
+            initialSeconds = (h * 3600) + (m * 60) + s;
+            timerSeconds = initialSeconds;
+
+            document.getElementById('block-1-display').textContent = document.getElementById('input-b1').value;
+            document.getElementById('block-2-display').textContent = document.getElementById('input-b2').value;
+            
+            const dateVal = document.getElementById('input-date').value;
+            if (dateVal) {
+                document.getElementById('block-3-display').textContent = dateVal;
+            }
+
+            updateDisplay();
+            closeConfig();
+        }
+
+        // Aplicar configurações iniciais no carregamento
+        applySettings();
+    </script>
+</body>
+</html>
