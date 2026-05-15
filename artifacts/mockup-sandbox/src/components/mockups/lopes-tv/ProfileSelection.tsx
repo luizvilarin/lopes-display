@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoBranca from "@/assets/logo-branca.png";
 
 const PROFILES = [
   {
@@ -168,12 +169,9 @@ export function ProfileSelection() {
       }} />
 
       {/* Top logo */}
-      <div style={{
-        position: "absolute", top: 32, left: 40,
-      }}>
-        <span className="lopes-logo">LOPES</span>
-        <span style={{ color: "#E30613", marginLeft: 2 }}>•</span>
-        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#72788A", marginLeft: 8, letterSpacing: "0.16em", textTransform: "uppercase" }}>Digital Signage</span>
+      <div style={{ position: "absolute", top: 32, left: 40, display: "flex", alignItems: "center", gap: 10 }}>
+        <img src={logoBranca} alt="Lopes" style={{ height: 24, objectFit: "contain" }} />
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#72788A", letterSpacing: "0.16em", textTransform: "uppercase" }}>Digital Signage</span>
       </div>
 
       {/* Main content */}

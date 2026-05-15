@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoBranca from "@/assets/logo-branca.png";
 
 const CATEGORIES = [
   { id: "all", label: "Todos", icon: "◉" },
@@ -256,7 +257,7 @@ export function StreamingInterface() {
 
       {/* Navbar */}
       <nav className="navbar">
-        <span className="lopes-logo">LOPES</span>
+        <img src={logoBranca} alt="Lopes" style={{ height: 26, objectFit: "contain" }} />
         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
           <span className="nav-item active">Imóveis</span>
           <span className="nav-item">Lançamentos</span>

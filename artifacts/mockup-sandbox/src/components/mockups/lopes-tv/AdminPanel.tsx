@@ -1,4 +1,7 @@
 import { useState, useRef } from "react";
+import logoBranca from "@/assets/logo-branca.png";
+import logoPreta from "@/assets/logo-preta.png";
+import faviconLopes from "@/assets/favicon-lopes.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -181,8 +184,11 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 24, padding: "40px 40px 36px", width: "100%", maxWidth: 400, boxShadow: "0 24px 64px rgba(0,0,0,.45)", animation: "scalePop 350ms cubic-bezier(0.34,1.56,0.64,1) both" }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 36, color: "#E30613", letterSpacing: ".08em" }}>LOPES</span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, marginBottom: 10 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "#E30613", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, boxShadow: "0 6px 20px rgba(227,6,19,.35)" }}>
+              <img src={faviconLopes} alt="Lopes" style={{ width: "100%", height: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+            </div>
+            <img src={logoBranca} alt="Lopes" style={{ height: 28, objectFit: "contain", opacity: .92 }} />
           </div>
           <div style={{ fontSize: 13, color: "var(--text3)", letterSpacing: ".10em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 700 }}>Painel de Controle</div>
           <div style={{ width: 40, height: 2, background: "#E30613", margin: "12px auto 0", borderRadius: 2 }} />
@@ -662,7 +668,12 @@ export function AdminPanel() {
       <div className={`adm-root adm-${theme}`}>
         {/* Top header */}
         <header style={{ height: 60, background: "var(--bg2)", borderBottom: "1px solid var(--border2)", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0, zIndex: 50 }}>
-          <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 22, color: "#E30613", letterSpacing: ".08em" }}>LOPES</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "#E30613", display: "flex", alignItems: "center", justifyContent: "center", padding: 5 }}>
+              <img src={faviconLopes} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+            </div>
+            <img src={logoBranca} alt="Lopes" style={{ height: 20, objectFit: "contain", opacity: .9 }} />
+          </div>
           <div style={{ width: 1, height: 16, background: "var(--border)" }} />
           <span style={{ fontSize: 12, color: "var(--text3)", letterSpacing: ".12em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 700 }}>Painel de Controle</span>
 

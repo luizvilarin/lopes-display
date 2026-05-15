@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import logoBranca from "@/assets/logo-branca.png";
+import logoPreta from "@/assets/logo-preta.png";
+import faviconLopes from "@/assets/favicon-lopes.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -171,10 +174,14 @@ function Navbar({ theme, onThemeToggle, onBack, onManager, activeUnit, onNav }: 
           Voltar
         </button>
       )}
-      <span
+      <img
+        src={theme === "dark" ? logoBranca : logoPreta}
+        alt="Lopes"
         onClick={() => onNav("streaming")}
-        style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 26, color: "#E30613", letterSpacing: ".08em", cursor: "pointer" }}
-      >LOPES</span>
+        style={{ height: 28, objectFit: "contain", cursor: "pointer", transition: "opacity 200ms ease" }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = ".8"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+      />
 
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
         {(["streaming", "player", "timer"] as Screen[]).map(s => {
@@ -235,8 +242,8 @@ function ScreenProfile({ onSelect, theme }: { onSelect: (id: string) => void; th
         position: "absolute", inset: 0, pointerEvents: "none",
         backgroundImage: "radial-gradient(circle at 50% 0%, rgba(227,6,19,.08) 0%, transparent 60%)",
       }} />
-      <div style={{ position: "absolute", top: 28, left: 36, display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 26, color: "#E30613", letterSpacing: ".08em" }}>LOPES</span>
+      <div style={{ position: "absolute", top: 28, left: 36, display: "flex", alignItems: "center", gap: 12 }}>
+        <img src={logoBranca} alt="Lopes" style={{ height: 24, objectFit: "contain", filter: "brightness(0) saturate(100%) invert(9%) sepia(98%) saturate(6735%) hue-rotate(0deg) brightness(90%) contrast(120%)" }} />
         <span style={{ fontSize: 11, color: "var(--text4)", letterSpacing: ".14em", textTransform: "uppercase", fontFamily: "'DM Sans',sans-serif" }}>Digital Signage</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 52 }}>

@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import faviconLopes from "@/assets/favicon-lopes.png";
+import logoBranca from "@/assets/logo-branca.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -165,23 +167,23 @@ function Sidebar({ unit, activeIdx }: { unit: UnitInfo; activeIdx: number }) {
   return (
     <aside style={{ width: 176, flexShrink: 0, display: "flex", flexDirection: "column", padding: "20px 14px 16px", gap: 16, background: "rgba(255,255,255,.04)", borderRight: "1px solid rgba(255,255,255,.06)" }}>
       {/* Logo */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-        <div style={{ position: "relative" }}>
-          <svg width="100" height="100" viewBox="0 0 100 100" style={{ animation: "glowRing 3s ease infinite" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+        <div style={{ position: "relative", animation: "glowRing 3s ease infinite" }}>
+          <svg width="100" height="100" viewBox="0 0 100 100" style={{ position: "absolute", inset: 0 }}>
             <defs>
               <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor={unit.ringStart} />
                 <stop offset="100%" stopColor={unit.ringEnd} />
               </linearGradient>
             </defs>
-            <circle cx="50" cy="50" r="46" fill="#1a1a1a" stroke="url(#ringGrad)" strokeWidth="4" />
-            {/* Lopes heart logo */}
-            <text x="50" y="60" textAnchor="middle" fontSize="36" fill="#fff">🤍</text>
+            <circle cx="50" cy="50" r="47" fill="none" stroke="url(#ringGrad)" strokeWidth="4.5" />
           </svg>
+          <div style={{ width: 100, height: 100, borderRadius: "50%", background: "#1a1a1a", border: "3px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: 14 }}>
+            <img src={faviconLopes} alt="Lopes" style={{ width: "100%", height: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+          </div>
         </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "#fff", lineHeight: 1.2 }}>{unit.name}</div>
-        </div>
+        <img src={logoBranca} alt="Lopes" style={{ width: 110, objectFit: "contain", filter: "brightness(0) invert(1)", opacity: .9 }} />
+        <div style={{ textAlign: "center", fontFamily: "'Barlow',sans-serif", fontWeight: 600, fontSize: 12, color: "rgba(255,255,255,.55)", marginTop: -4, lineHeight: 1.3 }}>{unit.name}</div>
       </div>
 
       {/* Nav */}
