@@ -147,6 +147,7 @@ const CSS = `
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes rocketEntry{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes rocketFloat{0%,100%{transform:translateY(0px)}50%{transform:translateY(-5px)}}
   @keyframes barFill{from{width:0}to{width:var(--w)}}
   @keyframes flamePulse{0%,100%{opacity:.85;transform:scaleY(1)}50%{opacity:1;transform:scaleY(1.18)}}
   @keyframes twinkle{0%,100%{opacity:.4}50%{opacity:1}}
@@ -334,30 +335,33 @@ function SlidePVenda({ slide }: { slide: SlidePVenda }) {
 // ─── Rocket ───────────────────────────────────────────────────────────────────
 
 function Rocket({ photoUrl, initials, delay = 0 }: { photoUrl?: string; initials: string; delay?: number }) {
+  const floatStart = delay + 750;
   return (
-    <div style={{ position: "relative", width: 110, height: 56, flexShrink: 0, animation: `rocketEntry 700ms ${delay}ms cubic-bezier(.34,1.56,.64,1) both` }}>
-      {/* Exhaust flames behind the rocket (left side, rocket points right) */}
+    <div style={{
+      position: "relative", width: 110, height: 56, flexShrink: 0,
+      animation: `rocketEntry 700ms ${delay}ms cubic-bezier(.34,1.56,.64,1) both, rocketFloat 2.2s ${floatStart}ms ease-in-out infinite`,
+    }}>
+      {/* Exhaust flames */}
       <div style={{ position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 2, animation: "flamePulse 350ms ease infinite" }}>
         {[22,14,9].map((h, i) => (
           <div key={i} style={{ width: h, height: 6, borderRadius: "0 9999px 9999px 0", background: `linear-gradient(90deg,transparent,${["#FF4500","#FF8C00","#FFD700"][i]})`, opacity: .95 }} />
         ))}
       </div>
-      {/* PNG rocket — fills the container */}
+      {/* PNG rocket */}
       <img src={fogueteImg} alt="foguete" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-      {/* Avatar circle overlaid on the cockpit window.
-          The window in the PNG is roughly at 47% from left, vertically centred. */}
+      {/* Avatar — positioned at the centre of the cockpit window in the PNG */}
       <div style={{
         position: "absolute",
-        left: "42%", top: "50%",
+        left: "47%", top: "50%",
         transform: "translate(-50%, -50%)",
-        width: 28, height: 28,
+        width: 26, height: 26,
         borderRadius: "50%",
         overflow: "hidden",
         background: photoUrl ? `url(${photoUrl}) center/cover` : "linear-gradient(135deg,#3a3a5c,#1a1a2e)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        border: "1.5px solid rgba(255,255,255,.35)",
+        border: "1.5px solid rgba(255,255,255,.40)",
       }}>
-        {!photoUrl && <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 9, color: "#fff", letterSpacing: ".03em" }}>{initials}</span>}
+        {!photoUrl && <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 9, color: "#fff", letterSpacing: ".03em", lineHeight: 1, textAlign: "center" }}>{initials}</span>}
         {photoUrl && <img src={photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
       </div>
     </div>
