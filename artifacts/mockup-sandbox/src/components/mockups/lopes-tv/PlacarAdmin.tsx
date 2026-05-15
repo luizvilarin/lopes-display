@@ -9,6 +9,7 @@ import type {
   Pessoa, Unidade, RankingEntry, PrimeiraVenda, ConfigMetas,
   Cargo, TipoRanking, CategoriaRanking,
 } from "@/types/placar";
+import { Icons } from "@/components/common/Icons";
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 
@@ -203,8 +204,13 @@ function SecaoPessoas({ pessoas, unidades, onChange }: {
                   <td><span className={p.ativo ? "badge-ativo" : "badge-inativo"}>{p.ativo ? "ativo" : "inativo"}</span></td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                      <button className="pa-btn-ghost" onClick={() => openEdit(p)}>Editar</button>
-                      <button className="pa-btn-danger" onClick={() => del(p.id)}>✕</button>
+                      <button className="pa-btn-ghost" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px" }} onClick={() => openEdit(p)}>
+                        <Icons.Edit size={14} />
+                        Editar
+                      </button>
+                      <button className="pa-btn-danger" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }} onClick={() => del(p.id)}>
+                        <Icons.Trash size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -579,13 +585,7 @@ function SecaoMetas({ config: cfgInicial, unidades, onChange }: {
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-export function PlacarAdmin() {
-  const [auth, setAuth] = useState(false);
-  const [user, setUser] = useState("");
-  const [pass, setPass] = useState("");
-  const [err, setErr] = useState("");
-  const [section, setSection] = useState<Section>("metas");
-
+export function PlacarAdmin({ activeSection }: { activeSection: string }) {
   const [pessoas, setPessoas]   = useState<Pessoa[]>([]);
   const [unidades]              = useState<Unidade[]>(MOCK_UNIDADES);
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
@@ -593,10 +593,9 @@ export function PlacarAdmin() {
   const [config, setConfig]     = useState<ConfigMetas | null>(null);
   const [tick, setTick]         = useState(0);
 
-  const refresh = () => setTick(t => t + 1);
+  const reload = () => setTick(t => t + 1);
 
   useEffect(() => {
-    if (!auth) return;
     Promise.all([
       placarService.getPessoas(),
       placarService.getRankings(),
@@ -608,125 +607,30 @@ export function PlacarAdmin() {
       setPV(pv);
       setConfig(cfg);
     });
-  }, [auth, tick]);
-
-  const login = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (user === "admin" && pass === "lopes2025") {
-      setAuth(true);
-      setErr("");
-    } else {
-      setErr("Usuário ou senha incorretos.");
-    }
-  };
-
-  // ── Login ──────────────────────────────────────────────────────────────────
-  if (!auth) {
-    return (
-      <>
-        <style>{CSS}</style>
-        <div className="pa-root" style={{ justifyContent: "center", alignItems: "center", background: "radial-gradient(ellipse at 50% 0%, rgba(227,6,19,.10) 0%, transparent 55%), #0a0a0f" }}>
-          <div className="pa-login-card">
-            <div style={{ textAlign: "center", marginBottom: 28 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: "#E30613", display: "flex", alignItems: "center", justifyContent: "center", padding: 10, margin: "0 auto 10px", boxShadow: "0 8px 24px rgba(227,6,19,.35)" }}>
-                <img src={faviconLopes} alt="" style={{ width: "100%", filter: "brightness(0) invert(1)" }} />
-              </div>
-              <img src={logoBranca} alt="Lopes" style={{ height: 26, marginBottom: 6, opacity: .9 }} />
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,.35)", letterSpacing: ".14em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 700 }}>Painel do Placar</div>
-            </div>
-            <form onSubmit={login} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label className="pa-label">Usuário</label>
-                <input className="pa-input" autoComplete="username" value={user} onChange={e => setUser(e.target.value)} placeholder="admin" />
-              </div>
-              <div>
-                <label className="pa-label">Senha</label>
-                <input className="pa-input" type="password" autoComplete="current-password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" />
-              </div>
-              {err && <div style={{ fontSize: 13, color: "#f87171", textAlign: "center" }}>{err}</div>}
-              <button className="pa-btn-primary" type="submit" style={{ marginTop: 4, padding: "11px 0", fontSize: 14, borderRadius: 10 }}>Entrar</button>
-            </form>
-            <div style={{ marginTop: 16, padding: "10px 14px", background: "rgba(255,255,255,.05)", borderRadius: 10, fontSize: 12, color: "rgba(255,255,255,.40)", textAlign: "center" }}>
-              Demo: <b style={{ color: "rgba(255,255,255,.70)" }}>admin</b> / <b style={{ color: "rgba(255,255,255,.70)" }}>lopes2025</b>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // ── App ────────────────────────────────────────────────────────────────────
-
-  const NAV: { id: Section; label: string; icon: string }[] = [
-    { id: "metas",    label: "Metas",         icon: "🎯" },
-    { id: "pvenda",   label: "Primeira Venda", icon: "🏆" },
-    { id: "rankings", label: "Rankings",       icon: "🚀" },
-    { id: "pessoas",  label: "Pessoas",        icon: "👤" },
-  ];
+  }, [tick]);
 
   return (
     <>
       <style>{CSS}</style>
-      <div className="pa-root">
-        {/* Header */}
-        <header className="pa-header">
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: "#E30613", display: "flex", alignItems: "center", justifyContent: "center", padding: 5 }}>
-            <img src={faviconLopes} alt="" style={{ width: "100%", filter: "brightness(0) invert(1)" }} />
-          </div>
-          <img src={logoBranca} alt="Lopes" style={{ height: 18, opacity: .9 }} />
-          <div style={{ width: 1, height: 16, background: "rgba(255,255,255,.12)" }} />
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,.40)", letterSpacing: ".12em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 700 }}>
-            Painel do Placar
-          </span>
-          <div style={{ marginLeft: "auto" }}>
-            <button className="pa-btn-ghost" style={{ fontSize: 12 }} onClick={() => setAuth(false)}>Sair</button>
-          </div>
-        </header>
-
-        <div className="pa-body">
-          {/* Sidebar */}
-          <nav className="pa-sidebar">
-            <div className="pa-section-label">Conteúdo</div>
-            {NAV.map(n => (
-              <div key={n.id} className={`pa-nav${section === n.id ? " active" : ""}`} onClick={() => setSection(n.id)}>
-                <span className="pa-nav-icon">{n.icon}</span>
-                {n.label}
-              </div>
-            ))}
-
-            <div className="pa-section-label" style={{ marginTop: 8 }}>Referência</div>
-            <div style={{ padding: "0 12px" }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.25)", lineHeight: 1.6 }}>
-                <div style={{ marginBottom: 4 }}>Arquivo do placar:</div>
-                <code style={{ fontSize: 10, background: "rgba(255,255,255,.06)", padding: "2px 6px", borderRadius: 4, display: "block" }}>PlacarLopes.tsx</code>
-                <div style={{ marginTop: 8, marginBottom: 4 }}>Serviço de dados:</div>
-                <code style={{ fontSize: 10, background: "rgba(255,255,255,.06)", padding: "2px 6px", borderRadius: 4, display: "block" }}>placarService.ts</code>
-                <div style={{ marginTop: 8, marginBottom: 4 }}>Schema SQL:</div>
-                <code style={{ fontSize: 10, background: "rgba(255,255,255,.06)", padding: "2px 6px", borderRadius: 4, display: "block" }}>supabase-schema.sql</code>
-              </div>
+      <div className="pa-root" style={{ background: "transparent", minHeight: "100%" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
+          {activeSection === "pessoas" && config && (
+            <SecaoPessoas pessoas={pessoas} unidades={unidades} onChange={reload} />
+          )}
+          {activeSection === "rankings" && (
+            <SecaoRankings rankings={rankings} pessoas={pessoas} onChange={reload} />
+          )}
+          {activeSection === "pvenda" && config && (
+            <SecaoPVenda pv={pv} pessoas={pessoas} onChange={reload} />
+          )}
+          {activeSection === "metas" && config && (
+            <SecaoMetas config={config} unidades={unidades} onChange={reload} />
+          )}
+          {!config && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: "rgba(255,255,255,.30)", fontSize: 14 }}>
+              Carregando…
             </div>
-          </nav>
-
-          {/* Main content */}
-          <main className="pa-main">
-            {section === "pessoas" && config && (
-              <SecaoPessoas pessoas={pessoas} unidades={unidades} onChange={refresh} />
-            )}
-            {section === "rankings" && (
-              <SecaoRankings rankings={rankings} pessoas={pessoas} onChange={refresh} />
-            )}
-            {section === "pvenda" && config && (
-              <SecaoPVenda pv={pv} pessoas={pessoas} onChange={refresh} />
-            )}
-            {section === "metas" && config && (
-              <SecaoMetas config={config} unidades={unidades} onChange={refresh} />
-            )}
-            {!config && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: "rgba(255,255,255,.30)", fontSize: 14 }}>
-                Carregando…
-              </div>
-            )}
-          </main>
+          )}
         </div>
       </div>
     </>

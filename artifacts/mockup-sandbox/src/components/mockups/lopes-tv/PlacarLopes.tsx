@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import faviconLopes from "@/assets/favicon-lopes.png";
 import logoBranca from "@/assets/logo-branca.png";
 import fogueteImg from "@/assets/foguete-lopes.png";
+import { placarService } from "@/services/placarService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,99 +29,16 @@ interface SlideRanking   extends SlideBase { type: "ranking"; pessoas: RankingPe
 
 type Slide = SlideMeta | SlidePVenda | SlideRanking;
 
-// ─── Default Data ─────────────────────────────────────────────────────────────
+// ─── Default Setup ────────────────────────────────────────────────────────────
 
-const UNIT: UnitInfo = {
-  name: "Lopes Jd. Goiás",
-  handle: "@lopesjdgoias",
+const FALLBACK_UNIT: UnitInfo = {
+  name: "Lopes Digital",
+  handle: "@lopesdigital",
   gradient: "radial-gradient(circle at 40% 40%, #1a0a2e, #0a0a14)",
   ringStart: "#FF0080",
   ringEnd: "#E30613",
-  navUnits: ["Und. Jd. Goiás", "Und. Marista", "Und. Bueno", "Gestão Patri."],
+  navUnits: ["Lopes"],
 };
-
-const DEFAULT_SLIDES: Slide[] = [
-  {
-    id: "meta-mensal",
-    type: "meta",
-    category: "Metas Lopes",
-    title: "Meta de Maio",
-    valor: "R$ 20.000.000,00",
-    realizadoNum: 4720000,
-    metaNum: 20000000,
-    periodo: "ANO DE 2026 - JD. GOIÁS",
-    showBox: false,
-  },
-  {
-    id: "meta-anual",
-    type: "meta",
-    category: "Metas Lopes",
-    title: "Meta Anual",
-    valor: "R$ 240.000.000,00",
-    realizadoNum: 47300000,
-    metaNum: 240000000,
-    periodo: "JD. GOIÁS · 2026",
-    showBox: true,
-  },
-  {
-    id: "pvenda",
-    type: "pvenda",
-    category: "História Lopes",
-    title: "Primeira venda",
-    nome: "Maria Osanete",
-    cargo: "Corretora",
-    photoUrl: "",
-    mensagem: "Parabéns pela venda!",
-    detalhe: "Você faz parte do crescimento da nossa empresa, nosso muito obrigado!",
-    updateFreq: "RANKING ATUALIZADO MENSALMENTE.",
-  },
-  {
-    id: "top-gestores-mensal",
-    type: "ranking",
-    category: "História Lopes",
-    title: "Top 3 Gestores Mensal",
-    updateFreq: "RANKING ATUALIZADO MENSALMENTE.",
-    pessoas: [
-      { name: "Ayrton",  value: 525000, initials: "AY", photoUrl: "" },
-    ],
-  },
-  {
-    id: "top-corretores-mensal",
-    type: "ranking",
-    category: "História Lopes",
-    title: "Top 3 Corretores Mensal",
-    updateFreq: "RANKING ATUALIZADO SEMANALMENTE.",
-    pessoas: [
-      { name: "Karulyne",  value: 525000, initials: "KA", photoUrl: "" },
-    ],
-  },
-  {
-    id: "top-gestores-anual",
-    type: "ranking",
-    category: "História Lopes",
-    title: "Top 3 Gestores Anual",
-    updateFreq: "RANKING ATUALIZADO MENSALMENTE.",
-    pessoas: [
-      { name: "Ayrton",          value: 5804137, initials: "AY", photoUrl: "" },
-      { name: "Douglas",         value: 5612373, initials: "DO", photoUrl: "" },
-      { name: "Thiago Rodrigues",value: 4844423, initials: "TR", photoUrl: "" },
-    ],
-  },
-  {
-    id: "top-corretores-anual",
-    type: "ranking",
-    category: "História Lopes",
-    title: "Top 5 Corretores Anual",
-    updateFreq: "RANKING ATUALIZADO SEMANALMENTE.",
-    pessoas: [
-      { name: "Ingrid",    value: 4235597, initials: "IN", photoUrl: "" },
-      { name: "Dariane",   value: 3974605, initials: "DA", photoUrl: "" },
-      { name: "Matheus V.",value: 3261435, initials: "MV", photoUrl: "" },
-      { name: "Ludmila A.",value: 2774257, initials: "LA", photoUrl: "" },
-      { name: "Taisa B.",  value: 2391797, initials: "TB", photoUrl: "" },
-    ],
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -165,7 +83,7 @@ const CSS = `
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ unit, activeIdx }: { unit: UnitInfo; activeIdx: number }) {
+function Sidebar({ unit }: { unit: UnitInfo }) {
   return (
     <aside style={{ width: 176, flexShrink: 0, display: "flex", flexDirection: "column", padding: "20px 14px 16px", gap: 16, background: "rgba(255,255,255,.04)", borderRight: "1px solid rgba(255,255,255,.06)" }}>
       {/* Logo */}
@@ -190,7 +108,7 @@ function Sidebar({ unit, activeIdx }: { unit: UnitInfo; activeIdx: number }) {
 
       {/* Nav */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {unit.navUnits.map((u, i) => (
+        {unit.navUnits.slice(0, 4).map((u, i) => (
           <div key={u} style={{ padding: "7px 12px", borderRadius: 9999, background: i === 0 ? "rgba(255,255,255,.18)" : "transparent", cursor: "pointer", fontSize: 12, fontFamily: "'Barlow',sans-serif", fontWeight: i === 0 ? 700 : 500, color: i === 0 ? "#fff" : "rgba(255,255,255,.50)", transition: "all 200ms ease" }}>
             {u}
           </div>
@@ -216,7 +134,6 @@ function CategoryPill({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
       <div style={{ padding: "5px 14px", borderRadius: 9999, background: "rgba(255,255,255,.12)", backdropFilter: "blur(8px)", fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 600, color: "#fff", border: "1px solid rgba(255,255,255,.15)" }}>{label}</div>
-      {/* Blue badge */}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="#1D9BF0"><path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91-1.01-1-2.52-1.27-3.91-.81C14.67 2.88 13.43 2 12 2s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81-1 1.01-1.27 2.52-.81 3.91C2.88 9.33 2 10.57 2 12s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91 1.01 1 2.52 1.27 3.91.81C9.33 21.12 10.57 22 12 22s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81 1-1.01 1.27-2.52.81-3.91C21.12 14.67 22 13.43 22 12zm-6.16-1.4l-3.75 5.02a1 1 0 0 1-1.39.19L8.5 14.06a1 1 0 0 1 1.22-1.59l1.73 1.33 3.12-4.18a1 1 0 1 1 1.61 1.17l-.34-.19z"/></svg>
     </div>
   );
@@ -225,7 +142,7 @@ function CategoryPill({ label }: { label: string }) {
 // ─── Slide: Meta ──────────────────────────────────────────────────────────────
 
 function SlideMeta({ slide }: { slide: SlideMeta }) {
-  const pct = Math.min(100, (slide.realizadoNum / slide.metaNum) * 100);
+  const pct = Math.min(100, (slide.realizadoNum / Math.max(1, slide.metaNum)) * 100);
   const pctStr = pct.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
   return (
@@ -233,7 +150,6 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
       <CategoryPill label={slide.category} />
       <h1 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 42, color: "rgba(255,255,255,.88)", letterSpacing: "-.01em", marginBottom: 52 }}>{slide.title}</h1>
 
-      {/* Value */}
       {slide.showBox ? (
         <div style={{ background: "rgba(255,255,255,.10)", borderRadius: 12, padding: "22px 36px", marginBottom: 20, display: "inline-block" }}>
           <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 64, color: "#fff", letterSpacing: "-.04em" }}>{slide.valor}</span>
@@ -244,7 +160,6 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
         </div>
       )}
 
-      {/* Progress bar */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ height: 12, borderRadius: 9999, background: "rgba(255,255,255,.12)", overflow: "hidden", maxWidth: 520 }}>
           <div style={{
@@ -278,11 +193,8 @@ function SlidePVenda({ slide }: { slide: SlidePVenda }) {
       <CategoryPill label={slide.category} />
       <h1 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 52, color: "#fff", letterSpacing: "-.02em", marginBottom: 28, flexShrink: 0 }}>{slide.title}</h1>
 
-      {/* Main area */}
       <div style={{ display: "flex", gap: 36, alignItems: "flex-start", minHeight: 0 }}>
-        {/* Profile card — fixed dimensions so it never overflows */}
         <div style={{ width: 230, flexShrink: 0, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 72px rgba(0,0,0,.75)", border: "1px solid rgba(255,255,255,.10)" }}>
-          {/* Photo area */}
           <div style={{
             width: "100%", height: 200, flexShrink: 0,
             background: slide.photoUrl ? `url(${slide.photoUrl}) center/cover` : "linear-gradient(145deg,#1e1e38,#2e2e50)",
@@ -298,7 +210,6 @@ function SlidePVenda({ slide }: { slide: SlidePVenda }) {
               <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "rgba(255,255,255,.70)" }}>🤍 Lopes</span>
             </div>
           </div>
-          {/* Congrats block — inside card, height fixed */}
           <div style={{ background: "#fff", padding: "13px 15px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
               <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "#111", lineHeight: 1.2 }}>{slide.mensagem}</span>
@@ -309,21 +220,19 @@ function SlidePVenda({ slide }: { slide: SlidePVenda }) {
           </div>
         </div>
 
-        {/* Right: cargo badge + bullets */}
         <div style={{ flex: 1, paddingTop: 6, display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ padding: "10px 18px", background: "rgba(227,6,19,.12)", border: "1px solid rgba(227,6,19,.30)", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 10, alignSelf: "flex-start" }}>
             <span style={{ fontSize: 20 }}>🏆</span>
             <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "#fff" }}>{slide.cargo}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {["🎉 Primeira venda do mês!", "✨ Membro da equipe Lopes", "📈 Crescendo junto conosco"].map((t, i) => (
+            {["🎉 Primeira venda!", "✨ Membro da equipe Lopes", "📈 Crescendo junto conosco"].map((t, i) => (
               <div key={i} style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: `rgba(255,255,255,${0.72 - i * 0.16})` }}>{t}</div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Footer */}
       <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 18, paddingTop: 14 }}>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{slide.updateFreq}</span>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{MES_ANO.toUpperCase()}</span>
@@ -341,15 +250,12 @@ function Rocket({ photoUrl, initials, delay = 0 }: { photoUrl?: string; initials
       position: "relative", width: 110, height: 56, flexShrink: 0,
       animation: `rocketEntry 700ms ${delay}ms cubic-bezier(.34,1.56,.64,1) both, rocketFloat 2.2s ${floatStart}ms ease-in-out infinite`,
     }}>
-      {/* Exhaust flames */}
       <div style={{ position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 2, animation: "flamePulse 350ms ease infinite" }}>
         {[22,14,9].map((h, i) => (
           <div key={i} style={{ width: h, height: 6, borderRadius: "0 9999px 9999px 0", background: `linear-gradient(90deg,transparent,${["#FF4500","#FF8C00","#FFD700"][i]})`, opacity: .95 }} />
         ))}
       </div>
-      {/* PNG rocket */}
       <img src={fogueteImg} alt="foguete" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-      {/* Avatar — positioned at the centre of the cockpit window in the PNG */}
       <div style={{
         position: "absolute",
         left: "47%", top: "50%",
@@ -358,11 +264,11 @@ function Rocket({ photoUrl, initials, delay = 0 }: { photoUrl?: string; initials
         borderRadius: "50%",
         overflow: "hidden",
         background: photoUrl ? `url(${photoUrl}) center/cover` : "linear-gradient(135deg,#3a3a5c,#1a1a2e)",
+        border: "1px solid rgba(255,255,255,.35)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        border: "1.5px solid rgba(255,255,255,.40)",
+        fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, fontWeight: 800, color: "#fff"
       }}>
-        {!photoUrl && <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 9, color: "#fff", letterSpacing: ".03em", lineHeight: 1, textAlign: "center" }}>{initials}</span>}
-        {photoUrl && <img src={photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        {!photoUrl && initials}
       </div>
     </div>
   );
@@ -371,29 +277,42 @@ function Rocket({ photoUrl, initials, delay = 0 }: { photoUrl?: string; initials
 // ─── Rocket Bar ───────────────────────────────────────────────────────────────
 
 function RocketBar({ person, maxValue, rank, delay }: { person: RankingPerson; maxValue: number; rank: number; delay: number }) {
-  const pct = Math.max(8, (person.value / maxValue) * 82); // 8..82% of bar
+  const baseWidth = Math.max(10, (person.value / Math.max(1, maxValue)) * 70);
+  const colors = [
+    ["#FFE81F", "rgba(255,232,31,.20)", "🏆 1º"],
+    ["#B8B8B8", "rgba(184,184,184,.15)", "🥈 2º"],
+    ["#CD7F32", "rgba(205,127,50,.15)", "🥉 3º"],
+  ][rank] || ["#E30613", "rgba(227,6,19,.15)", `${rank + 1}º`];
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 28, animation: `slideUp 600ms ${delay}ms cubic-bezier(.22,.68,0,1.2) both` }}>
-      {/* Name */}
-      <div style={{ width: 140, flexShrink: 0, textAlign: "right", fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "rgba(255,255,255,.90)" }}>{person.name}</div>
+    <div style={{ display: "flex", alignItems: "center", gap: 18, height: 76, minHeight: 0 }}>
+      <div style={{ width: 44, fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 14, color: colors[0], letterSpacing: ".04em" }}>{colors[2]}</div>
+      
+      <div style={{ flex: 1, display: "flex", alignItems: "center", position: "relative", height: "100%" }}>
+        <div style={{
+          height: 16, borderRadius: 9999,
+          background: `linear-gradient(90deg, ${colors[1]}, ${colors[0]})`,
+          boxShadow: `0 0 24px ${colors[1]}`,
+          width: `${baseWidth}%`,
+          animation: `barFill 1.2s ${delay}ms cubic-bezier(.25, 1, .5, 1) both`,
+          "--w": `${baseWidth}%`,
+          position: "relative",
+        } as React.CSSProperties} />
 
-      {/* Track + bar + rocket */}
-      <div style={{ flex: 1, position: "relative", height: 52 }}>
-        {/* Track line */}
-        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 2, background: "rgba(255,255,255,.14)", transform: "translateY(-50%)", borderRadius: 2 }} />
-        {/* Filled bar */}
-        <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", height: 20, borderRadius: "0 9999px 9999px 0", background: `linear-gradient(90deg,${["#8B7355","#9E8364","#B0956E"][rank % 3] || "#8B7355"},${["#C4A67A","#D4B888","#E0C896"][rank % 3] || "#C4A67A"})`, animation: `barFill 1.4s ${delay + 200}ms cubic-bezier(.22,.68,0,1.2) both`, "--w": `${pct}%`, width: `${pct}%` } as React.CSSProperties} />
-        {/* Rocket at end of bar */}
-        <div style={{ position: "absolute", left: `${pct}%`, top: "50%", transform: "translate(-20px, -50%)" }}>
-          <Rocket photoUrl={person.photoUrl} initials={person.initials} delay={delay + 400} />
+        <div style={{
+          marginLeft: -8,
+          zIndex: 2,
+          position: "relative",
+          animation: `fadeIn 500ms ${delay + 200}ms both`
+        }}>
+          <Rocket photoUrl={person.photoUrl} initials={person.initials} delay={delay} />
         </div>
-        {/* End dot */}
-        <div style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,.30)", border: "1.5px solid rgba(255,255,255,.20)" }} />
-      </div>
 
-      {/* Value */}
-      <div style={{ width: 150, flexShrink: 0, fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 14, color: "rgba(255,255,255,.85)", whiteSpace: "nowrap" as const }}>{fmtBRL(person.value)}</div>
+        <div style={{ marginLeft: 16, display: "flex", flexDirection: "column", animation: `fadeIn 600ms ${delay + 400}ms both`, flexShrink: 0 }}>
+          <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 15, color: "#fff", lineHeight: 1.2 }}>{person.name}</span>
+          <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, color: colors[0], letterSpacing: ".02em" }}>{fmtBRL(person.value)}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -403,16 +322,9 @@ function RocketBar({ person, maxValue, rank, delay }: { person: RankingPerson; m
 function Starfield() {
   return (
     <div className="starfield">
-      {Array.from({ length: 120 }, (_, i) => {
-        const x = (Math.sin(i * 137.5) * 0.5 + 0.5) * 100;
-        const y = (Math.cos(i * 97.3) * 0.5 + 0.5) * 100;
-        const s = 1 + (i % 3) * 0.6;
-        const op = 0.2 + (i % 4) * 0.15;
-        const tw = i % 5 === 0;
-        return (
-          <div key={i} style={{ position: "absolute", left: `${x.toFixed(1)}%`, top: `${y.toFixed(1)}%`, width: s, height: s, borderRadius: "50%", background: `rgba(255,255,255,${op.toFixed(2)})`, animation: tw ? `twinkle ${2 + (i % 3)}s ease ${i * 0.3}s infinite` : "none" }} />
-        );
-      })}
+      {Array.from({ length: 120 }, (_, i) => (
+        <div key={i} className={`star-${i} ${i % 5 === 0 ? "tw" : ""}`} style={{ animationDelay: `${(i * 83) % 3000}ms` }} />
+      ))}
     </div>
   );
 }
@@ -435,7 +347,6 @@ function SlideRanking({ slide }: { slide: SlideRanking }) {
           ))}
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 20, paddingTop: 8 }}>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{slide.updateFreq}</span>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{MES_ANO.toUpperCase()}</span>
@@ -460,8 +371,11 @@ function ProgressDots({ total, current, onChange }: { total: number; current: nu
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export function PlacarLopes() {
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [unitInfo, setUnitInfo] = useState<UnitInfo>(FALLBACK_UNIT);
   const [slideIdx, setSlideIdx] = useState(0);
   const [key, setKey] = useState(0);
+  const [loading, setLoading] = useState(true);
   const INTERVAL = 8000;
 
   const goTo = useCallback((i: number) => {
@@ -469,20 +383,158 @@ export function PlacarLopes() {
     setKey(k => k + 1);
   }, []);
 
+  // Carregar Dados Assíncronos do Supabase
   useEffect(() => {
-    const t = setInterval(() => goTo((slideIdx + 1) % DEFAULT_SLIDES.length), INTERVAL);
-    return () => clearInterval(t);
-  }, [slideIdx, goTo]);
+    const loadData = async () => {
+      try {
+        const activeUnitId = localStorage.getItem("lopes_active_unit") || "jd-goias";
+        
+        const [config, pv, allRankings, unidades] = await Promise.all([
+          placarService.getConfig(activeUnitId),
+          placarService.getPrimeiraVenda(),
+          placarService.getRankings(),
+          placarService.getUnidades()
+        ]);
 
-  const slide = DEFAULT_SLIDES[slideIdx];
+        // 1. Mapear Unidade Ativa para o Sidebar
+        const activeUnit = unidades.find(u => u.id === activeUnitId) || unidades[0];
+        if (activeUnit) {
+          setUnitInfo({
+            name: activeUnit.nome,
+            handle: activeUnit.handle,
+            gradient: "radial-gradient(circle at 40% 40%, #1a0a2e, #0a0a14)",
+            ringStart: "#FF0080",
+            ringEnd: "#E30613",
+            navUnits: unidades.map(u => u.nome)
+          });
+        }
+
+        // 2. Gerar os slides dinamicamente
+        const generated: Slide[] = [];
+
+        // Slide de Metas (Mensal / Anual)
+        if (config) {
+          generated.push({
+            id: "meta-mensal",
+            type: "meta",
+            category: "Metas Lopes",
+            title: config.meta_mensal_titulo || "Meta Mensal",
+            valor: fmtBRL(Number(config.meta_mensal_valor)),
+            realizadoNum: Number(config.meta_mensal_realizado),
+            metaNum: Number(config.meta_mensal_valor),
+            periodo: config.meta_mensal_periodo || "MÊS ATUAL",
+            showBox: false,
+          });
+
+          generated.push({
+            id: "meta-anual",
+            type: "meta",
+            category: "Metas Lopes",
+            title: config.meta_anual_titulo || "Meta Anual",
+            valor: fmtBRL(Number(config.meta_anual_valor)),
+            realizadoNum: Number(config.meta_anual_realizado),
+            metaNum: Number(config.meta_anual_valor),
+            periodo: `ANO DE ${new Date().getFullYear()}`,
+            showBox: true,
+          });
+        }
+
+        // Slide de Primeira Venda
+        if (pv && pv.pessoa) {
+          generated.push({
+            id: "pvenda",
+            type: "pvenda",
+            category: "História Lopes",
+            title: "Primeira Venda",
+            nome: pv.pessoa.nome,
+            cargo: pv.pessoa.cargo === "gestor" ? "Gestor" : "Corretora",
+            photoUrl: pv.pessoa.foto_url || "",
+            mensagem: pv.mensagem,
+            detalhe: pv.detalhe || "Você faz parte do crescimento da nossa empresa, nosso muito obrigado!",
+            updateFreq: "RANKING ATUALIZADO SEMANALMENTE.",
+          });
+        }
+
+        // Slides de Rankings
+        const addRankSlide = (tipo: "mensal" | "anual", categoria: "gestores" | "corretores", title: string) => {
+          const entries = allRankings
+            .filter(r => r.tipo === tipo && r.categoria === categoria && r.pessoa)
+            .sort((a, b) => a.posicao - b.posicao)
+            .slice(0, 3)
+            .map(r => ({
+              name: r.pessoa!.nome.split(" ")[0],
+              value: Number(r.valor),
+              initials: r.pessoa!.nome.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase(),
+              photoUrl: r.pessoa!.foto_url || ""
+            }));
+          
+          if (entries.length > 0) {
+            generated.push({
+              id: `top-${categoria}-${tipo}`,
+              type: "ranking",
+              category: "História Lopes",
+              title,
+              pessoas: entries,
+              updateFreq: tipo === "mensal" ? "RANKING ATUALIZADO MENSALMENTE." : "RANKING ATUALIZADO ANUALMENTE."
+            });
+          }
+        };
+
+        addRankSlide("mensal", "gestores", "Top 3 Gestores Mensal");
+        addRankSlide("mensal", "corretores", "Top 3 Corretores Mensal");
+        addRankSlide("anual", "gestores", "Top 3 Gestores Anual");
+        addRankSlide("anual", "corretores", "Top 3 Corretores Anual");
+
+        // Fallback em caso de base vazia
+        if (generated.length === 0) {
+          generated.push({
+            id: "fallback",
+            type: "meta",
+            category: "Metas Lopes",
+            title: "Lopes Display Digital",
+            valor: "R$ 0,00",
+            realizadoNum: 0,
+            metaNum: 1,
+            periodo: "Aguardando configurações de Metas no Painel",
+            showBox: false,
+          });
+        }
+
+        setSlides(generated);
+      } catch (err) {
+        console.error("Erro ao carregar placar:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Loop de Autoplay
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const t = setInterval(() => goTo((slideIdx + 1) % slides.length), INTERVAL);
+    return () => clearInterval(t);
+  }, [slideIdx, goTo, slides.length]);
+
+  if (loading) {
+    return (
+      <div style={{ width: "100vw", height: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 40, height: 40, borderRadius: "50%", border: "3px solid rgba(255,255,255,.1)", borderTopColor: "#E30613", animation: "spin 1s linear infinite" }} />
+      </div>
+    );
+  }
+
+  const slide = slides[slideIdx] || slides[0];
+  if (!slide) return null;
 
   return (
     <>
       <style>{CSS}</style>
       <div className="placar-root" style={{ background: slide.type === "ranking" ? "radial-gradient(ellipse at 30% 50%,#080818 0%,#000 70%)" : "#0a0a0a" }}>
-        <Sidebar unit={UNIT} activeIdx={0} />
+        <Sidebar unit={unitInfo} />
 
-        {/* Main */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
           <div key={key} style={{ flex: 1, display: "flex" }}>
             {slide.type === "meta"    && <SlideMeta   slide={slide as SlideMeta}   />}
@@ -490,16 +542,22 @@ export function PlacarLopes() {
             {slide.type === "ranking" && <SlideRanking slide={slide as SlideRanking} />}
           </div>
 
-          <ProgressDots total={DEFAULT_SLIDES.length} current={slideIdx} onChange={goTo} />
-
-          {/* Nav arrows */}
-          {[[-1,"←"],[1,"→"]].map(([dir, lbl]) => (
-            <button key={String(lbl)} onClick={() => goTo((slideIdx + DEFAULT_SLIDES.length + (dir as number)) % DEFAULT_SLIDES.length)} style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [dir === -1 ? "left" : "right"]: 12, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.6)", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 16, fontFamily: "monospace", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "all 200ms ease" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.15)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.6)"; }}>
-              {lbl}
-            </button>
-          ))}
+          {slides.length > 1 && (
+            <>
+              <ProgressDots total={slides.length} current={slideIdx} onChange={goTo} />
+              {[[-1,"←"],[1,"→"]].map(([dir, lbl]) => (
+                <button 
+                  key={String(lbl)} 
+                  onClick={() => goTo((slideIdx + slides.length + (dir as number)) % slides.length)} 
+                  style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [dir === -1 ? "left" : "right"]: 12, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.6)", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 16, fontFamily: "monospace", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "all 200ms ease" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.15)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.6)"; }}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </>

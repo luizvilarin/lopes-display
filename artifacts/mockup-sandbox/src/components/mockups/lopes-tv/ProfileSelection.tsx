@@ -1,45 +1,99 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import logoBranca from "@/assets/logo-branca.png";
+import faviconLopes from "@/assets/favicon-lopes.png";
+import { placarService } from "@/services/placarService";
+import type { Unidade } from "@/types/placar";
 
-const PROFILES = [
-  {
-    id: "marista",
-    name: "Marista",
-    color: "#1a2744",
-    initial: "M",
-    gradient: "linear-gradient(135deg, #1a2744 0%, #2d3f6b 100%)",
-  },
-  {
-    id: "bueno",
-    name: "Bueno",
-    color: "#0d3524",
-    initial: "B",
-    gradient: "linear-gradient(135deg, #0d3524 0%, #1a5c3e 100%)",
-  },
-  {
-    id: "jardim",
-    name: "Jardim Goiás",
-    color: "#3d1a00",
-    initial: "JG",
-    gradient: "linear-gradient(135deg, #3d1a00 0%, #7a3500 100%)",
-  },
-  {
-    id: "oeste",
-    name: "Oeste",
-    color: "#1a0030",
-    initial: "O",
-    gradient: "linear-gradient(135deg, #1a0030 0%, #3d006b 100%)",
-  },
-];
+const FALLBACK_GRADIENTS: Record<string, string> = {
+  "marista": "linear-gradient(135deg,#1a2744,#2d3f6b)",
+  "bueno": "linear-gradient(135deg,#0d3524,#1a5c3e)",
+  "jd-goias": "linear-gradient(135deg,#3d1a00,#7a3500)",
+  "oeste": "linear-gradient(135deg,#1a0030,#3d006b)",
+};
 
 export function ProfileSelection() {
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [unidades, setUnidades] = useState<Unidade[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Admin PIN State
+  const [showPin, setShowPin] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinErr, setPinErr] = useState("");
+  const [validating, setValidating] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const list = await placarService.getUnidades();
+        setUnidades(list);
+      } catch (e) {
+        console.error("Erro ao buscar unidades no ProfileSelection:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const handleSelect = (id: string) => {
     setSelected(id);
-    setTimeout(() => setSelected(null), 600);
+    if (id === "admin") {
+      setTimeout(() => {
+        setShowPin(true);
+        setSelected(null);
+      }, 300);
+      return;
+    }
+
+    setTimeout(() => {
+      // Salvamos o ID da unidade em ambas as chaves para unificação
+      localStorage.setItem("lopes_selected_unit", id);
+      localStorage.setItem("lopes_active_unit", id);
+      navigate("/hub");
+    }, 600);
   };
+
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pin.trim() || validating) return;
+    
+    setValidating(true);
+    setPinErr("");
+    try {
+      const dbPin = await placarService.getAdminPin();
+      if (pin === dbPin) {
+        localStorage.setItem("lopes_admin_logged", "true");
+        navigate("/admin");
+      } else {
+        setPinErr("PIN Incorreto");
+        setPin("");
+      }
+    } catch (err) {
+      console.error("Erro ao validar PIN:", err);
+      setPinErr("Erro na rede. Tente de novo.");
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const allProfiles = [
+    ...unidades.map(u => ({
+      id: u.id,
+      name: u.nome,
+      initial: u.nome.substring(0, 2).toUpperCase(),
+      gradient: FALLBACK_GRADIENTS[u.id] || "linear-gradient(135deg, #333 0%, #000 100%)"
+    })),
+    {
+      id: "admin",
+      name: "Administrativo",
+      initial: "ADM",
+      gradient: "linear-gradient(135deg, #E30613 0%, #8A0008 100%)",
+    }
+  ];
 
   return (
     <div
@@ -56,7 +110,7 @@ export function ProfileSelection() {
         overflow: "hidden",
       }}
     >
-      {/* Google Fonts */}
+      {/* Google Fonts & CSS */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
 
@@ -86,8 +140,8 @@ export function ProfileSelection() {
           transform: scale(1.08);
         }
         .profile-avatar {
-          width: 160px;
-          height: 160px;
+          width: 140px;
+          height: 140px;
           border-radius: 12px;
           border: 3px solid transparent;
           transition: border-color 200ms ease, box-shadow 250ms ease;
@@ -98,11 +152,15 @@ export function ProfileSelection() {
         .profile-card:hover .profile-avatar {
           border-color: #E30613;
           box-shadow: 0 0 24px rgba(227,6,19,0.35), 0 0 48px rgba(227,6,19,0.15);
+        }
+        .profile-avatar.selected {
+          border-color: #E30613;
+          box-shadow: 0 0 24px rgba(227,6,19,0.35), 0 0 48px rgba(227,6,19,0.15);
           animation: glowPulse 2s ease infinite;
         }
         .profile-label {
           margin-top: 16px;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 500;
           color: #72788A;
           font-family: 'DM Sans', sans-serif;
@@ -116,7 +174,7 @@ export function ProfileSelection() {
         .initial-text {
           font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
           font-weight: 800;
-          font-size: 56px;
+          font-size: 48px;
           color: rgba(255,255,255,0.90);
           letter-spacing: -0.02em;
           user-select: none;
@@ -124,41 +182,10 @@ export function ProfileSelection() {
         .headline {
           font-family: 'Barlow', 'Helvetica Neue', sans-serif;
           font-weight: 700;
-          font-size: 36px;
+          font-size: 32px;
           color: #F0F2F8;
           letter-spacing: -0.02em;
           animation: fadeSlideUp 500ms cubic-bezier(0.25,0.46,0.45,0.94) both;
-        }
-        .lopes-logo {
-          font-family: 'Barlow Condensed', sans-serif;
-          font-weight: 800;
-          font-size: 28px;
-          letter-spacing: 0.08em;
-          color: #E30613;
-        }
-        .fullscreen-btn {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 14px 32px;
-          border-radius: 9999px;
-          background: #E30613;
-          color: white;
-          font-family: 'Barlow', sans-serif;
-          font-weight: 700;
-          font-size: 15px;
-          letter-spacing: 0.04em;
-          border: none;
-          cursor: pointer;
-          transition: background 200ms ease, transform 150ms ease, box-shadow 200ms ease;
-          box-shadow: 0 4px 16px rgba(227,6,19,0.40);
-          text-transform: uppercase;
-          animation: fadeSlideUp 700ms cubic-bezier(0.25,0.46,0.45,0.94) both;
-        }
-        .fullscreen-btn:hover {
-          background: #FF1A27;
-          transform: scale(1.04);
-          box-shadow: 0 8px 28px rgba(227,6,19,0.55);
         }
       `}</style>
 
@@ -171,57 +198,92 @@ export function ProfileSelection() {
       {/* Top logo */}
       <div style={{ position: "absolute", top: 32, left: 40, display: "flex", alignItems: "center", gap: 10 }}>
         <img src={logoBranca} alt="Lopes" style={{ height: 24, objectFit: "contain" }} />
-        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#72788A", letterSpacing: "0.16em", textTransform: "uppercase" }}>Digital Signage</span>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#72788A", letterSpacing: "0.16em", textTransform: "uppercase" }}>Plataforma Digital</span>
       </div>
 
       {/* Main content */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 56 }}>
-        <h1 className="headline">Qual unidade está exibindo?</h1>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 48 }}>
+        <h1 className="headline">Quem está acessando?</h1>
 
         {/* Profiles grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 160px)",
-          gap: "32px",
-          maxWidth: 800,
-        }}>
-          {PROFILES.map((profile, i) => (
-            <div
-              key={profile.id}
-              className="profile-card"
-              style={{ animationDelay: `${i * 80}ms` }}
-              onMouseEnter={() => setHovered(profile.id)}
-              onMouseLeave={() => setHovered(null)}
-              onClick={() => handleSelect(profile.id)}
-            >
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 140 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid rgba(255,255,255,.1)", borderTopColor: "#E30613", animation: "glowPulse 1s linear infinite" }} />
+          </div>
+        ) : (
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "28px",
+            maxWidth: 900,
+          }}>
+            {allProfiles.map((profile, i) => (
               <div
-                className="profile-avatar"
-                style={{
-                  background: profile.gradient,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  filter: selected === profile.id ? "brightness(1.3)" : "brightness(1)",
-                }}
+                key={profile.id}
+                className="profile-card"
+                style={{ animationDelay: `${i * 80}ms` }}
+                onMouseEnter={() => setHovered(profile.id)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => handleSelect(profile.id)}
               >
-                <span className="initial-text">{profile.initial}</span>
+                <div
+                  className={`profile-avatar ${selected === profile.id ? "selected" : ""}`}
+                  style={{
+                    background: profile.gradient,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 140,
+                    height: 140,
+                    filter: selected === profile.id ? "brightness(1.3)" : "brightness(1)",
+                    border: profile.id === "admin" && hovered === "admin" ? "3px solid #E30613" : undefined,
+                  }}
+                >
+                  {profile.id === "admin" ? (
+                    <div style={{ width: 44, height: 44, background: "#fff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <img src={faviconLopes} alt="Admin" style={{ height: 24, filter: "brightness(0)" }} />
+                    </div>
+                  ) : (
+                    <span className="initial-text">{profile.initial}</span>
+                  )}
+                </div>
+                <span className="profile-label" style={{ color: profile.id === "admin" ? "#E30613" : undefined, fontWeight: profile.id === "admin" ? 700 : undefined }}>{profile.name}</span>
               </div>
-              <span className="profile-label">{profile.name}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Fullscreen button */}
-        <button
-          className="fullscreen-btn"
-          onClick={() => document.documentElement.requestFullscreen?.()}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-          </svg>
-          Iniciar Transmissão
-        </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Admin PIN Modal */}
+      {showPin && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: "#111118", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 24, padding: 40, width: "100%", maxWidth: 360, animation: "scalePop 300ms cubic-bezier(0.34,1.56,0.64,1) both", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: "#E30613", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+              <img src={faviconLopes} alt="Admin" style={{ height: 26, filter: "brightness(0) invert(1)" }} />
+            </div>
+            <h2 style={{ fontFamily: "'Barlow', sans-serif", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Acesso Restrito</h2>
+            <p style={{ color: "#72788A", fontSize: 14, marginBottom: 24, textAlign: "center" }}>Insira o PIN de administrador</p>
+            
+            <form onSubmit={handlePinSubmit} style={{ width: "100%" }}>
+              <input
+                autoFocus
+                type="password"
+                placeholder="PIN"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                style={{ width: "100%", background: "#1A1A24", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px", color: "#fff", fontSize: 20, textAlign: "center", letterSpacing: "0.2em", outline: "none", marginBottom: 16 }}
+              />
+              {pinErr && <div style={{ color: "#f87171", fontSize: 13, textAlign: "center", marginBottom: 16 }}>{pinErr}</div>}
+              
+              <div style={{ display: "flex", gap: 10 }}>
+                <button type="button" disabled={validating} onClick={() => setShowPin(false)} style={{ flex: 1, padding: "12px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: 10, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: validating ? 0.5 : 1 }}>Cancelar</button>
+                <button type="submit" disabled={validating} style={{ flex: 1, padding: "12px", background: "#E30613", border: "none", color: "#fff", borderRadius: 10, cursor: validating ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: validating ? 0.8 : 1 }}>{validating ? "Validando..." : "Acessar"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Bottom hint */}
       <div style={{
@@ -229,7 +291,7 @@ export function ProfileSelection() {
         color: "#4A4F60", fontSize: 13, fontFamily: "'DM Sans', sans-serif",
         letterSpacing: "0.04em",
       }}>
-        Selecione uma unidade para continuar
+        Selecione um perfil para continuar
       </div>
     </div>
   );
