@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import faviconLopes from "@/assets/favicon-lopes.png";
 import logoBranca from "@/assets/logo-branca.png";
+import fogueteImg from "@/assets/foguete-lopes.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -270,40 +271,59 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
 // ─── Slide: Primeira Venda ────────────────────────────────────────────────────
 
 function SlidePVenda({ slide }: { slide: SlidePVenda }) {
+  const initials = slide.nome.split(" ").map(w => w[0]).slice(0, 2).join("");
   return (
-    <div className="slide-up" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 52px 0" }}>
+    <div className="slide-up" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 52px 0", overflow: "hidden" }}>
       <CategoryPill label={slide.category} />
-      <h1 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 52, color: "#fff", letterSpacing: "-.02em", marginBottom: 40 }}>{slide.title}</h1>
+      <h1 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 52, color: "#fff", letterSpacing: "-.02em", marginBottom: 28, flexShrink: 0 }}>{slide.title}</h1>
 
-      {/* Card */}
-      <div style={{ display: "flex", gap: 0, maxWidth: 320 }}>
-        <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,.70)" }}>
-          {/* Photo */}
-          <div style={{ width: 220, height: 180, background: slide.photoUrl ? `url(${slide.photoUrl}) center/cover` : "linear-gradient(135deg,#2a2a3e,#3d3d5c)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+      {/* Main area */}
+      <div style={{ display: "flex", gap: 36, alignItems: "flex-start", minHeight: 0 }}>
+        {/* Profile card — fixed dimensions so it never overflows */}
+        <div style={{ width: 230, flexShrink: 0, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 72px rgba(0,0,0,.75)", border: "1px solid rgba(255,255,255,.10)" }}>
+          {/* Photo area */}
+          <div style={{
+            width: "100%", height: 200, flexShrink: 0,
+            background: slide.photoUrl ? `url(${slide.photoUrl}) center/cover` : "linear-gradient(145deg,#1e1e38,#2e2e50)",
+            display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
+          }}>
             {!slide.photoUrl && (
-              <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(255,255,255,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 28, color: "#fff" }}>
-                {slide.nome.split(" ").map(w => w[0]).slice(0,2).join("")}
+              <div style={{ width: 78, height: 78, borderRadius: "50%", background: "rgba(255,255,255,.14)", border: "2px solid rgba(255,255,255,.22)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 30, color: "#fff" }}>
+                {initials}
               </div>
             )}
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 12px", background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 12, color: "#fff", letterSpacing: ".08em", textTransform: "uppercase" }}>{slide.nome}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "rgba(255,255,255,.75)", fontFamily: "'DM Sans',sans-serif" }}>🤍 Lopes</div>
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "10px 14px", background: "linear-gradient(to top, rgba(0,0,0,.82), transparent)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 12, color: "#fff", letterSpacing: ".06em", textTransform: "uppercase" }}>{slide.nome}</span>
+              <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "rgba(255,255,255,.70)" }}>🤍 Lopes</span>
             </div>
           </div>
-          {/* Congrats card */}
-          <div style={{ background: "#fff", padding: "12px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 14, color: "#111" }}>{slide.mensagem}</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#22c55e"/><path d="M8 12l3 3 5-5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          {/* Congrats block — inside card, height fixed */}
+          <div style={{ background: "#fff", padding: "13px 15px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "#111", lineHeight: 1.2 }}>{slide.mensagem}</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" fill="#22c55e"/><path d="M8 12l3 3 5-5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <div style={{ width: 32, height: 12, borderRadius: 9999, background: "rgba(0,0,0,.15)", marginBottom: 8 }} />
-            <div style={{ fontSize: 11, color: "#555", lineHeight: 1.5, textTransform: "uppercase", letterSpacing: ".06em", fontFamily: "'DM Sans',sans-serif" }}>{slide.detalhe}</div>
+            <div style={{ width: 34, height: 9, borderRadius: 9999, background: "rgba(0,0,0,.12)", marginBottom: 9 }} />
+            <div style={{ fontSize: 10, color: "#555", lineHeight: 1.55, textTransform: "uppercase", letterSpacing: ".05em", fontFamily: "'DM Sans',sans-serif" }}>{slide.detalhe}</div>
+          </div>
+        </div>
+
+        {/* Right: cargo badge + bullets */}
+        <div style={{ flex: 1, paddingTop: 6, display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ padding: "10px 18px", background: "rgba(227,6,19,.12)", border: "1px solid rgba(227,6,19,.30)", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 10, alignSelf: "flex-start" }}>
+            <span style={{ fontSize: 20 }}>🏆</span>
+            <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "#fff" }}>{slide.cargo}</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {["🎉 Primeira venda do mês!", "✨ Membro da equipe Lopes", "📈 Crescendo junto conosco"].map((t, i) => (
+              <div key={i} style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: `rgba(255,255,255,${0.72 - i * 0.16})` }}>{t}</div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 20, paddingTop: 24 }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 18, paddingTop: 14 }}>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{slide.updateFreq}</span>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{MES_ANO.toUpperCase()}</span>
       </div>
@@ -315,29 +335,31 @@ function SlidePVenda({ slide }: { slide: SlidePVenda }) {
 
 function Rocket({ photoUrl, initials, delay = 0 }: { photoUrl?: string; initials: string; delay?: number }) {
   return (
-    <div style={{ position: "relative", width: 64, height: 52, flexShrink: 0, animation: `rocketEntry 700ms ${delay}ms cubic-bezier(.34,1.56,.64,1) both` }}>
-      {/* Flames */}
-      <div style={{ position: "absolute", left: -14, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 2, animation: "flamePulse 400ms ease infinite" }}>
-        {[18,12,8].map((h, i) => (
-          <div key={i} style={{ width: h, height: 7, borderRadius: "0 9999px 9999px 0", background: `linear-gradient(90deg,transparent,${["#FF6B00","#FF9500","#FFD000"][i]})`, opacity: .9 }} />
+    <div style={{ position: "relative", width: 110, height: 56, flexShrink: 0, animation: `rocketEntry 700ms ${delay}ms cubic-bezier(.34,1.56,.64,1) both` }}>
+      {/* Exhaust flames behind the rocket (left side, rocket points right) */}
+      <div style={{ position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 2, animation: "flamePulse 350ms ease infinite" }}>
+        {[22,14,9].map((h, i) => (
+          <div key={i} style={{ width: h, height: 6, borderRadius: "0 9999px 9999px 0", background: `linear-gradient(90deg,transparent,${["#FF4500","#FF8C00","#FFD700"][i]})`, opacity: .95 }} />
         ))}
       </div>
-      {/* Body */}
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,#D8D8D8 0%,#B0B0B0 40%,#888 100%)", borderRadius: "50% 36% 36% 50%", border: "1.5px solid rgba(255,255,255,.25)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {/* Red stripe */}
-        <div style={{ position: "absolute", top: 0, bottom: 0, right: 8, width: 8, background: "#E30613", opacity: .8 }} />
-        {/* Cockpit window */}
-        <div style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid rgba(255,255,255,.6)", background: photoUrl ? `url(${photoUrl}) center/cover` : "linear-gradient(135deg,#3a3a5c,#1a1a2e)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1 }}>
-          {!photoUrl && <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 10, color: "#fff" }}>{initials}</span>}
-          {photoUrl && <img src={photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-        </div>
+      {/* PNG rocket — fills the container */}
+      <img src={fogueteImg} alt="foguete" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+      {/* Avatar circle overlaid on the cockpit window.
+          The window in the PNG is roughly at 47% from left, vertically centred. */}
+      <div style={{
+        position: "absolute",
+        left: "42%", top: "50%",
+        transform: "translate(-50%, -50%)",
+        width: 28, height: 28,
+        borderRadius: "50%",
+        overflow: "hidden",
+        background: photoUrl ? `url(${photoUrl}) center/cover` : "linear-gradient(135deg,#3a3a5c,#1a1a2e)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        border: "1.5px solid rgba(255,255,255,.35)",
+      }}>
+        {!photoUrl && <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 9, color: "#fff", letterSpacing: ".03em" }}>{initials}</span>}
+        {photoUrl && <img src={photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
       </div>
-      {/* Nose cone */}
-      <div style={{ position: "absolute", right: -16, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "14px solid transparent", borderBottom: "14px solid transparent", borderLeft: "18px solid #B0B0B0" }} />
-      {/* Top fin */}
-      <div style={{ position: "absolute", top: -8, left: 14, width: 0, height: 0, borderBottom: "10px solid #E30613", borderRight: "10px solid transparent" }} />
-      {/* Bottom fin */}
-      <div style={{ position: "absolute", bottom: -8, left: 14, width: 0, height: 0, borderTop: "10px solid #E30613", borderRight: "10px solid transparent" }} />
     </div>
   );
 }
