@@ -4,6 +4,7 @@ import logoBranca from "@/assets/logo-branca.png";
 import faviconLopes from "@/assets/favicon-lopes.png";
 import { placarService } from "@/services/placarService";
 import type { Unidade } from "@/types/placar";
+import { PinPad } from "@/components/common/PinPad";
 
 const FALLBACK_GRADIENTS: Record<string, string> = {
   "marista": "linear-gradient(135deg,#1a2744,#2d3f6b)",
@@ -21,7 +22,6 @@ export function ProfileSelection() {
 
   // Admin PIN State
   const [showPin, setShowPin] = useState(false);
-  const [pin, setPin] = useState("");
   const [pinErr, setPinErr] = useState("");
   const [validating, setValidating] = useState(false);
 
@@ -57,20 +57,18 @@ export function ProfileSelection() {
     }, 600);
   };
 
-  const handlePinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pin.trim() || validating) return;
+  const handlePinSubmit = async (submittedPin: string) => {
+    if (validating) return;
     
     setValidating(true);
     setPinErr("");
     try {
       const dbPin = await placarService.getAdminPin();
-      if (pin === dbPin) {
+      if (submittedPin === dbPin) {
         localStorage.setItem("lopes_admin_logged", "true");
         navigate("/admin");
       } else {
         setPinErr("PIN Incorreto");
-        setPin("");
       }
     } catch (err) {
       console.error("Erro ao validar PIN:", err);
@@ -245,7 +243,7 @@ export function ProfileSelection() {
                       <img src={faviconLopes} alt="Admin" style={{ height: 24, filter: "brightness(0)" }} />
                     </div>
                   ) : (
-                    <span className="initial-text">{profile.initial}</span>
+                    <img src={faviconLopes} alt={profile.name} style={{ height: 60, filter: "brightness(0) invert(1)" }} />
                   )}
                 </div>
                 <span className="profile-label" style={{ color: profile.id === "admin" ? "#E30613" : undefined, fontWeight: profile.id === "admin" ? 700 : undefined }}>{profile.name}</span>
@@ -262,25 +260,15 @@ export function ProfileSelection() {
             <div style={{ width: 48, height: 48, borderRadius: 14, background: "#E30613", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
               <img src={faviconLopes} alt="Admin" style={{ height: 26, filter: "brightness(0) invert(1)" }} />
             </div>
-            <h2 style={{ fontFamily: "'Barlow', sans-serif", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Acesso Restrito</h2>
+            <h2 style={{ fontFamily: "'Barlow', sans-serif", fontSize: 24, fontWeight: 800, marginBottom: 8, color: "#FFF" }}>Acesso Restrito</h2>
             <p style={{ color: "#72788A", fontSize: 14, marginBottom: 24, textAlign: "center" }}>Insira o PIN de administrador</p>
             
-            <form onSubmit={handlePinSubmit} style={{ width: "100%" }}>
-              <input
-                autoFocus
-                type="password"
-                placeholder="PIN"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                style={{ width: "100%", background: "#1A1A24", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px", color: "#fff", fontSize: 20, textAlign: "center", letterSpacing: "0.2em", outline: "none", marginBottom: 16 }}
-              />
-              {pinErr && <div style={{ color: "#f87171", fontSize: 13, textAlign: "center", marginBottom: 16 }}>{pinErr}</div>}
-              
-              <div style={{ display: "flex", gap: 10 }}>
-                <button type="button" disabled={validating} onClick={() => setShowPin(false)} style={{ flex: 1, padding: "12px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: 10, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: validating ? 0.5 : 1 }}>Cancelar</button>
-                <button type="submit" disabled={validating} style={{ flex: 1, padding: "12px", background: "#E30613", border: "none", color: "#fff", borderRadius: 10, cursor: validating ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: validating ? 0.8 : 1 }}>{validating ? "Validando..." : "Acessar"}</button>
-              </div>
-            </form>
+            <PinPad
+              onPinSubmit={handlePinSubmit}
+              onCancel={() => setShowPin(false)}
+              validating={validating}
+              error={pinErr}
+            />
           </div>
         </div>
       )}

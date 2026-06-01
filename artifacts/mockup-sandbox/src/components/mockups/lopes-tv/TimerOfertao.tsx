@@ -452,49 +452,66 @@ export function TimerOfertao() {
             fontSize: 13, color: "#72788A", letterSpacing: "0.14em", textTransform: "uppercase",
           }}>Ofertão</span>
         </div>
+      </div>
 
-        {/* Controls + menu */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
-          {/* Play/Pause */}
-          <button
-            className="ctrl-btn primary"
-            onClick={toggle}
-            disabled={isDone}
-            title={isRunning ? "Pausar" : "Iniciar"}
-          >
-            {isRunning ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M5 3l14 9-14 9V3z"/>
-              </svg>
-            )}
-          </button>
-
-          {/* Reset */}
-          <button className="ctrl-btn" onClick={reset} title="Reiniciar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+      {/* Floating vertical control menu on the right side */}
+      <div style={{
+        position: "absolute",
+        right: 24,
+        top: "50%",
+        transform: "translateY(-50%)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        alignItems: "center",
+        zIndex: 100,
+        background: "rgba(20,20,24,0.60)",
+        backdropFilter: "blur(20px)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 20,
+        padding: "16px 12px",
+        boxShadow: "0 24px 50px rgba(0,0,0,0.55)",
+      }}>
+        {/* Play/Pause */}
+        <button
+          className="ctrl-btn primary"
+          onClick={toggle}
+          disabled={isDone}
+          title={isRunning ? "Pausar" : "Iniciar"}
+          style={{ width: 48, height: 48, borderRadius: 14 }}
+        >
+          {isRunning ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
             </svg>
-          </button>
-
-          {/* Settings */}
-          <button className="ctrl-btn" onClick={() => { setShowConfig(true); setShowMenu(false); setIsRunning(false); stop(); }} title="Ajustes">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-              <circle cx="12" cy="12" r="3"/>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 3l14 9-14 9V3z"/>
             </svg>
-          </button>
+          )}
+        </button>
 
-          {/* Fullscreen */}
-          <button className="ctrl-btn" onClick={() => document.documentElement.requestFullscreen?.()} title="Tela Cheia">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-            </svg>
-          </button>
-        </div>
+        {/* Reset */}
+        <button className="ctrl-btn" onClick={reset} title="Reiniciar" style={{ width: 42, height: 42, borderRadius: 12 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+        </button>
+
+        {/* Settings */}
+        <button className="ctrl-btn" onClick={() => { setShowConfig(true); setShowMenu(false); setIsRunning(false); stop(); }} title="Ajustes" style={{ width: 42, height: 42, borderRadius: 12 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+
+        {/* Fullscreen */}
+        <button className="ctrl-btn" onClick={() => document.documentElement.requestFullscreen?.()} title="Tela Cheia" style={{ width: 42, height: 42, borderRadius: 12 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
       </div>
 
       {/* Center — main timer */}

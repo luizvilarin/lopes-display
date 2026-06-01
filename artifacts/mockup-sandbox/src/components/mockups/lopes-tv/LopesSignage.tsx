@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import logoBranca from "@/assets/logo-branca.png";
 import logoPreta from "@/assets/logo-preta.png";
 import faviconLopes from "@/assets/favicon-lopes.png";
 import { PlacarLopes } from "./PlacarLopes";
+import { CulturaLopes } from "./CulturaLopes";
 import { placarService, type Imovel, type SignageSettings } from "@/services/placarService";
-import type { Unidade } from "@/types/placar";
+import type { Unidade, Pessoa } from "@/types/placar";
+import { Icons } from "@/components/common/Icons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Screen = "streaming" | "player" | "timer" | "placar";
+type Screen = "streaming" | "player" | "timer" | "placar" | "cultura";
 type Theme = "dark" | "light";
 
 const FALLBACK_GRADIENTS: Record<string, string> = {
@@ -131,7 +133,7 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
     }}>
       {onBack && (
         <button className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }} onClick={onBack}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(180deg)" }}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
           Voltar
         </button>
       )}
@@ -145,9 +147,14 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
       />
 
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-        {(["streaming", "player", "timer", "placar"] as Screen[]).map(s => {
-          const labels: Record<string, string> = { streaming: "Carrossel de Imóveis", player: "Apresentação", timer: "Ofertão", placar: "Placar Envolvente" };
-          const isAct = currentScreen === s;
+        {(["streaming", "timer", "placar"] as Screen[]).map(s => {
+          const labels: Record<string, string> = { streaming: "Sinalização", timer: "Temporizador", placar: "Placar" };
+          const icons: Record<string, React.ReactNode> = { 
+            streaming: <Icons.TV size={16} />, 
+            timer: <Icons.Timer size={16} />, 
+            placar: <Icons.Rocket size={16} />
+          };
+          const isAct = currentScreen === s || (currentScreen === "player" && s === "streaming");
           return (
             <button key={s} className="btn" style={{
               background: "none", padding: "20px 0",
@@ -155,11 +162,13 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
               color: isAct ? "var(--text)" : "var(--text3)", 
               borderBottom: `3px solid ${isAct ? "#E30613" : "transparent"}`,
               borderRadius: 0,
+              display: "flex", alignItems: "center", gap: 8
             }}
               onClick={() => onNav(s)}
-              onMouseEnter={e => { if(!isAct) (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
-              onMouseLeave={e => { if(!isAct) (e.currentTarget as HTMLElement).style.color = "var(--text3)"; }}
-            >{labels[s]}</button>
+            >
+              {icons[s]}
+              {labels[s]}
+            </button>
           );
         })}
       </div>
@@ -179,8 +188,8 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
         </button>
         {/* Manager */}
         <button className="btn" style={{ background: "#E30613", color: "#fff", padding: "8px 16px", borderRadius: 10, fontSize: 12, letterSpacing: ".10em", display: "flex", alignItems: "center", gap: 6 }} onClick={handleAdminBtn}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          ADMIN
+          <Icons.LayoutGrid size={14} />
+          PAINEL
         </button>
         {/* Unit avatar */}
         {unit && (
@@ -202,15 +211,19 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
 
 // ─── Screen 2: Streaming Interface ───────────────────────────────────────────
 
-const CATEGORIES = [
-  { id: "all", label: "Todos", icon: "◉" },
-  { id: "lancamentos", label: "Lançamentos", icon: "✦" },
-  { id: "coberturas", label: "Coberturas", icon: "◆" },
-];
-
-function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpen: (id: number) => void; config: SignageSettings }) {
+function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpen: (id: number | null, playlist?: Imovel[]) => void; config: SignageSettings }) {
   const [cat, setCat] = useState("all");
   const [heroIdx, setHeroIdx] = useState(0);
+
+  const dynamicCategories = useMemo(() => {
+    const cats = Array.from(new Set(imoveis.map(p => p.category).filter(Boolean))) as string[];
+    return [
+      { id: "all", label: "Todos", icon: "◉" },
+      ...cats.map(c => ({ id: c, label: c, icon: "✦" }))
+    ];
+  }, [imoveis]);
+
+  const filtered = cat === "all" ? imoveis : imoveis.filter(p => p.category === cat);
 
   const interval = config?.rot_interval || 8;
   const autoRot = config?.auto_rotate ?? true;
@@ -231,14 +244,14 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
     );
   }
 
-  const featured = imoveis.slice(0, 2);
+  const featured = filtered.slice(0, 2);
 
   return (
     <div className="screen-enter" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 68px)", overflow: "hidden" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 36px 32px" }}>
 
         {/* Hero banners */}
-        <div style={{ display: "grid", gridTemplateColumns: imoveis.length === 1 ? "1fr" : "1fr 1fr", gap: 18, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: filtered.length === 1 ? "1fr" : "1fr 1fr", gap: 18, marginBottom: 28 }}>
           {featured.map((p, i) => (
             <div key={p.id} onClick={() => onOpen(p.id)} style={{
               borderRadius: 20, padding: "28px 32px 24px", minHeight: 200,
@@ -261,7 +274,7 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#E30613"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.18)"; }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>Ver Imóvel
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>Ver Produto
                 </button>
               </div>
             </div>
@@ -270,7 +283,7 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
 
         {/* Category pills */}
         <div style={{ display: "flex", gap: 10, marginBottom: 24, overflowX: "auto", paddingBottom: 4 }}>
-          {CATEGORIES.map(c => (
+          {dynamicCategories.map(c => (
             <button key={c.id} className={`pill ${cat === c.id ? "active" : "inactive"}`} onClick={() => setCat(c.id)}>
               <span style={{ fontSize: 12 }}>{c.icon}</span>{c.label}
             </button>
@@ -279,9 +292,17 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
 
         {/* Property cards */}
         <div style={{ marginBottom: 32 }}>
-          <p style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 20, color: "var(--text)", letterSpacing: "-.01em", marginBottom: 14 }}>Imóveis em Destaque</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <p style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 20, color: "var(--text)", letterSpacing: "-.01em", margin: 0 }}>Produtos em Destaque</p>
+            {filtered.length > 0 && (
+              <button className="btn btn-accent" style={{ padding: "8px 16px", borderRadius: 10, fontSize: 12, display: "flex", alignItems: "center", gap: 6 }} onClick={() => onOpen(null, filtered)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+                Apresentar {cat === "all" ? "Todos" : cat}
+              </button>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8 }}>
-            {imoveis.map((p, i) => (
+            {filtered.map((p, i) => (
               <div key={p.id} className="card-hover" onClick={() => onOpen(p.id)} style={{
                 width: 170, minWidth: 170, borderRadius: 16, overflow: "hidden", position: "relative",
                 background: p.image_url ? `url(${p.image_url}) center/cover` : p.gradient || "linear-gradient(135deg,#242430,#1c1c24)", flexShrink: 0,
@@ -308,10 +329,32 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
 // ─── Screen 3: Player / Fullscreen ───────────────────────────────────────────
 
 function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imovel[]; config: SignageSettings; initialPropId: number | null; onBack: () => void }) {
-  const startIndex = initialPropId ? imoveis.findIndex(p => p.id === initialPropId) : 0;
-  const [idx, setIdx] = useState(startIndex >= 0 ? startIndex : 0);
+  const isPlaylistMode = initialPropId === null;
+  const singleProp = initialPropId ? imoveis.find(p => p.id === initialPropId) : null;
+  
+  const slides = useMemo(() => {
+    if (isPlaylistMode) {
+      return imoveis.map(p => ({ type: "product", prop: p, url: p.image_url, video: p.video_url }));
+    } else if (singleProp) {
+      const arr = [];
+      if (singleProp.video_url || singleProp.image_url || singleProp.gradient) {
+        arr.push({ type: "cover", prop: singleProp, url: singleProp.image_url, video: singleProp.video_url });
+      }
+      if (singleProp.gallery && singleProp.gallery.length > 0) {
+        singleProp.gallery.forEach(g => arr.push({ type: "gallery", prop: singleProp, url: g }));
+      }
+      if (arr.length === 0) {
+        arr.push({ type: "cover", prop: singleProp }); // fallback
+      }
+      return arr;
+    }
+    return [];
+  }, [isPlaylistMode, imoveis, singleProp]);
+
+  const [idx, setIdx] = useState(0);
   const [fading, setFading] = useState(false);
-  const p = imoveis[idx] ?? imoveis[0];
+  const currentSlide = slides[idx] || slides[0];
+  const p = currentSlide?.prop;
 
   const interval = config?.rot_interval || 8;
   const autoRot = config?.auto_rotate ?? true;
@@ -322,18 +365,18 @@ function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imo
   }, []);
 
   useEffect(() => {
-    if (!autoRot || imoveis.length <= 1) return;
-    const t = setInterval(() => go((idx + 1) % imoveis.length), interval * 1000);
+    if (!autoRot || slides.length <= 1) return;
+    const t = setInterval(() => go((idx + 1) % slides.length), interval * 1000);
     return () => clearInterval(t);
-  }, [autoRot, interval, idx, imoveis.length, go]);
+  }, [autoRot, interval, idx, slides.length, go]);
 
-  if (!p) return null;
+  if (!p || !currentSlide) return null;
 
   const renderMedia = () => {
-    if (p.video_url) {
+    if (currentSlide.video) {
       // Suporte a embeds de youtube e links diretos mp4
-      let embedSrc = p.video_url;
-      const ytMatch = p.video_url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
+      let embedSrc = currentSlide.video;
+      const ytMatch = currentSlide.video.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
       if (ytMatch) {
         embedSrc = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=0&loop=1&playlist=${ytMatch[1]}`;
         return (
@@ -347,9 +390,9 @@ function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imo
     }
 
     // Caso seja imagem
-    if (p.image_url) {
+    if (currentSlide.url) {
       return (
-        <div style={{ position: "absolute", inset: 0, background: `url(${p.image_url}) center/cover`, opacity: fading ? 0 : 1, transition: "opacity 450ms ease" }} />
+        <div style={{ position: "absolute", inset: 0, background: `url(${currentSlide.url}) center/cover`, opacity: fading ? 0 : 1, transition: "opacity 450ms ease" }} />
       );
     }
 
@@ -371,9 +414,9 @@ function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imo
       <div style={{ position: "absolute", right: "8%", top: "10%", width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(255,255,255,.06) 0%,transparent 70%)", pointerEvents: "none" }} />
 
       {/* Progress Bar */}
-      {imoveis.length > 1 && (
+      {slides.length > 1 && (
         <div style={{ position: "absolute", top: 18, left: 60, right: 60, display: "flex", gap: 6, zIndex: 10 }}>
-          {imoveis.map((_, i) => (
+          {slides.map((_, i) => (
             <div key={i} style={{ height: 3, flex: 1, borderRadius: 2, background: i < idx ? "#E30613" : i === idx ? "rgba(255,255,255,.25)" : "rgba(255,255,255,.12)", overflow: "hidden", cursor: "pointer" }} onClick={() => go(i)}>
               {i === idx && autoRot && (
                 <div style={{ height: "100%", background: "#E30613", transformOrigin: "left", animation: `progressFill ${interval}s linear forwards` }} />
@@ -384,40 +427,43 @@ function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imo
       )}
 
       {/* Content Overlay */}
-      <div style={{ position: "absolute", inset: 0, padding: "60px 80px", display: "flex", flexDirection: "column", justifyContent: "center", opacity: fading ? 0 : 1, transition: "opacity 450ms ease", zIndex: 5 }}>
+      <div style={{ position: "absolute", inset: 0, padding: "60px 80px", display: "flex", alignItems: "center", justifyContent: "space-between", opacity: fading ? 0 : 1, transition: "opacity 450ms ease", zIndex: 5 }}>
         <div style={{ maxWidth: 750 }}>
           <div style={{ marginBottom: 18 }}>
             <span style={{ display: "inline-block", padding: "5px 14px", borderRadius: 8, background: p.tag_color || "#E30613", color: "#fff", fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: ".14em", textTransform: "uppercase" }}>{p.tag}</span>
-            <span style={{ color: "rgba(240,242,248,.70)", fontSize: 14, marginLeft: 12, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, textShadow: "0 2px 4px rgba(0,0,0,.5)" }}>{p.address}</span>
           </div>
           <h1 style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: "clamp(42px,6vw,78px)", color: "#F0F2F8", letterSpacing: "-.03em", lineHeight: .95, marginBottom: 14, textShadow: "0 4px 12px rgba(0,0,0,.4)" }}>{p.title}</h1>
-          <div style={{ color: "#E30613", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: "clamp(28px,4vw,52px)", letterSpacing: "-.02em", marginBottom: 18, textShadow: "0 2px 6px rgba(0,0,0,.3)" }}>{p.price}</div>
           
           {p.description && (
             <p style={{ color: "rgba(240,242,248,.80)", fontSize: "clamp(14px,1.5vw,18px)", lineHeight: 1.5, maxWidth: 600, marginBottom: 24, textShadow: "0 2px 4px rgba(0,0,0,.5)" }}>{p.description}</p>
           )}
-
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {[`⬛ ${p.area}`, `🛏 ${p.rooms}`, `🚗 ${p.garage}`].map((item, i) => (
-              <div key={i} style={{ padding: "12px 20px", borderRadius: 14, background: "rgba(0,0,0,.60)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.15)", color: "#fff", fontSize: 14, fontWeight: 600 }}>{item}</div>
-            ))}
-          </div>
         </div>
+
+        {p.qr_code_url && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, background: "rgba(0,0,0,.4)", backdropFilter: "blur(12px)", padding: 24, borderRadius: 24, border: "1px solid rgba(255,255,255,.1)" }}>
+            <img src={p.qr_code_url} alt="QR Code Linktree" style={{ width: 180, height: 180, objectFit: "cover", borderRadius: 16 }} />
+            <div style={{ color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, textAlign: "center" }}>
+              Acesse nossos<br />materiais digitais
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Status Row */}
-      <div style={{ position: "absolute", bottom: 28, left: 80, right: 80, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 10 }}>
-        <div style={{ display: "flex", gap: 8 }}>
-          {imoveis.map((_, i) => (
-            <button key={i} style={{ border: "none", cursor: "pointer", borderRadius: i === idx ? 5 : "50%", width: i === idx ? 28 : 10, height: 10, background: i === idx ? "#E30613" : "rgba(255,255,255,.28)", transition: "all 300ms ease" }} onClick={() => go(i)} />
-          ))}
+      {slides.length > 1 && (
+        <div style={{ position: "absolute", bottom: 28, left: 80, right: 80, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 10 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            {slides.map((_, i) => (
+              <button key={i} style={{ border: "none", cursor: "pointer", borderRadius: i === idx ? 5 : "50%", width: i === idx ? 28 : 10, height: 10, background: i === idx ? "#E30613" : "rgba(255,255,255,.28)", transition: "all 300ms ease" }} onClick={() => go(i)} />
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: autoRot ? "#22c55e" : "#F5A623", boxShadow: autoRot ? "0 0 8px rgba(34,197,94,.80)" : "none", animation: autoRot ? "blink 2s ease infinite" : "none" }} />
+            <span style={{ color: "rgba(255,255,255,.60)", fontSize: 12, fontFamily: "'DM Sans',sans-serif", letterSpacing: ".08em", textShadow: "0 1px 2px rgba(0,0,0,.8)" }}>{autoRot ? "ROTAÇÃO AUTOMÁTICA" : "MANUAL"}</span>
+            <span style={{ color: "rgba(255,255,255,.45)", fontSize: 12, marginLeft: 8 }}>{idx + 1} / {slides.length}</span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: autoRot ? "#22c55e" : "#F5A623", boxShadow: autoRot ? "0 0 8px rgba(34,197,94,.80)" : "none", animation: autoRot ? "blink 2s ease infinite" : "none" }} />
-          <span style={{ color: "rgba(255,255,255,.60)", fontSize: 12, fontFamily: "'DM Sans',sans-serif", letterSpacing: ".08em", textShadow: "0 1px 2px rgba(0,0,0,.8)" }}>{autoRot ? "ROTAÇÃO AUTOMÁTICA" : "MANUAL"}</span>
-          <span style={{ color: "rgba(255,255,255,.45)", fontSize: 12, marginLeft: 8 }}>{idx + 1} / {imoveis.length}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -443,12 +489,13 @@ function CircleRing({ value, max, size, color, label, children }: { value: numbe
   );
 }
 
-function ScreenTimer({ config }: { config: SignageSettings }) {
+function ScreenTimer({ config, onUpdate }: { config: SignageSettings, onUpdate: (c: SignageSettings) => void }) {
   const { timer_label1, timer_label2, timer_label3, timer_seconds } = config;
   const initSecs = timer_seconds || 600;
   const [secs, setSecs] = useState(initSecs);
   const [init, setInit] = useState(initSecs);
   const [running, setRunning] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
   const intRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { setSecs(initSecs); setInit(initSecs); }, [initSecs]);
@@ -492,8 +539,8 @@ function ScreenTimer({ config }: { config: SignageSettings }) {
         fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900,
         fontSize: "clamp(72px,15vw,180px)", color: timeColor, letterSpacing: "-.04em", lineHeight: 1,
         animation: isDone ? "donePulse .8s ease infinite" : isUrgent ? "urgentPulse 1s ease infinite" : "none",
-        userSelect: "none",
-      }}>{formatTime(secs)}</div>
+        userSelect: "none", cursor: "pointer"
+      }} onClick={() => { stop(); setShowConfig(true); }} title="Configurar tempo">{formatTime(secs)}</div>
 
       {/* Status */}
       <div style={{ height: 28, display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
@@ -508,20 +555,35 @@ function ScreenTimer({ config }: { config: SignageSettings }) {
       </div>
 
       {/* Controls */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 24, zIndex: 10 }}>
+      <div style={{ position: "fixed", top: "50%", right: 24, transform: "translateY(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, zIndex: 100, background: "rgba(10,10,15,0.7)", padding: "16px 12px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(12px)", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
         <button className="btn btn-ghost" style={{ width: 44, height: 44, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => { stop(); setSecs(init); }} title="Reiniciar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
         </button>
-        <button className="btn btn-accent" style={{ width: 56, height: 56, borderRadius: "50%", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(227,6,19,.40)", opacity: isDone ? .5 : 1 }} onClick={running ? stop : start} disabled={isDone}>
+        <button className="btn btn-accent" style={{ width: 52, height: 52, borderRadius: "50%", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(227,6,19,.40)", opacity: isDone ? .5 : 1 }} onClick={running ? stop : start} disabled={isDone}>
           {running
             ? <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
             : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
           }
         </button>
+        <button className="btn btn-ghost" style={{ width: 44, height: 44, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => { stop(); setShowConfig(true); }} title="Ajustes">
+          <Icons.Settings size={16} />
+        </button>
         <button className="btn btn-ghost" style={{ width: 44, height: 44, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => document.documentElement.requestFullscreen?.()} title="Tela cheia">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          <Icons.Maximize size={16} />
         </button>
       </div>
+
+      {showConfig && (
+        <QuickConfigModal 
+          config={config} 
+          onClose={() => setShowConfig(false)} 
+          onSave={async (newCfg) => {
+            const saved = await placarService.saveSignageConfig({ ...newCfg, unidade_id: config.unidade_id });
+            onUpdate({ ...config, ...newCfg, id: saved.id });
+            setShowConfig(false);
+          }}
+        />
+      )}
 
       {/* Info blocks */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, display: "flex", gap: 14, padding: "0 36px 24px", zIndex: 5 }}>
@@ -538,6 +600,77 @@ function ScreenTimer({ config }: { config: SignageSettings }) {
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
+function QuickConfigModal({ config, onClose, onSave }: { config: SignageSettings, onClose: () => void, onSave: (c: Partial<SignageSettings>) => void }) {
+  const [draft, setDraft] = useState({
+    timer_label1: config.timer_label1,
+    timer_label2: config.timer_label2,
+    timer_label3: config.timer_label3,
+    timer_seconds: config.timer_seconds,
+  });
+
+  const [horas, setHoras] = useState(Math.floor(config.timer_seconds / 3600));
+  const [minutos, setMinutos] = useState(Math.floor((config.timer_seconds % 3600) / 60));
+  const [segundos, setSegundos] = useState(config.timer_seconds % 60);
+
+  const up = (k: keyof typeof draft, v: any) => setDraft(p => ({ ...p, [k]: v }));
+
+  const handleTimeChange = (h: number, m: number, s: number) => {
+    setHoras(h);
+    setMinutos(m);
+    setSegundos(s);
+    const total = h * 3600 + m * 60 + s;
+    up("timer_seconds", total);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.8)", backdropFilter: "blur(10px)", padding: 20 }}>
+      <div style={{ background: "var(--bg1)", width: "100%", maxWidth: 400, borderRadius: 24, padding: "28px 32px", border: "1px solid var(--border2)", boxShadow: "0 24px 64px rgba(0,0,0,.6)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+          <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 18, color: "var(--text)" }}>Ajuste Rápido</div>
+          <button className="btn btn-ghost" style={{ width: 32, height: 32, padding: 0, borderRadius: 8 }} onClick={onClose}><Icons.X size={14} /></button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text4)", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 8 }}>Tempo do Temporizador</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 10, color: "var(--text3)", marginBottom: 4, textAlign: "center" }}>Horas</label>
+                <input type="number" min={0} max={23} className="adm-input" value={horas} onChange={e => handleTimeChange(Math.max(0, parseInt(e.target.value) || 0), minutos, segundos)} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text)", textAlign: "center", fontSize: 16, fontWeight: 700 }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, color: "var(--text3)", marginBottom: 4, textAlign: "center" }}>Minutos</label>
+                <input type="number" min={0} max={59} className="adm-input" value={minutos} onChange={e => handleTimeChange(horas, Math.max(0, Math.min(59, parseInt(e.target.value) || 0)), segundos)} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text)", textAlign: "center", fontSize: 16, fontWeight: 700 }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, color: "var(--text3)", marginBottom: 4, textAlign: "center" }}>Segundos</label>
+                <input type="number" min={0} max={59} className="adm-input" value={segundos} onChange={e => handleTimeChange(horas, minutos, Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text)", textAlign: "center", fontSize: 16, fontWeight: 700 }} />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text4)", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6 }}>Rótulo 1</label>
+            <input type="text" className="adm-input" value={draft.timer_label1} onChange={e => up("timer_label1", e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 10, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text)", fontFamily: "'Barlow',sans-serif" }} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text4)", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6 }}>Rótulo 2</label>
+            <input type="text" className="adm-input" value={draft.timer_label2} onChange={e => up("timer_label2", e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 10, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text)", fontFamily: "'Barlow',sans-serif" }} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text4)", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6 }}>Rótulo 3</label>
+            <input type="text" className="adm-input" value={draft.timer_label3} onChange={e => up("timer_label3", e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 10, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text)", fontFamily: "'Barlow',sans-serif" }} />
+          </div>
+        </div>
+
+        <button className="btn btn-accent" style={{ width: "100%", marginTop: 28, padding: "14px", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => onSave(draft)}>
+          <Icons.Check size={16} />
+          Gravar Alterações
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function LopesSignage() {
   const [screen, setScreen] = useState<Screen>("streaming");
   const [theme, setTheme] = useState<Theme>("dark");
@@ -550,6 +683,7 @@ export function LopesSignage() {
   
   const [loading, setLoading] = useState(true);
   const [openPropId, setOpenPropId] = useState<number | null>(null);
+  const [playerPlaylist, setPlayerPlaylist] = useState<Imovel[] | null>(null);
 
   const toggleTheme = () => setTheme(t => t === "dark" ? "light" : "dark");
 
@@ -560,7 +694,9 @@ export function LopesSignage() {
         const unitList = await placarService.getUnidades();
         setUnidades(unitList);
         
-        const stored = localStorage.getItem("lopes_selected_unit") || localStorage.getItem("lopes_active_unit") || unitList[0]?.id;
+        const rawStored = localStorage.getItem("lopes_selected_unit") || localStorage.getItem("lopes_active_unit");
+        const isValidId = (v?: string | null) => !!v && v !== "Todas" && v.trim() !== "";
+        const stored = isValidId(rawStored) ? rawStored! : unitList[0]?.id;
         if (stored) {
           setActiveUnit(stored);
         }
@@ -611,8 +747,9 @@ export function LopesSignage() {
     loadContent();
   }, [activeUnit]);
 
-  const handleOpenProp = (id: number) => {
+  const handleOpenProp = (id: number | null, playlist?: Imovel[]) => {
     setOpenPropId(id);
+    setPlayerPlaylist(playlist || null);
     setScreen("player");
   };
 
@@ -632,7 +769,7 @@ export function LopesSignage() {
           <Navbar
             theme={theme}
             onThemeToggle={toggleTheme}
-            onBack={screen !== "streaming" && screen !== "placar" ? () => setScreen("streaming") : undefined}
+            onBack={screen !== "streaming" && screen !== "placar" && screen !== "cultura" ? () => setScreen("streaming") : undefined}
             activeUnit={activeUnit}
             unidades={unidades}
             onNav={s => setScreen(s)}
@@ -640,9 +777,10 @@ export function LopesSignage() {
           />
           
           {screen === "streaming" && config && <ScreenStreaming imoveis={imoveis} onOpen={handleOpenProp} config={config} />}
-          {screen === "player"    && config && <ScreenPlayer imoveis={imoveis} config={config} initialPropId={openPropId} onBack={() => setScreen("streaming")} />}
-          {screen === "timer"     && config && <ScreenTimer config={config} />}
-          {screen === "placar"    && <div className="screen-enter" style={{ height: "calc(100vh - 68px)", overflow: "hidden" }}><PlacarLopes /></div>}
+          {screen === "player"    && config && <ScreenPlayer imoveis={playerPlaylist || imoveis} config={config} initialPropId={openPropId} onBack={() => setScreen("streaming")} />}
+          {screen === "timer"     && config && <ScreenTimer config={config} onUpdate={(c) => setConfig(c)} />}
+          {screen === "placar"    && <div className="screen-enter" style={{ height: "calc(100vh - 68px)", overflow: "hidden" }}><PlacarLopes activeUnitId={activeUnit} /></div>}
+          {screen === "cultura"   && <div className="screen-enter" style={{ height: "calc(100vh - 68px)", overflow: "hidden" }}><CulturaLopes activeUnitId={activeUnit} /></div>}
         </div>
       )}
     </>

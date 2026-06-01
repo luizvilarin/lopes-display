@@ -9,7 +9,7 @@ import { Icons } from "@/components/common/Icons";
 
 type UnifiedSection = 
   // Placar Sections
-  | "metas" | "pvenda" | "rankings" | "pessoas"
+  | "metas" | "pvenda" | "rankings" | "pessoas" | "cultura"
   // Signage Sections
   | "imoveis" | "ofertao" | "display"
   // System
@@ -18,6 +18,22 @@ type UnifiedSection =
 export function UnifiedAdmin() {
   const navigate = useNavigate();
   const [section, setSection] = useState<UnifiedSection>("metas");
+  const [activeUnitId, setActiveUnitId] = useState<string>(() => {
+    return localStorage.getItem("lopes_admin_active_unit") || "Todas";
+  });
+
+  const UNIDADES_LIST = [
+    { id: "Todas", nome: "Todas as Unidades" },
+    { id: "jd-goias", nome: "Lopes Jardim Goiás" },
+    { id: "marista", nome: "Lopes Marista" },
+    { id: "bueno", nome: "Lopes Bueno" },
+    { id: "oeste", nome: "Lopes Oeste" }
+  ];
+
+  const handleUnitChange = (id: string) => {
+    setActiveUnitId(id);
+    localStorage.setItem("lopes_admin_active_unit", id);
+  };
 
   const NAV_GROUPS = [
     {
@@ -25,7 +41,7 @@ export function UnifiedAdmin() {
       items: [
         { id: "metas",    label: "Metas",         icon: <Icons.Target /> },
         { id: "pvenda",   label: "Primeira Venda", icon: <Icons.Trophy /> },
-        { id: "rankings", label: "Rankings",       icon: <Icons.Rocket /> },
+        { id: "rankings", label: "Placar Envolvente", icon: <Icons.Rocket /> },
         { id: "pessoas",  label: "Equipe",         icon: <Icons.Users /> },
       ]
     },
@@ -33,8 +49,9 @@ export function UnifiedAdmin() {
       title: "Conteúdo Digital",
       items: [
         { id: "imoveis",  label: "Produtos",       icon: <Icons.Home /> },
-        { id: "ofertao",  label: "Ofertão",        icon: <Icons.Timer /> },
+        { id: "ofertao",  label: "Temporizador",   icon: <Icons.Timer /> },
         { id: "display",  label: "Config. TV",     icon: <Icons.TV /> },
+        // { id: "cultura",  label: "Cultura Lopes",  icon: <Icons.BookOpen /> },
       ]
     },
     {
@@ -46,11 +63,11 @@ export function UnifiedAdmin() {
   ];
 
   const renderSection = () => {
-    if (["metas", "pvenda", "rankings", "pessoas"].includes(section)) {
-      return <PlacarAdmin activeSection={section} />;
+    if (["metas", "pvenda", "rankings", "pessoas", "cultura"].includes(section)) {
+      return <PlacarAdmin activeSection={section} activeUnitId={activeUnitId} />;
     }
     if (["imoveis", "ofertao", "display"].includes(section)) {
-      return <AdminPanel activeSection={section} />;
+      return <AdminPanel activeSection={section} activeUnitId={activeUnitId} />;
     }
     if (section === "senha") {
       return <SecuritySection />;
@@ -72,6 +89,21 @@ export function UnifiedAdmin() {
         <span style={{ fontSize: 13, color: "#B8BDCC", letterSpacing: ".12em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 700 }}>
           Painel Unificado
         </span>
+
+        {/* Seletor Global de Unidade */}
+        <div style={{ marginLeft: 32, display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.04)", padding: "5px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}>
+          <span style={{ fontSize: 14 }}>📍</span>
+          <span style={{ fontSize: 11, color: "#72788A", textTransform: "uppercase", fontWeight: 700, fontFamily: "'Barlow',sans-serif", letterSpacing: ".05em" }}>Unidade Ativa:</span>
+          <select 
+            value={activeUnitId} 
+            onChange={(e) => handleUnitChange(e.target.value)} 
+            style={{ background: "transparent", color: "#fff", border: "none", fontSize: 13, fontWeight: 700, fontFamily: "'Barlow',sans-serif", outline: "none", cursor: "pointer", paddingRight: 4 }}
+          >
+            {UNIDADES_LIST.map(u => (
+              <option key={u.id} value={u.id} style={{ background: "#111118", color: "#fff", fontWeight: 600 }}>{u.nome}</option>
+            ))}
+          </select>
+        </div>
 
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: "#1C1C24", borderRadius: 8, border: "1px solid #2A2A36" }}>

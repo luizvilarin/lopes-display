@@ -131,7 +131,49 @@ const CSS = `
 
 // ─── Image Dropzone ───────────────────────────────────────────────────────────
 
-function ImageDropzone({ value, onChange, label }: { value: string; onChange: (url: string) => void; label: string }) {
+const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error("Erro ao carregar imagem"));
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+    reader.readAsDataURL(file);
+  });
+};
+
+function ImageDropzone({ value, onChange, label, maxWidth = 1024, maxHeight = 576 }: { value: string; onChange: (url: string) => void; label: string; maxWidth?: number; maxHeight?: number }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState(value);
   const [urlInput, setUrlInput] = useState(value);
@@ -141,10 +183,15 @@ function ImageDropzone({ value, onChange, label }: { value: string; onChange: (u
     setUrlInput(value);
   }, [value]);
 
-  const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = e => { const url = e.target?.result as string; setPreview(url); onChange(url); };
-    reader.readAsDataURL(file);
+  const handleFile = async (file: File) => {
+    try {
+      const url = await compressImage(file, maxWidth, maxHeight);
+      setPreview(url);
+      onChange(url);
+    } catch (err) {
+      console.error("Erro ao compactar imagem:", err);
+      alert("Erro ao ler e processar a imagem.");
+    }
   };
 
   return (
@@ -183,9 +230,27 @@ function ImageDropzone({ value, onChange, label }: { value: string; onChange: (u
 
 // ─── Property Modal ───────────────────────────────────────────────────────────
 
-function PropertyModal({ prop, onSave, onClose }: { prop: Imovel; onSave: (p: Imovel) => Promise<void>; onClose: () => void }) {
-  const [draft, setDraft] = useState<Imovel>({ ...prop });
+function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClose }: { prop: Imovel; categories: string[]; unidades: Unidade[]; activeUnitId: string; onSave: (p: Imovel) => Promise<void>; onClose: () => void }) {
+  const [draft, setDraft] = useState<Imovel>({
+    ...prop,
+    unidade_id: prop.unidade_id || activeUnitId,
+    category: prop.category || "Geral",
+    gallery: prop.gallery || []
+  });
   const [saving, setSaving] = useState(false);
+  const [newGalUrl, setNewGalUrl] = useState("");
+
+  const addGal = () => {
+    if (newGalUrl) {
+      up("gallery", [...(draft.gallery || []), newGalUrl]);
+      setNewGalUrl("");
+    }
+  };
+  const rmGal = (i: number) => {
+    const g = [...(draft.gallery || [])];
+    g.splice(i, 1);
+    up("gallery", g);
+  };
 
   const up = (k: keyof Imovel, v: any) => setDraft(d => ({ ...d, [k]: v }));
 
@@ -229,13 +294,26 @@ function PropertyModal({ prop, onSave, onClose }: { prop: Imovel; onSave: (p: Im
               </div>
             </div>
 
+            <div className="pa-form-row" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label className="adm-label">Unidade Associada</label>
+              <select className="adm-input" value={draft.unidade_id} onChange={e => up("unidade_id", e.target.value)} style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 10, fontSize: 14 }}>
+                <option value="Todas">Todas as Unidades (Global)</option>
+                {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+              </select>
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {([["title","Título do Imóvel"],["price","Preço"],["area","Área"],["rooms","Quartos/Suítes"],["garage","Garagem"],["address","Endereço completo"]] as [keyof Imovel, string][]).map(([k, lbl]) => (
-                <div key={k} style={{ gridColumn: k === "title" || k === "address" ? "1 / -1" : "auto" }}>
-                  <label className="adm-label">{lbl}</label>
-                  <input className="adm-input" type="text" value={String(draft[k] ?? "")} onChange={e => up(k, e.target.value)} />
-                </div>
-              ))}
+              <div>
+                <label className="adm-label">Nome do Produto</label>
+                <input className="adm-input" type="text" value={String(draft.title ?? "")} onChange={e => up("title", e.target.value)} />
+              </div>
+              <div>
+                <label className="adm-label">Categoria</label>
+                <input className="adm-input" list="cat-list" type="text" value={draft.category || ""} onChange={e => up("category", e.target.value)} placeholder="Ex: Loteamentos" />
+                <datalist id="cat-list">
+                  {categories.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
             </div>
 
             <div>
@@ -259,6 +337,27 @@ function PropertyModal({ prop, onSave, onClose }: { prop: Imovel; onSave: (p: Im
 
             <ImageDropzone value={draft.image_url || ""} onChange={url => up("image_url", url)} label="Imagem de Capa (Empreendimento)" />
 
+            <div style={{ padding: "20px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: 16 }}>
+              <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 14, color: "var(--text)", marginBottom: 4 }}>Galeria de Imagens Adicionais</div>
+              <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 16 }}>Adicione imagens extras para complementar a apresentação deste produto na TV</div>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10, marginBottom: 16 }}>
+                {(draft.gallery || []).map((g, i) => (
+                  <div key={i} style={{ position: "relative", height: 80, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)" }}>
+                    <img src={g} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <button className="adm-btn-danger" style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer", background: "rgba(227,6,19,0.9)" }} onClick={() => rmGal(i)}>
+                      <Icons.Trash size={12} color="#fff" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <input className="adm-input" type="url" placeholder="Cole a URL da nova imagem..." value={newGalUrl} onChange={e => setNewGalUrl(e.target.value)} style={{ fontSize: 13 }} />
+                <button className="adm-btn adm-btn-ghost" style={{ padding: "10px 14px", fontSize: 12, whiteSpace: "nowrap", border: "1px solid var(--border)" }} onClick={addGal}>Adicionar à Galeria</button>
+              </div>
+            </div>
+
             <div style={{ padding: "20px", background: "rgba(227,6,19,0.03)", border: "1px dashed rgba(227,6,19,0.2)", borderRadius: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(227,6,19,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -269,7 +368,7 @@ function PropertyModal({ prop, onSave, onClose }: { prop: Imovel; onSave: (p: Im
                   <div style={{ fontSize: 11, color: "var(--text3)" }}>Arte com o QR Code para o corretor escanear</div>
                 </div>
               </div>
-              <ImageDropzone value={draft.qr_code_url || ""} onChange={url => up("qr_code_url", url)} label="Upload da Arte do QR Code" />
+              <ImageDropzone value={draft.qr_code_url || ""} onChange={url => up("qr_code_url", url)} label="Upload da Arte do QR Code" maxWidth={256} maxHeight={256} />
             </div>
 
             <div>
@@ -299,23 +398,21 @@ function PropertyModal({ prop, onSave, onClose }: { prop: Imovel; onSave: (p: Im
 
 // ─── Sections ─────────────────────────────────────────────────────────────────
 
-function SectionImoveis({ imoveis, onSave, onDelete, activeUnit }: { imoveis: Imovel[]; onSave: (p: Imovel) => Promise<void>; onDelete: (id: number) => Promise<void>; activeUnit: string }) {
+function SectionImoveis({ imoveis, onSave, onDelete, activeUnit, unidades, activeUnitId }: { imoveis: Imovel[]; onSave: (p: Imovel) => Promise<void>; onDelete: (id: number) => Promise<void>; activeUnit: string; unidades: Unidade[]; activeUnitId: string }) {
   const [editing, setEditing] = useState<Imovel | null>(null);
+  const categories = Array.from(new Set(imoveis.map(p => p.category).filter(Boolean)));
 
   const openAdd = () => {
     const novo: Imovel = {
       id: 0,
-      unidade_id: activeUnit,
-      title: "Novo Imóvel",
-      price: "R$ 0",
-      area: "0 m²",
-      rooms: "—",
-      garage: "—",
-      address: "—",
+      unidade_id: activeUnitId === "Todas" ? (unidades[0]?.id || "jd-goias") : activeUnit,
+      title: "Novo Produto",
       tag: "NOVO",
       tag_color: "#E30613",
       gradient: "linear-gradient(160deg,#1a2744,#2d3f6b)",
+      category: "Geral",
       image_url: "",
+      gallery: [],
       video_url: "",
       ativo: true,
       description: ""
@@ -328,7 +425,12 @@ function SectionImoveis({ imoveis, onSave, onDelete, activeUnit }: { imoveis: Im
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h2 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 20, color: "var(--text)" }}>Produtos Digitais</h2>
-          <p style={{ fontSize: 13, color: "var(--text3)", marginTop: 3 }}>{imoveis.filter(p => p.ativo).length} ativos · {imoveis.length} total para esta unidade</p>
+          <p style={{ fontSize: 13, color: "var(--text3)", marginTop: 3 }}>
+            {activeUnitId === "Todas"
+              ? `${imoveis.filter(p => p.ativo).length} ativos · ${imoveis.length} total para todas as unidades`
+              : `${imoveis.filter(p => p.ativo).length} ativos · ${imoveis.length} total para esta unidade`
+            }
+          </p>
         </div>
         <button className="adm-btn adm-btn-accent" style={{ padding: "10px 18px", fontSize: 13, display: "flex", alignItems: "center", gap: 7 }} onClick={openAdd}>
           <Icons.Plus size={14} />
@@ -376,12 +478,21 @@ function SectionImoveis({ imoveis, onSave, onDelete, activeUnit }: { imoveis: Im
 
               <div style={{ padding: 16 }}>
                 <h3 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 15, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>{p.title}</h3>
-                <p style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.address}</p>
-                
-                <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-                  <span style={{ background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text2)", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{p.price}</span>
-                  <span style={{ background: "var(--bg4)", border: "1px solid var(--border)", color: "var(--text2)", padding: "3px 8px", borderRadius: 6, fontSize: 11 }}>{p.area}</span>
-                </div>
+                <p style={{ fontSize: 11, color: "var(--text3)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{
+                    padding: "2px 6px",
+                    borderRadius: 4,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    background: p.unidade_id === "Todas" ? "rgba(227,6,19,.15)" : "rgba(255,255,255,.06)",
+                    color: p.unidade_id === "Todas" ? "#ff6b6b" : "rgba(255,255,255,.6)",
+                    border: p.unidade_id === "Todas" ? "1px solid rgba(227,6,19,.3)" : "1px solid rgba(255,255,255,.1)"
+                  }}>
+                    {p.unidade_id === "Todas" ? "Todas as Unidades" : (unidades.find(u => u.id === p.unidade_id)?.nome.replace("Lopes ", "") || p.unidade_id)}
+                  </span>
+                  <span>· {p.category}</span>
+                </p>
 
                 <div style={{ display: "flex", gap: 8 }}>
                   <button className="adm-btn adm-btn-ghost" style={{ flex: 1, padding: "9px", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => setEditing(p)}>
@@ -398,7 +509,7 @@ function SectionImoveis({ imoveis, onSave, onDelete, activeUnit }: { imoveis: Im
         </div>
       )}
 
-      {editing && <PropertyModal prop={editing} onSave={onSave} onClose={() => setEditing(null)} />}
+      {editing && <PropertyModal prop={editing} categories={categories} unidades={unidades} activeUnitId={activeUnitId} onSave={onSave} onClose={() => setEditing(null)} />}
     </div>
   );
 }
@@ -431,7 +542,7 @@ function SectionOfertao({ label1, label2, label3, seconds, onUpdate }: { label1:
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 20, color: "var(--text)" }}>Ofertão (Contagem Regressiva)</h2>
+        <h2 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 20, color: "var(--text)" }}>Temporizador (Contagem Regressiva)</h2>
         <p style={{ fontSize: 13, color: "var(--text3)", marginTop: 3 }}>Controle o timer e os informativos na tela principal da TV</p>
       </div>
 
@@ -468,16 +579,16 @@ function SectionOfertao({ label1, label2, label3, seconds, onUpdate }: { label1:
           ))}
         </div>
 
-        <button className="adm-btn adm-btn-accent" style={{ padding: "14px", fontSize: 14, letterSpacing: ".08em", textTransform: "uppercase" }} onClick={save}>Salvar Ofertão</button>
+        <button className="adm-btn adm-btn-accent" style={{ padding: "14px", fontSize: 14, letterSpacing: ".08em", textTransform: "uppercase" }} onClick={save}>Salvar Temporizador</button>
       </div>
     </div>
   );
 }
 
-function SectionDisplay({ theme, onThemeToggle, autoRotate, interval, onAutoRotate, onInterval, activeUnit, onUnit, unidades }: {
+function SectionDisplay({ theme, onThemeToggle, autoRotate, interval, onAutoRotate, onInterval, activeUnit, unidades }: {
   theme: "dark" | "light"; onThemeToggle: () => void;
   autoRotate: boolean; interval: number; onAutoRotate: (v: boolean) => void; onInterval: (v: number) => void;
-  activeUnit: string; onUnit: (id: string) => void; unidades: Unidade[];
+  activeUnit: string; unidades: Unidade[];
 }) {
   return (
     <div>
@@ -517,33 +628,11 @@ function SectionDisplay({ theme, onThemeToggle, autoRotate, interval, onAutoRota
           )}
         </div>
 
-        <div className="stat-card">
-          <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 15, color: "var(--text)", marginBottom: 14 }}>Unidade Selecionada</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {unidades.map(u => {
-              const initial = u.nome.split(" ").map(w => w[0]).join("").substring(0,2).toUpperCase();
-              const gradient = FALLBACK_GRADIENTS[u.id] || "linear-gradient(135deg,#242430,#1c1c24)";
-              return (
-                <div key={u.id} onClick={() => onUnit(u.id)} style={{
-                  padding: "12px 14px", borderRadius: 12, cursor: "pointer",
-                  background: activeUnit === u.id ? "rgba(227,6,19,.10)" : "var(--bg4)",
-                  border: `1px solid ${activeUnit === u.id ? "#E30613" : "var(--border)"}`,
-                  display: "flex", alignItems: "center", gap: 10, transition: "all 200ms ease",
-                }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: gradient, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 11, color: "rgba(255,255,255,.9)" }}>{initial}</div>
-                  <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.nome}</span>
-                  {activeUnit === u.id && <svg style={{ marginLeft: "auto", flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E30613" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         <div style={{ padding: "14px 16px", background: "rgba(227,6,19,.06)", border: "1px solid rgba(227,6,19,.20)", borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E30613" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "var(--text)" }}>Visualizar na TV</div>
-            <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>Abra o link do display dessa unidade</div>
+            <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>Abra o link do display dessa unidade ({unidades.find(u => u.id === activeUnit)?.nome || ""})</div>
           </div>
           <button className="adm-btn adm-btn-accent" style={{ padding: "8px 14px", fontSize: 12 }} onClick={() => window.open(`/tv/${activeUnit}`, "_blank")}>Abrir TV</button>
         </div>
@@ -554,7 +643,7 @@ function SectionDisplay({ theme, onThemeToggle, autoRotate, interval, onAutoRota
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-export function AdminPanel({ activeSection }: { activeSection: string }) {
+export function AdminPanel({ activeSection, activeUnitId }: { activeSection: string; activeUnitId: string }) {
   const [loading, setLoading] = useState(true);
   const [theme, setTheme]         = useState<"dark" | "light">("dark");
   const [unidades, setUnidades]   = useState<Unidade[]>([]);
@@ -579,8 +668,6 @@ export function AdminPanel({ activeSection }: { activeSection: string }) {
       try {
         const list = await placarService.getUnidades();
         setUnidades(list);
-        const stored = localStorage.getItem("lopes_active_unit") || list[0]?.id || "jd-goias";
-        setActiveUnit(stored);
       } catch (e) {
         console.error(e);
       }
@@ -588,36 +675,49 @@ export function AdminPanel({ activeSection }: { activeSection: string }) {
     init();
   }, []);
 
-  // 2. Load content for specific activeUnit
+  // Sync with global unit id
   useEffect(() => {
-    if (!activeUnit) return;
+    if (activeUnitId !== "Todas") {
+      setActiveUnit(activeUnitId);
+    } else if (unidades.length > 0) {
+      setActiveUnit(unidades[0].id);
+    }
+  }, [activeUnitId, unidades]);
+
+  // 2. Load content for specific activeUnit or all units for products
+  useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [listImov, config] = await Promise.all([
-          placarService.getImoveis(activeUnit),
-          placarService.getSignageConfig(activeUnit)
-        ]);
+        let listImov: Imovel[] = [];
+        if (activeUnitId === "Todas") {
+          listImov = await placarService.getAllImoveis();
+        } else if (activeUnit) {
+          listImov = await placarService.getImoveis(activeUnit);
+        }
 
         setImoveis(listImov);
 
-        if (config) {
-          setTheme(config.theme || "dark");
-          setAutoRotate(config.auto_rotate);
-          setRotInterval(config.rot_interval);
-          setTl1(config.timer_label1 || "Vendas");
-          setTl2(config.timer_label2 || "Meta Diária");
-          setTl3(config.timer_label3 || "");
-          setTimerSecs(config.timer_seconds || 600);
-        } else {
-          // Defaults
-          setTheme("dark");
-          setAutoRotate(true);
-          setRotInterval(8);
-          setTl1("Vendas");
-          setTl2("Meta Diária");
-          setTl3("");
-          setTimerSecs(600);
+        if (activeUnit) {
+          const config = await placarService.getSignageConfig(activeUnit);
+          if (config) {
+            setTheme(config.theme || "dark");
+            setAutoRotate(config.auto_rotate);
+            setRotInterval(config.rot_interval);
+            setTl1(config.timer_label1 || "Vendas");
+            setTl2(config.timer_label2 || "Meta Diária");
+            setTl3(config.timer_label3 || "");
+            setTimerSecs(config.timer_seconds || 600);
+          } else {
+            // Defaults
+            setTheme("dark");
+            setAutoRotate(true);
+            setRotInterval(8);
+            setTl1("Vendas");
+            setTl2("Meta Diária");
+            setTl3("");
+            setTimerSecs(600);
+          }
         }
       } catch (err) {
         console.error("Erro ao carregar dados da unidade no Admin:", err);
@@ -627,9 +727,10 @@ export function AdminPanel({ activeSection }: { activeSection: string }) {
     };
 
     loadData();
-  }, [activeUnit]);
+  }, [activeUnit, activeUnitId]);
 
   const updateSignage = async (patch: Partial<SignageSettings>) => {
+    if (activeUnitId === "Todas") return;
     try {
       await placarService.saveSignageConfig({
         unidade_id: activeUnit,
@@ -658,8 +759,13 @@ export function AdminPanel({ activeSection }: { activeSection: string }) {
         await placarService.saveImovel(payload);
       }
       // Refresh local imoveis list
-      const list = await placarService.getImoveis(activeUnit);
-      setImoveis(list);
+      if (activeUnitId === "Todas") {
+        const list = await placarService.getAllImoveis();
+        setImoveis(list);
+      } else {
+        const list = await placarService.getImoveis(activeUnit);
+        setImoveis(list);
+      }
       showSaved();
     } catch (err) {
       console.error("Erro:", err);
@@ -675,11 +781,6 @@ export function AdminPanel({ activeSection }: { activeSection: string }) {
     } catch (err) {
       console.error(err);
     }
-  };
-
-  const handleUnitChange = (id: string) => {
-    setActiveUnit(id);
-    localStorage.setItem("lopes_active_unit", id);
   };
 
   return (
@@ -699,38 +800,59 @@ export function AdminPanel({ activeSection }: { activeSection: string }) {
                   onSave={handleSaveImovel} 
                   onDelete={handleDeleteImovel} 
                   activeUnit={activeUnit} 
+                  unidades={unidades}
+                  activeUnitId={activeUnitId}
                 />
               )}
               
               {activeSection === "ofertao" && (
-                <SectionOfertao 
-                  label1={tl1} 
-                  label2={tl2} 
-                  label3={tl3} 
-                  seconds={timerSecs} 
-                  onUpdate={(l1, l2, l3, s) => {
-                    setTl1(l1); setTl2(l2); setTl3(l3); setTimerSecs(s);
-                    updateSignage({ timer_label1: l1, timer_label2: l2, timer_label3: l3, timer_seconds: s });
-                  }} 
-                />
+                activeUnitId === "Todas" ? (
+                  <div style={{ padding: "48px 24px", background: "var(--bg3)", border: "1px dashed var(--border)", borderRadius: 16, textAlign: "center", maxWidth: 520 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(227,6,19,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                      <Icons.Timer size={24} color="#E30613" />
+                    </div>
+                    <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "var(--text)", marginTop: 12 }}>Unidade não selecionada</div>
+                    <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 4 }}>Selecione uma unidade específica no cabeçalho para gerenciar o temporizador.</div>
+                  </div>
+                ) : (
+                  <SectionOfertao 
+                    label1={tl1} 
+                    label2={tl2} 
+                    label3={tl3} 
+                    seconds={timerSecs} 
+                    onUpdate={(l1, l2, l3, s) => {
+                      setTl1(l1); setTl2(l2); setTl3(l3); setTimerSecs(s);
+                      updateSignage({ timer_label1: l1, timer_label2: l2, timer_label3: l3, timer_seconds: s });
+                    }} 
+                  />
+                )
               )}
 
               {activeSection === "display" && (
-                <SectionDisplay 
-                  theme={theme} 
-                  unidades={unidades}
-                  onThemeToggle={() => {
-                    const next = theme === "dark" ? "light" : "dark";
-                    setTheme(next);
-                    updateSignage({ theme: next });
-                  }} 
-                  autoRotate={autoRotate} 
-                  interval={rotInterval} 
-                  onAutoRotate={v => { setAutoRotate(v); updateSignage({ auto_rotate: v }); }} 
-                  onInterval={v => { setRotInterval(v); updateSignage({ rot_interval: v }); }} 
-                  activeUnit={activeUnit} 
-                  onUnit={handleUnitChange} 
-                />
+                activeUnitId === "Todas" ? (
+                  <div style={{ padding: "48px 24px", background: "var(--bg3)", border: "1px dashed var(--border)", borderRadius: 16, textAlign: "center", maxWidth: 520 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(227,6,19,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    </div>
+                    <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "var(--text)", marginTop: 12 }}>Unidade não selecionada</div>
+                    <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 4 }}>Selecione uma unidade específica no cabeçalho para configurar a TV de exibição.</div>
+                  </div>
+                ) : (
+                  <SectionDisplay 
+                    theme={theme} 
+                    unidades={unidades}
+                    onThemeToggle={() => {
+                      const next = theme === "dark" ? "light" : "dark";
+                      setTheme(next);
+                      updateSignage({ theme: next });
+                    }} 
+                    autoRotate={autoRotate} 
+                    interval={rotInterval} 
+                    onAutoRotate={v => { setAutoRotate(v); updateSignage({ auto_rotate: v }); }} 
+                    onInterval={v => { setRotInterval(v); updateSignage({ rot_interval: v }); }} 
+                    activeUnit={activeUnit} 
+                  />
+                )
               )}
             </div>
           </div>

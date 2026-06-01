@@ -5,15 +5,17 @@ export interface Imovel {
   id: number;
   unidade_id: string;
   title: string;
-  price: string;
-  area: string;
-  rooms: string;
-  garage: string;
-  address: string;
+  price?: string;
+  area?: string;
+  rooms?: string;
+  garage?: string;
+  address?: string;
   tag: string;
   tag_color: string;
   gradient: string;
+  category: string;
   image_url: string;
+  gallery: string[];
   qr_code_url?: string;
   video_url: string;
   ativo: boolean;
@@ -22,7 +24,7 @@ export interface Imovel {
 }
 
 export interface SignageSettings {
-  id: number;
+  id?: number;
   unidade_id: string;
   theme: "dark" | "light";
   auto_rotate: boolean;
@@ -50,8 +52,9 @@ export const placarService = {
   },
 
   // ─── Pessoas ──────────────────────────────────────────────────────────────
-  getPessoas: async (unidade_id?: string): Promise<Pessoa[]> => {
-    let query = supabase.from("pessoas").select("*").eq("ativo", true).order("nome");
+  getPessoas: async (unidade_id?: string, onlyAtivo = true): Promise<Pessoa[]> => {
+    let query = supabase.from("pessoas").select("id, nome, cargo, unidade_id, foto_url, ativo").order("nome");
+    if (onlyAtivo) query = query.eq("ativo", true);
     if (unidade_id) query = query.eq("unidade_id", unidade_id);
     
     const { data, error } = await query;
@@ -109,7 +112,7 @@ export const placarService = {
 
   // ─── Rankings ─────────────────────────────────────────────────────────────
   getRankings: async (): Promise<(RankingEntry & { pessoa?: Pessoa })[]> => {
-    const { data, error } = await supabase.from("ranking_entries").select(`*, pessoa:pessoas(*)`).eq("ativo", true);
+    const { data, error } = await supabase.from("ranking_entries").select(`*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, ativo)`).eq("ativo", true);
     if (error) throw error;
     return data ?? [];
   },
@@ -124,38 +127,53 @@ export const placarService = {
     return data;
   },
   deleteRankingEntry: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("ranking_entries").update({ ativo: false }).eq("id", id);
+    const { error } = await supabase.from("ranking_entries").delete().eq("id", id);
     if (error) throw error;
   },
 
   // ─── Primeira Venda ───────────────────────────────────────────────────────
-  getPrimeiraVenda: async (): Promise<(PrimeiraVenda & { pessoa: Pessoa }) | null> => {
-    const { data, error } = await supabase
+  getPrimeiraVenda: async (unidadeId?: string): Promise<(PrimeiraVenda & { pessoa: Pessoa })[]> => {
+    let query = supabase
       .from("primeira_venda")
-      .select(`*, pessoa:pessoas(*)`)
-      .eq("ativo", true)
-      .order("criado_em", { ascending: false })
-      .limit(1);
+      .select(`*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, ativo)`)
+      .eq("ativo", true);
+
+    if (unidadeId && unidadeId !== "Todas") {
+      const { data: pessoas } = await supabase
+        .from("pessoas")
+        .select("id")
+        .eq("unidade_id", unidadeId)
+        .eq("ativo", true);
+      const ids = (pessoas || []).map(p => p.id);
+      if (ids.length > 0) {
+        query = query.in("pessoa_id", ids);
+      } else {
+        return [];
+      }
+    }
+
+    const { data, error } = await query.order("criado_em", { ascending: false });
     
     if (error) throw error;
-    return data && data.length > 0 ? data[0] : null;
+    return data ?? [];
   },
   savePrimeiraVenda: async (pv: Omit<PrimeiraVenda, "id" | "criado_em">): Promise<PrimeiraVenda> => {
-    // Inativa os anteriores
-    await supabase.from("primeira_venda").update({ ativo: false }).eq("ativo", true);
     const { data, error } = await supabase.from("primeira_venda").insert(pv).select().single();
     if (error) throw error;
     return data;
   },
+  deletePrimeiraVenda: async (id: string): Promise<void> => {
+    const { error } = await supabase.from("primeira_venda").delete().eq("id", id);
+    if (error) throw error;
+  },
 
   // ─── Imóveis ──────────────────────────────────────────────────────────────
   getImoveis: async (unidade_id: string): Promise<Imovel[]> => {
-    const { data, error } = await supabase
-      .from("imoveis")
-      .select("*")
-      .eq("unidade_id", unidade_id)
-      .eq("ativo", true)
-      .order("id");
+    let query = supabase.from("imoveis").select("*").eq("ativo", true).order("id");
+    if (unidade_id !== "Todas") {
+      query = query.or(`unidade_id.eq.${unidade_id},unidade_id.eq.Todas`);
+    }
+    const { data, error } = await query;
     
     if (error) throw error;
     return data ?? [];

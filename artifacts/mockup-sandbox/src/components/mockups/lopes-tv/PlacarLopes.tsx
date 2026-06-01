@@ -23,9 +23,9 @@ interface RankingPerson {
 }
 
 interface SlideBase { id: string; type: string; category: "Metas Lopes" | "História Lopes"; title: string; }
-interface SlideMeta      extends SlideBase { type: "meta"; valor: string; realizadoNum: number; metaNum: number; periodo: string; showBox?: boolean; }
-interface SlidePVenda    extends SlideBase { type: "pvenda"; nome: string; cargo: string; photoUrl?: string; mensagem: string; detalhe: string; updateFreq: string; }
-interface SlideRanking   extends SlideBase { type: "ranking"; pessoas: RankingPerson[]; updateFreq: string; }
+interface SlideMeta extends SlideBase { type: "meta"; valor: string; realizadoNum: number; metaNum: number; periodo: string; showBox?: boolean; }
+interface SlidePVenda extends SlideBase { type: "pvenda"; nome: string; cargo: string; photoUrl?: string; mensagem: string; detalhe: string; updateFreq: string; }
+interface SlideRanking extends SlideBase { type: "ranking"; pessoas: RankingPerson[]; updateFreq: string; }
 
 type Slide = SlideMeta | SlidePVenda | SlideRanking;
 
@@ -108,16 +108,19 @@ function Sidebar({ unit }: { unit: UnitInfo }) {
 
       {/* Nav */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {unit.navUnits.slice(0, 4).map((u, i) => (
-          <div key={u} style={{ padding: "7px 12px", borderRadius: 9999, background: i === 0 ? "rgba(255,255,255,.18)" : "transparent", cursor: "pointer", fontSize: 12, fontFamily: "'Barlow',sans-serif", fontWeight: i === 0 ? 700 : 500, color: i === 0 ? "#fff" : "rgba(255,255,255,.50)", transition: "all 200ms ease" }}>
-            {u}
-          </div>
-        ))}
+        {unit.navUnits.slice(0, 4).map((u) => {
+          const isSelected = u === unit.name;
+          return (
+            <div key={u} style={{ padding: "7px 12px", borderRadius: 9999, background: isSelected ? "rgba(255,255,255,.18)" : "transparent", cursor: "pointer", fontSize: 12, fontFamily: "'Barlow',sans-serif", fontWeight: isSelected ? 700 : 500, color: isSelected ? "#fff" : "rgba(255,255,255,.50)", transition: "all 200ms ease" }}>
+              {u}
+            </div>
+          );
+        })}
       </div>
 
       {/* Dots */}
       <div style={{ display: "flex", gap: 8, paddingLeft: 12 }}>
-        {[0,1,2].map(i => <div key={i} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,.14)" }} />)}
+        {[0, 1, 2].map(i => <div key={i} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,.14)" }} />)}
       </div>
 
       {/* Handle */}
@@ -134,7 +137,7 @@ function CategoryPill({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
       <div style={{ padding: "5px 14px", borderRadius: 9999, background: "rgba(255,255,255,.12)", backdropFilter: "blur(8px)", fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 600, color: "#fff", border: "1px solid rgba(255,255,255,.15)" }}>{label}</div>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="#1D9BF0"><path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91-1.01-1-2.52-1.27-3.91-.81C14.67 2.88 13.43 2 12 2s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81-1 1.01-1.27 2.52-.81 3.91C2.88 9.33 2 10.57 2 12s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91 1.01 1 2.52 1.27 3.91.81C9.33 21.12 10.57 22 12 22s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81 1-1.01 1.27-2.52.81-3.91C21.12 14.67 22 13.43 22 12zm-6.16-1.4l-3.75 5.02a1 1 0 0 1-1.39.19L8.5 14.06a1 1 0 0 1 1.22-1.59l1.73 1.33 3.12-4.18a1 1 0 1 1 1.61 1.17l-.34-.19z"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#1D9BF0"><path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91-1.01-1-2.52-1.27-3.91-.81C14.67 2.88 13.43 2 12 2s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81-1 1.01-1.27 2.52-.81 3.91C2.88 9.33 2 10.57 2 12s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91 1.01 1 2.52 1.27 3.91.81C9.33 21.12 10.57 22 12 22s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81 1-1.01 1.27-2.52.81-3.91C21.12 14.67 22 13.43 22 12zm-6.16-1.4l-3.75 5.02a1 1 0 0 1-1.39.19L8.5 14.06a1 1 0 0 1 1.22-1.59l1.73 1.33 3.12-4.18a1 1 0 1 1 1.61 1.17l-.34-.19z" /></svg>
     </div>
   );
 }
@@ -152,11 +155,11 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
 
       {slide.showBox ? (
         <div style={{ background: "rgba(255,255,255,.10)", borderRadius: 12, padding: "22px 36px", marginBottom: 20, display: "inline-block" }}>
-          <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 64, color: "#fff", letterSpacing: "-.04em" }}>{slide.valor}</span>
+          <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 500, fontSize: 58, color: "#fff", letterSpacing: "0.08em" }}>{slide.valor}</span>
         </div>
       ) : (
         <div style={{ marginBottom: 32 }}>
-          <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 84, color: "#fff", letterSpacing: "-.05em", lineHeight: 1 }}>{slide.valor}</span>
+          <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 500, fontSize: 76, color: "#fff", letterSpacing: "0.08em", lineHeight: 1 }}>{slide.valor}</span>
         </div>
       )}
 
@@ -187,48 +190,36 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
 // ─── Slide: Primeira Venda ────────────────────────────────────────────────────
 
 function SlidePVenda({ slide }: { slide: SlidePVenda }) {
-  const initials = slide.nome.split(" ").map(w => w[0]).slice(0, 2).join("");
+  const initials = slide.nome.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
   return (
     <div className="slide-up" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 52px 0", overflow: "hidden" }}>
       <CategoryPill label={slide.category} />
-      <h1 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 52, color: "#fff", letterSpacing: "-.02em", marginBottom: 28, flexShrink: 0 }}>{slide.title}</h1>
+      <h1 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 52, color: "#fff", letterSpacing: "-.02em", marginBottom: 20, flexShrink: 0 }}>{slide.title}</h1>
 
-      <div style={{ display: "flex", gap: 36, alignItems: "flex-start", minHeight: 0 }}>
-        <div style={{ width: 230, flexShrink: 0, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 72px rgba(0,0,0,.75)", border: "1px solid rgba(255,255,255,.10)" }}>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 0, flex: 1 }}>
+        <div style={{ width: 280, borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 72px rgba(0,0,0,.75)", border: "1px solid rgba(255,255,255,.10)" }}>
           <div style={{
-            width: "100%", height: 200, flexShrink: 0,
+            width: "100%", height: 260,
             background: slide.photoUrl ? `url(${slide.photoUrl}) center/cover` : "linear-gradient(145deg,#1e1e38,#2e2e50)",
             display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
           }}>
             {!slide.photoUrl && (
-              <div style={{ width: 78, height: 78, borderRadius: "50%", background: "rgba(255,255,255,.14)", border: "2px solid rgba(255,255,255,.22)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 30, color: "#fff" }}>
+              <div style={{ width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,.14)", border: "2px solid rgba(255,255,255,.22)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 36, color: "#fff" }}>
                 {initials}
               </div>
             )}
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "10px 14px", background: "linear-gradient(to top, rgba(0,0,0,.82), transparent)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 12, color: "#fff", letterSpacing: ".06em", textTransform: "uppercase" }}>{slide.nome}</span>
-              <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "rgba(255,255,255,.70)" }}>🤍 Lopes</span>
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "12px 16px", background: "linear-gradient(to top, rgba(0,0,0,.82), transparent)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 14, color: "#fff", letterSpacing: ".06em", textTransform: "uppercase" }}>{slide.nome}</span>
+              <img src={logoBranca} alt="Lopes" style={{ height: 13, width: "auto", filter: "brightness(0) invert(1)", opacity: 0.85 }} />
             </div>
           </div>
-          <div style={{ background: "#fff", padding: "13px 15px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "#111", lineHeight: 1.2 }}>{slide.mensagem}</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" fill="#22c55e"/><path d="M8 12l3 3 5-5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <div style={{ background: "#fff", padding: "16px 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "#111", lineHeight: 1.2 }}>{slide.mensagem}</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" fill="#22c55e" /><path d="M8 12l3 3 5-5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </div>
-            <div style={{ width: 34, height: 9, borderRadius: 9999, background: "rgba(0,0,0,.12)", marginBottom: 9 }} />
-            <div style={{ fontSize: 10, color: "#555", lineHeight: 1.55, textTransform: "uppercase", letterSpacing: ".05em", fontFamily: "'DM Sans',sans-serif" }}>{slide.detalhe}</div>
-          </div>
-        </div>
-
-        <div style={{ flex: 1, paddingTop: 6, display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ padding: "10px 18px", background: "rgba(227,6,19,.12)", border: "1px solid rgba(227,6,19,.30)", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 10, alignSelf: "flex-start" }}>
-            <span style={{ fontSize: 20 }}>🏆</span>
-            <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "#fff" }}>{slide.cargo}</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {["🎉 Primeira venda!", "✨ Membro da equipe Lopes", "📈 Crescendo junto conosco"].map((t, i) => (
-              <div key={i} style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: `rgba(255,255,255,${0.72 - i * 0.16})` }}>{t}</div>
-            ))}
+            <div style={{ width: 40, height: 2, background: "rgba(0,0,0,.12)", marginBottom: 12 }} />
+            <div style={{ fontSize: 12, color: "#555", lineHeight: 1.55, textTransform: "uppercase", letterSpacing: ".05em", fontFamily: "'DM Sans',sans-serif" }}>{slide.detalhe}</div>
           </div>
         </div>
       </div>
@@ -250,21 +241,21 @@ function Rocket({ photoUrl, initials, delay = 0 }: { photoUrl?: string; initials
       position: "relative", width: 110, height: 56, flexShrink: 0,
       animation: `rocketEntry 700ms ${delay}ms cubic-bezier(.34,1.56,.64,1) both, rocketFloat 2.2s ${floatStart}ms ease-in-out infinite`,
     }}>
-      <div style={{ position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 2, animation: "flamePulse 350ms ease infinite" }}>
-        {[22,14,9].map((h, i) => (
-          <div key={i} style={{ width: h, height: 6, borderRadius: "0 9999px 9999px 0", background: `linear-gradient(90deg,transparent,${["#FF4500","#FF8C00","#FFD700"][i]})`, opacity: .95 }} />
+      <div style={{ position: "absolute", left: -10, top: "24%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 2, animation: "flamePulse 350ms ease infinite" }}>
+        {[14, 25, 14].map((h, i) => (
+          <div key={i} style={{ width: h, height: 6, borderRadius: "0 9999px 9999px 0", background: `linear-gradient(90deg,transparent,${["#FF4500", "#FFD700", "#FF8C00"][i]})`, opacity: .95 }} />
         ))}
       </div>
       <img src={fogueteImg} alt="foguete" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
       <div style={{
         position: "absolute",
-        left: "47%", top: "50%",
+        left: "61%", top: "50%",
         transform: "translate(-50%, -50%)",
         width: 26, height: 26,
         borderRadius: "50%",
         overflow: "hidden",
         background: photoUrl ? `url(${photoUrl}) center/cover` : "linear-gradient(135deg,#3a3a5c,#1a1a2e)",
-        border: "1px solid rgba(255,255,255,.35)",
+        border: "1.5px solid #190303",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, fontWeight: 800, color: "#fff"
       }}>
@@ -287,7 +278,7 @@ function RocketBar({ person, maxValue, rank, delay }: { person: RankingPerson; m
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 18, height: 76, minHeight: 0 }}>
       <div style={{ width: 44, fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 14, color: colors[0], letterSpacing: ".04em" }}>{colors[2]}</div>
-      
+
       <div style={{ flex: 1, display: "flex", alignItems: "center", position: "relative", height: "100%" }}>
         <div style={{
           height: 16, borderRadius: 9999,
@@ -310,7 +301,7 @@ function RocketBar({ person, maxValue, rank, delay }: { person: RankingPerson; m
 
         <div style={{ marginLeft: 16, display: "flex", flexDirection: "column", animation: `fadeIn 600ms ${delay + 400}ms both`, flexShrink: 0 }}>
           <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 15, color: "#fff", lineHeight: 1.2 }}>{person.name}</span>
-          <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 16, color: colors[0], letterSpacing: ".02em" }}>{fmtBRL(person.value)}</span>
+          <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 15, color: colors[0], letterSpacing: "0.02em" }}>{fmtBRL(person.value)}</span>
         </div>
       </div>
     </div>
@@ -370,7 +361,7 @@ function ProgressDots({ total, current, onChange }: { total: number; current: nu
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-export function PlacarLopes() {
+export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?: string }) {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [unitInfo, setUnitInfo] = useState<UnitInfo>(FALLBACK_UNIT);
   const [slideIdx, setSlideIdx] = useState(0);
@@ -387,17 +378,39 @@ export function PlacarLopes() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const activeUnitId = localStorage.getItem("lopes_active_unit") || "jd-goias";
-        
+        // IDs de unidades válidas (nunca incluem 'Todas' ou vazio)
+        const VALID_UNIT_IDS = ["jd-goias", "marista", "bueno", "oeste"];
+        const resolveUnitId = (raw?: string | null): string | null => {
+          if (!raw || raw === "Todas" || raw.trim() === "") return null;
+          return raw;
+        };
+
+        const rawUnit = propActiveUnitId || localStorage.getItem("lopes_active_unit") || localStorage.getItem("lopes_selected_unit");
+        const activeUnitId: string | null = resolveUnitId(rawUnit);
+        // Para queries que requerem um ID concreto, usa o primeiro unidade válida como fallback
+        const concreteUnitId = activeUnitId || VALID_UNIT_IDS[0];
+
         const [config, pv, allRankings, unidades] = await Promise.all([
-          placarService.getConfig(activeUnitId),
-          placarService.getPrimeiraVenda(),
-          placarService.getRankings(),
-          placarService.getUnidades()
+          placarService.getConfig(concreteUnitId).catch(err => {
+            console.error("Falha ao carregar config na TV:", err);
+            return null;
+          }),
+          placarService.getPrimeiraVenda(activeUnitId || undefined).catch(err => {
+            console.error("Falha ao carregar primeira venda na TV:", err);
+            return null;
+          }),
+          placarService.getRankings().catch(err => {
+            console.error("Falha ao carregar rankings na TV:", err);
+            return [];
+          }),
+          placarService.getUnidades().catch(err => {
+            console.error("Falha ao carregar unidades na TV:", err);
+            return [];
+          })
         ]);
 
         // 1. Mapear Unidade Ativa para o Sidebar
-        const activeUnit = unidades.find(u => u.id === activeUnitId) || unidades[0];
+        const activeUnit = unidades.find(u => u.id === concreteUnitId) || unidades[0];
         if (activeUnit) {
           setUnitInfo({
             name: activeUnit.nome,
@@ -440,25 +453,34 @@ export function PlacarLopes() {
         }
 
         // Slide de Primeira Venda
-        if (pv && pv.pessoa) {
-          generated.push({
-            id: "pvenda",
-            type: "pvenda",
-            category: "História Lopes",
-            title: "Primeira Venda",
-            nome: pv.pessoa.nome,
-            cargo: pv.pessoa.cargo === "gestor" ? "Gestor" : "Corretora",
-            photoUrl: pv.pessoa.foto_url || "",
-            mensagem: pv.mensagem,
-            detalhe: pv.detalhe || "Você faz parte do crescimento da nossa empresa, nosso muito obrigado!",
-            updateFreq: "RANKING ATUALIZADO SEMANALMENTE.",
+        if (Array.isArray(pv)) {
+          pv.forEach((item) => {
+            if (item && item.pessoa) {
+              generated.push({
+                id: `pvenda-${item.id}`,
+                type: "pvenda",
+                category: "História Lopes",
+                title: "Primeira Venda",
+                nome: item.pessoa.nome,
+                cargo: item.pessoa.cargo === "gestor" ? "Gestor" : "Corretora",
+                photoUrl: item.pessoa.foto_url || "",
+                mensagem: item.mensagem,
+                detalhe: item.detalhe || "Você faz parte do crescimento da nossa empresa, nosso muito obrigado!",
+                updateFreq: "RANKING ATUALIZADO SEMANALMENTE.",
+              });
+            }
           });
         }
 
         // Slides de Rankings
         const addRankSlide = (tipo: "mensal" | "anual", categoria: "gestores" | "corretores", title: string) => {
           const entries = allRankings
-            .filter(r => r.tipo === tipo && r.categoria === categoria && r.pessoa)
+            .filter(r => {
+              if (r.tipo !== tipo || r.categoria !== categoria || !r.pessoa) return false;
+              // Só filtra por unidade se tiver um ID concreto (nunca filtra por 'Todas' ou vazio)
+              if (activeUnitId) return r.pessoa.unidade_id === activeUnitId;
+              return true; // sem filtro de unidade → mostra todos
+            })
             .sort((a, b) => a.posicao - b.posicao)
             .slice(0, 3)
             .map(r => ({
@@ -467,7 +489,7 @@ export function PlacarLopes() {
               initials: r.pessoa!.nome.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase(),
               photoUrl: r.pessoa!.foto_url || ""
             }));
-          
+
           if (entries.length > 0) {
             generated.push({
               id: `top-${categoria}-${tipo}`,
@@ -509,7 +531,7 @@ export function PlacarLopes() {
     };
 
     loadData();
-  }, []);
+  }, [propActiveUnitId]);
 
   // Loop de Autoplay
   useEffect(() => {
@@ -537,18 +559,18 @@ export function PlacarLopes() {
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
           <div key={key} style={{ flex: 1, display: "flex" }}>
-            {slide.type === "meta"    && <SlideMeta   slide={slide as SlideMeta}   />}
-            {slide.type === "pvenda"  && <SlidePVenda  slide={slide as SlidePVenda}  />}
+            {slide.type === "meta" && <SlideMeta slide={slide as SlideMeta} />}
+            {slide.type === "pvenda" && <SlidePVenda slide={slide as SlidePVenda} />}
             {slide.type === "ranking" && <SlideRanking slide={slide as SlideRanking} />}
           </div>
 
           {slides.length > 1 && (
             <>
               <ProgressDots total={slides.length} current={slideIdx} onChange={goTo} />
-              {[[-1,"←"],[1,"→"]].map(([dir, lbl]) => (
-                <button 
-                  key={String(lbl)} 
-                  onClick={() => goTo((slideIdx + slides.length + (dir as number)) % slides.length)} 
+              {[[-1, "←"], [1, "→"]].map(([dir, lbl]) => (
+                <button
+                  key={String(lbl)}
+                  onClick={() => goTo((slideIdx + slides.length + (dir as number)) % slides.length)}
                   style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [dir === -1 ? "left" : "right"]: 12, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.6)", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 16, fontFamily: "monospace", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "all 200ms ease" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.15)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.6)"; }}
