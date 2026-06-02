@@ -72,7 +72,7 @@ export const placarService = {
     return data;
   },
   deletePessoa: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("pessoas").update({ ativo: false }).eq("id", id);
+    const { error } = await supabase.from("pessoas").delete().eq("id", id);
     if (error) throw error;
   },
 

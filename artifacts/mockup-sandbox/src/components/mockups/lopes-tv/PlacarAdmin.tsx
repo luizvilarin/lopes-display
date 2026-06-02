@@ -464,7 +464,6 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                 <th>Pessoa</th>
                 <th>Cargo</th>
                 <th>Unidade</th>
-                <th>Status</th>
                 <th></th>
               </tr>
             </thead>
@@ -481,7 +480,6 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                     </td>
                     <td><span className={p.cargo === "gestor" ? "badge-gestor" : "badge-corretor"}>{p.cargo}</span></td>
                     <td style={{ color: "rgba(255,255,255,.55)", fontSize: 12 }}>{un?.nome ?? "—"}</td>
-                    <td><span className={p.ativo ? "badge-ativo" : "badge-inativo"}>{p.ativo ? "ativo" : "inativo"}</span></td>
                     <td>
                       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                         <button className="pa-btn-ghost" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px" }} onClick={() => openEdit(p)}>
@@ -602,13 +600,6 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                     }
                   }}
                 />
-              </div>
-              <div className="pa-form-row">
-                <label className="pa-label">Status</label>
-                <select className="pa-input pa-select" value={modal.ativo ? "1" : "0"} onChange={e => setModal(m => ({ ...m!, ativo: e.target.value === "1" }))}>
-                  <option value="1">Ativo</option>
-                  <option value="0">Inativo</option>
-                </select>
               </div>
             </div>
 
