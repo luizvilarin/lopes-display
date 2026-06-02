@@ -415,9 +415,27 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [subTab, setSubTab] = useState<"ativos" | "arquivados">("ativos");
+  const [cargoFilter, setCargoFilter] = useState<string>("todos");
+  const [unidadeFilter, setUnidadeFilter] = useState<string>("todas");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  useEffect(() => {
+    setUnidadeFilter(activeUnitId === "Todas" ? "todas" : activeUnitId);
+  }, [activeUnitId]);
+
+  // Apply cargo, unit, subtab, and sorting filters
+  const filteredList = pessoas
+    .filter(p => (subTab === "ativos" ? p.ativo : !p.ativo))
+    .filter(p => (cargoFilter === "todos" ? true : p.cargo === cargoFilter))
+    .filter(p => (unidadeFilter === "todas" ? true : p.unidade_id === unidadeFilter))
+    .sort((a, b) => {
+      const nameA = a.nome.toLowerCase();
+      const nameB = b.nome.toLowerCase();
+      return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    });
+
+  // Keep listToShow for the subtab badge counts (filtered by unit only)
   const listToShow = activeUnitId === "Todas" ? pessoas : pessoas.filter(p => p.unidade_id === activeUnitId);
-  const filteredList = listToShow.filter(p => subTab === "ativos" ? p.ativo : !p.ativo);
 
   const openAdd = () => setModal({ 
     cargo: "corretor", 
@@ -495,6 +513,61 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
           >
             Arquivados <span style={{ fontSize: 11, background: "rgba(255,255,255,0.08)", padding: "2px 6px", borderRadius: 10, color: "rgba(255,255,255,0.6)" }}>{listToShow.filter(p => !p.ativo).length}</span>
           </button>
+        </div>
+
+        {/* Filters and Sorting Bar */}
+        <div style={{ 
+          display: "flex", 
+          gap: 12, 
+          flexWrap: "wrap", 
+          marginBottom: 16, 
+          background: "rgba(255,255,255,0.03)", 
+          padding: 12, 
+          borderRadius: 8, 
+          border: "1px solid rgba(255,255,255,0.05)" 
+        }}>
+          {/* Cargo */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 150 }}>
+            <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600, textTransform: "uppercase" }}>Cargo</label>
+            <select 
+              value={cargoFilter} 
+              onChange={e => setCargoFilter(e.target.value)}
+              className="pa-input pa-select" 
+              style={{ padding: "6px 10px", fontSize: 13, height: 34 }}
+            >
+              <option value="todos">Todos os cargos</option>
+              <option value="corretor">Corretores</option>
+              <option value="gestor">Gestores</option>
+            </select>
+          </div>
+
+          {/* Unidade */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 160 }}>
+            <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600, textTransform: "uppercase" }}>Unidade</label>
+            <select 
+              value={unidadeFilter} 
+              onChange={e => setUnidadeFilter(e.target.value)}
+              className="pa-input pa-select" 
+              style={{ padding: "6px 10px", fontSize: 13, height: 34 }}
+            >
+              <option value="todas">Todas as unidades</option>
+              {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+            </select>
+          </div>
+
+          {/* Sorting */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 180, marginLeft: "auto" }}>
+            <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600, textTransform: "uppercase" }}>Ordem Alfabética</label>
+            <select 
+              value={sortOrder} 
+              onChange={e => setSortOrder(e.target.value as "asc" | "desc")}
+              className="pa-input pa-select" 
+              style={{ padding: "6px 10px", fontSize: 13, height: 34 }}
+            >
+              <option value="asc">Nome (A - Z)</option>
+              <option value="desc">Nome (Z - A)</option>
+            </select>
+          </div>
         </div>
 
         <div className="pa-table-wrap">
