@@ -414,7 +414,10 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [subTab, setSubTab] = useState<"ativos" | "arquivados">("ativos");
+
   const listToShow = activeUnitId === "Todas" ? pessoas : pessoas.filter(p => p.unidade_id === activeUnitId);
+  const filteredList = listToShow.filter(p => subTab === "ativos" ? p.ativo : !p.ativo);
 
   const openAdd = () => setModal({ 
     cargo: "corretor", 
@@ -440,8 +443,19 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
     }
   };
 
+  const archive = async (id: string) => {
+    if (!confirm("Arquivar este colaborador? Ele deixará de aparecer no painel da TV e nos rankings ativos.")) return;
+    await placarService.updatePessoa(id, { ativo: false });
+    onChange();
+  };
+
+  const restore = async (id: string) => {
+    await placarService.updatePessoa(id, { ativo: true });
+    onChange();
+  };
+
   const del = async (id: string) => {
-    if (!confirm("Remover esta pessoa?")) return;
+    if (!confirm("Excluir permanentemente este colaborador? Esta ação removerá definitivamente o cadastro dele e todo o seu histórico no placar e primeira venda.")) return;
     await placarService.deletePessoa(id);
     onChange();
   };
@@ -452,9 +466,35 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <div className="pa-title">Pessoas</div>
-            <div className="pa-subtitle">Corretores e gestores cadastrados — {listToShow.length} exibidos</div>
+            <div className="pa-subtitle">Corretores e gestores cadastrados — {filteredList.length} exibidos</div>
           </div>
           <button className="pa-btn-primary" onClick={openAdd}>+ Novo</button>
+        </div>
+
+        {/* Sub-tabs switcher */}
+        <div style={{ display: "flex", gap: 16, borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 16 }}>
+          <button 
+            type="button"
+            onClick={() => setSubTab("ativos")} 
+            style={{
+              background: "none", border: "none", color: subTab === "ativos" ? "#fff" : "rgba(255,255,255,0.4)",
+              fontWeight: 700, paddingBottom: 10, borderBottom: subTab === "ativos" ? "2px solid #E30613" : "2px solid transparent",
+              cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6
+            }}
+          >
+            Ativos <span style={{ fontSize: 11, background: "rgba(255,255,255,0.08)", padding: "2px 6px", borderRadius: 10, color: "rgba(255,255,255,0.6)" }}>{listToShow.filter(p => p.ativo).length}</span>
+          </button>
+          <button 
+            type="button"
+            onClick={() => setSubTab("arquivados")} 
+            style={{
+              background: "none", border: "none", color: subTab === "arquivados" ? "#fff" : "rgba(255,255,255,0.4)",
+              fontWeight: 700, paddingBottom: 10, borderBottom: subTab === "arquivados" ? "2px solid #E30613" : "2px solid transparent",
+              cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6
+            }}
+          >
+            Arquivados <span style={{ fontSize: 11, background: "rgba(255,255,255,0.08)", padding: "2px 6px", borderRadius: 10, color: "rgba(255,255,255,0.6)" }}>{listToShow.filter(p => !p.ativo).length}</span>
+          </button>
         </div>
 
         <div className="pa-table-wrap">
@@ -468,32 +508,55 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
               </tr>
             </thead>
             <tbody>
-              {listToShow.map(p => {
-                const un = unidades.find(u => u.id === p.unidade_id);
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <Avatar pessoa={p} size={32} />
-                        <span style={{ fontWeight: 600 }}>{p.nome}</span>
-                      </div>
-                    </td>
-                    <td><span className={p.cargo === "gestor" ? "badge-gestor" : "badge-corretor"}>{p.cargo}</span></td>
-                    <td style={{ color: "rgba(255,255,255,.55)", fontSize: 12 }}>{un?.nome ?? "—"}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                        <button className="pa-btn-ghost" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px" }} onClick={() => openEdit(p)}>
-                          <Icons.Edit size={14} />
-                          Editar
-                        </button>
-                        <button className="pa-btn-danger" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }} onClick={() => del(p.id)}>
-                          <Icons.Trash size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredList.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: "32px 0" }}>
+                    Nenhum colaborador {subTab === "ativos" ? "ativo" : "arquivado"} encontrado.
+                  </td>
+                </tr>
+              ) : (
+                filteredList.map(p => {
+                  const un = unidades.find(u => u.id === p.unidade_id);
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <Avatar pessoa={p} size={32} />
+                          <span style={{ fontWeight: 600 }}>{p.nome}</span>
+                        </div>
+                      </td>
+                      <td><span className={p.cargo === "gestor" ? "badge-gestor" : "badge-corretor"}>{p.cargo}</span></td>
+                      <td style={{ color: "rgba(255,255,255,.55)", fontSize: 12 }}>{un?.nome ?? "—"}</td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                          {subTab === "ativos" ? (
+                            <>
+                              <button className="pa-btn-ghost" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px" }} onClick={() => openEdit(p)}>
+                                <Icons.Edit size={14} />
+                                Editar
+                              </button>
+                              <button className="pa-btn-ghost" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }} onClick={() => archive(p.id)}>
+                                <Icons.Archive size={14} />
+                                Arquivar
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button className="pa-btn-ghost" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderColor: "rgba(34,197,94,0.3)", color: "#4ade80" }} onClick={() => restore(p.id)}>
+                                <Icons.Refresh size={14} />
+                                Restaurar
+                              </button>
+                              <button className="pa-btn-danger" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }} onClick={() => del(p.id)} title="Excluir Permanentemente">
+                                <Icons.Trash size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

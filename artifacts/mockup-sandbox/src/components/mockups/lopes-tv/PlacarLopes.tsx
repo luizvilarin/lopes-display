@@ -455,7 +455,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         // Slide de Primeira Venda
         if (Array.isArray(pv)) {
           pv.forEach((item) => {
-            if (item && item.pessoa) {
+            if (item && item.pessoa && item.pessoa.ativo) {
               generated.push({
                 id: `pvenda-${item.id}`,
                 type: "pvenda",
@@ -476,7 +476,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         const addRankSlide = (tipo: "mensal" | "anual", categoria: "gestores" | "corretores", title: string) => {
           const entries = allRankings
             .filter(r => {
-              if (r.tipo !== tipo || r.categoria !== categoria || !r.pessoa) return false;
+              if (r.tipo !== tipo || r.categoria !== categoria || !r.pessoa || !r.pessoa.ativo) return false;
               // Só filtra por unidade se tiver um ID concreto (nunca filtra por 'Todas' ou vazio)
               if (activeUnitId) return r.pessoa.unidade_id === activeUnitId;
               return true; // sem filtro de unidade → mostra todos
