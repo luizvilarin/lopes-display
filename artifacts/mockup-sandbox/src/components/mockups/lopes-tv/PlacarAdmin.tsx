@@ -539,6 +539,9 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                                 <Icons.Archive size={14} />
                                 Arquivar
                               </button>
+                              <button className="pa-btn-danger" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }} onClick={() => del(p.id)} title="Excluir Permanentemente">
+                                <Icons.Trash size={14} />
+                              </button>
                             </>
                           ) : (
                             <>
