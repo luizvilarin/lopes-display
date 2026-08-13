@@ -147,12 +147,18 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
       />
 
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-        {(["streaming", "timer", "placar"] as Screen[]).map(s => {
-          const labels: Record<string, string> = { streaming: "Sinalização", timer: "Temporizador", placar: "Placar" };
+        {(["streaming", "timer", "placar", "cultura"] as Screen[]).map(s => {
+          const labels: Record<string, string> = { 
+            streaming: "Sinalização", 
+            timer: "Temporizador", 
+            placar: "Placar",
+            cultura: "Cultura Lopes"
+          };
           const icons: Record<string, React.ReactNode> = { 
             streaming: <Icons.TV size={16} />, 
             timer: <Icons.Timer size={16} />, 
-            placar: <Icons.Rocket size={16} />
+            placar: <Icons.Rocket size={16} />,
+            cultura: <Icons.BookOpen size={16} />
           };
           const isAct = currentScreen === s || (currentScreen === "player" && s === "streaming");
           return (

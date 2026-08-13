@@ -51,7 +51,7 @@ export function UnifiedAdmin() {
         { id: "imoveis",  label: "Produtos",       icon: <Icons.Home /> },
         { id: "ofertao",  label: "Temporizador",   icon: <Icons.Timer /> },
         { id: "display",  label: "Config. TV",     icon: <Icons.TV /> },
-        // { id: "cultura",  label: "Cultura Lopes",  icon: <Icons.BookOpen /> },
+        { id: "cultura",  label: "Cultura Lopes",  icon: <Icons.BookOpen /> },
       ]
     },
     {

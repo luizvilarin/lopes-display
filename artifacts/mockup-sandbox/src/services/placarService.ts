@@ -43,6 +43,70 @@ export const MOCK_UNIDADES: Unidade[] = [
   { id: "oeste",    nome: "Lopes Oeste",         handle: "@lopesoeste",    ativo: true }
 ];
 
+// ─── Imóvel Payload Serializer & Deserializer ─────────────────────────────────
+
+const serializeImovelPayload = (i: Partial<Imovel>) => {
+  let desc = i.description || "";
+  if (i.gallery && Array.isArray(i.gallery) && i.gallery.length > 0) {
+    desc = desc ? `${desc}\n__GALLERY__:${JSON.stringify(i.gallery)}` : `__GALLERY__:${JSON.stringify(i.gallery)}`;
+  }
+  
+  const payload: Record<string, any> = {};
+  if (i.unidade_id !== undefined) payload.unidade_id = i.unidade_id;
+  if (i.title !== undefined) payload.title = i.title;
+  if (i.tag !== undefined) payload.tag = i.tag;
+  if (i.tag_color !== undefined) payload.tag_color = i.tag_color;
+  if (i.gradient !== undefined) payload.gradient = i.gradient;
+  if (i.image_url !== undefined) payload.image_url = i.image_url;
+  if (i.video_url !== undefined) payload.video_url = i.video_url;
+  if (i.ativo !== undefined) payload.ativo = i.ativo;
+  if (i.qr_code_url !== undefined) payload.qr_code_url = i.qr_code_url;
+  
+  payload.description = desc;
+  payload.address = i.category || i.address || "Geral";
+  payload.price = i.price ?? "—";
+  payload.area = i.area ?? "—";
+  payload.rooms = i.rooms ?? "—";
+  payload.garage = i.garage ?? "—";
+
+  return payload;
+};
+
+const deserializeImovelRow = (row: any): Imovel => {
+  let cleanDesc = row.description || "";
+  let gallery: string[] = row.gallery || [];
+  
+  if (cleanDesc.includes("__GALLERY__:")) {
+    const parts = cleanDesc.split("__GALLERY__:");
+    cleanDesc = parts[0].trim();
+    try {
+      gallery = JSON.parse(parts[1]);
+    } catch (e) {}
+  }
+  
+  return {
+    id: row.id,
+    unidade_id: row.unidade_id || "jd-goias",
+    title: row.title || "",
+    price: row.price ?? "—",
+    area: row.area ?? "—",
+    rooms: row.rooms ?? "—",
+    garage: row.garage ?? "—",
+    address: row.address ?? "—",
+    tag: row.tag || "NOVO",
+    tag_color: row.tag_color || "#E30613",
+    gradient: row.gradient || "linear-gradient(160deg,#1a2744,#2d3f6b)",
+    category: row.category || row.address || "Geral",
+    image_url: row.image_url || "",
+    gallery: gallery,
+    qr_code_url: row.qr_code_url || "",
+    video_url: row.video_url || "",
+    ativo: row.ativo !== undefined ? row.ativo : true,
+    description: cleanDesc,
+    criado_em: row.criado_em
+  };
+};
+
 export const placarService = {
   // ─── Unidades ─────────────────────────────────────────────────────────────
   getUnidades: async (): Promise<Unidade[]> => {
@@ -168,38 +232,41 @@ export const placarService = {
   },
 
   // ─── Imóveis ──────────────────────────────────────────────────────────────
-  getImoveis: async (unidade_id: string): Promise<Imovel[]> => {
-    let query = supabase.from("imoveis").select("*").eq("ativo", true).order("id");
+  getImoveis: async (unidade_id: string, onlyActive = false): Promise<Imovel[]> => {
+    let query = supabase.from("imoveis").select("*").order("id");
+    if (onlyActive) {
+      query = query.eq("ativo", true);
+    }
     if (unidade_id !== "Todas") {
       query = query.or(`unidade_id.eq.${unidade_id},unidade_id.eq.Todas`);
     }
     const { data, error } = await query;
-    
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map(deserializeImovelRow);
   },
-  getAllImoveis: async (): Promise<Imovel[]> => {
-    const { data, error } = await supabase
-      .from("imoveis")
-      .select("*")
-      .eq("ativo", true)
-      .order("id");
-    
+  getAllImoveis: async (onlyActive = false): Promise<Imovel[]> => {
+    let query = supabase.from("imoveis").select("*").order("id");
+    if (onlyActive) {
+      query = query.eq("ativo", true);
+    }
+    const { data, error } = await query;
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map(deserializeImovelRow);
   },
   saveImovel: async (i: Omit<Imovel, "id" | "criado_em">): Promise<Imovel> => {
-    const { data, error } = await supabase.from("imoveis").insert(i).select().single();
+    const payload = serializeImovelPayload(i);
+    const { data, error } = await supabase.from("imoveis").insert(payload).select().single();
     if (error) throw error;
-    return data;
+    return deserializeImovelRow(data);
   },
   updateImovel: async (id: number, patch: Partial<Imovel>): Promise<Imovel> => {
-    const { data, error } = await supabase.from("imoveis").update(patch).eq("id", id).select().single();
+    const payload = serializeImovelPayload(patch);
+    const { data, error } = await supabase.from("imoveis").update(payload).eq("id", id).select().single();
     if (error) throw error;
-    return data;
+    return deserializeImovelRow(data);
   },
   deleteImovel: async (id: number): Promise<void> => {
-    const { error } = await supabase.from("imoveis").update({ ativo: false }).eq("id", id);
+    const { error } = await supabase.from("imoveis").delete().eq("id", id);
     if (error) throw error;
   },
 

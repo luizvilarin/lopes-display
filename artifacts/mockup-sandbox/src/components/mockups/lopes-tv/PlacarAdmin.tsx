@@ -1551,8 +1551,8 @@ function SecaoCultura({ unidades, activeUnitId }: { unidades: Unidade[]; activeU
                   </div>
                 )}
 
-                {/* TEMPLATE 4: GRID */}
-                {selectedSlide.template === "grid" && (
+                {/* TEMPLATE 4: GRID, TOOLS, MARKETING */}
+                {(selectedSlide.template === "grid" || selectedSlide.template === "tools" || selectedSlide.template === "marketing") && (
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 4, textAlign: "center" }}>
                     <div>
                       <h2 style={{ fontSize: 9, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
@@ -1573,8 +1573,8 @@ function SecaoCultura({ unidades, activeUnitId }: { unidades: Unidade[]; activeU
                   </div>
                 )}
 
-                {/* TEMPLATE 5: SPLIT-METRICS */}
-                {selectedSlide.template === "split-metrics" && (
+                {/* TEMPLATE 5: SPLIT-METRICS, MERITOCRACIA */}
+                {(selectedSlide.template === "split-metrics" || selectedSlide.template === "meritocracia") && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%", textAlign: "left" }}>
                     <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
                       <h2 style={{ fontSize: 9, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
@@ -1615,6 +1615,139 @@ function SecaoCultura({ unidades, activeUnitId }: { unidades: Unidade[]; activeU
                       <div style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)", padding: 4, borderRadius: 6, fontSize: 4.5, color: "rgba(255,255,255,.7)", textAlign: "center" }}>
                         {selectedSlide.mapData?.centerHighlight}
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TEMPLATE: TEAM-GRID */}
+                {selectedSlide.template === "team-grid" && (
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "center" }}>
+                    <h2 style={{ fontSize: 8, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
+                      {selectedSlide.title.replace(/{unidade}/g, activeUnitName)}
+                    </h2>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 3, marginTop: 2 }}>
+                      {selectedSlide.teamMembers?.slice(0, 6).map((member, mIdx) => (
+                        <div key={mIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#E30613", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {member.image_url ? (
+                              <img src={member.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              <span style={{ fontSize: 4 }}>👤</span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 3.5, color: "#fff", fontWeight: 700, whiteSpace: "nowrap" }}>{member.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TEMPLATE: TIMELINE */}
+                {selectedSlide.template === "timeline" && (
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "left" }}>
+                    <h2 style={{ fontSize: 8, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
+                      {selectedSlide.title.replace(/{unidade}/g, activeUnitName)}
+                    </h2>
+                    <div style={{ display: "flex", gap: 4, marginTop: 2, overflowX: "hidden" }}>
+                      {selectedSlide.timelineItems?.slice(0, 3).map((item, tIdx) => (
+                        <div key={tIdx} style={{ background: "rgba(255,255,255,.04)", padding: 4, borderRadius: 4, flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 4, color: "#ef4444", fontWeight: 800 }}>Etapa {tIdx + 1}</span>
+                          <div style={{ fontSize: 4.5, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</div>
+                          <p style={{ fontSize: 3.5, color: "rgba(255,255,255,.5)", lineHeight: 1.1 }}>{item.description.slice(0, 40)}...</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TEMPLATE: CAMPAIGN */}
+                {selectedSlide.template === "campaign" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 8, width: "100%", textAlign: "left" }}>
+                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 }}>
+                      <span style={{ fontSize: 4, fontWeight: 900, color: "#fca5a5" }}>{selectedSlide.subtitle}</span>
+                      <h2 style={{ fontSize: 8.5, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
+                        {selectedSlide.title.replace(/{unidade}/g, activeUnitName)}
+                      </h2>
+                      <p style={{ fontSize: 4.5, color: "rgba(255,255,255,.6)", lineHeight: 1.2 }}>
+                        {selectedSlide.body?.slice(0, 80)}...
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: "100%", height: 36, borderRadius: 6, background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {selectedSlide.image_url ? (
+                          <img src={selectedSlide.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
+                        ) : (
+                          <span style={{ fontSize: 5 }}>📢</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TEMPLATE: SPIN */}
+                {selectedSlide.template === "spin" && (
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "center" }}>
+                    <h2 style={{ fontSize: 8, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
+                      {selectedSlide.title.replace(/{unidade}/g, activeUnitName)}
+                    </h2>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, marginTop: 2 }}>
+                      {selectedSlide.spinData?.slice(0, 4).map((item, idx) => (
+                        <div key={idx} style={{ background: "rgba(255,255,255,.04)", padding: 4, borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#E30613", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 5, fontWeight: 900 }}>
+                            {item.letter}
+                          </div>
+                          <span style={{ fontSize: 4, color: "#fff", fontWeight: 700 }}>{item.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TEMPLATE: CAREER */}
+                {selectedSlide.template === "career" && (
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "center" }}>
+                    <h2 style={{ fontSize: 8, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
+                      {selectedSlide.title.replace(/{unidade}/g, activeUnitName)}
+                    </h2>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 1.5, marginTop: 1, maxWidth: 160, margin: "0 auto", width: "100%" }}>
+                      {selectedSlide.careerTiers?.slice(0, 5).map((tier, idx) => (
+                        <div key={idx} style={{ background: idx === 0 ? "rgba(227,6,19,.15)" : "rgba(255,255,255,.03)", padding: "1.5px 4px", borderRadius: 3, display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid rgba(255,255,255,.05)" }}>
+                          <span style={{ fontSize: 4, color: "#fff", fontWeight: 700 }}>{tier.name}</span>
+                          <span style={{ fontSize: 5, color: "#E30613", fontWeight: 900 }}>{tier.percentage}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TEMPLATE: BENEFITS */}
+                {selectedSlide.template === "benefits" && (
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "center" }}>
+                    <h2 style={{ fontSize: 8, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
+                      {selectedSlide.title.replace(/{unidade}/g, activeUnitName)}
+                    </h2>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, marginTop: 2 }}>
+                      {selectedSlide.images?.slice(0, 8).map((url, idx) => (
+                        <div key={idx} style={{ background: "rgba(255,255,255,.05)", borderRadius: 4, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <img src={url} alt="" style={{ maxHeight: "80%", maxWidth: "80%", objectFit: "contain" }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TEMPLATE: DRESS-CODE */}
+                {selectedSlide.template === "dress-code" && (
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "center" }}>
+                    <h2 style={{ fontSize: 8, fontWeight: 900, color: "#fff", textTransform: "uppercase" }}>
+                      {selectedSlide.title.replace(/{unidade}/g, activeUnitName)}
+                    </h2>
+                    <div style={{ display: "flex", gap: 3, marginTop: 2, justifyContent: "center" }}>
+                      {selectedSlide.images?.slice(0, 5).map((url, idx) => (
+                        <div key={idx} style={{ width: 14, height: 22, borderRadius: 3, overflow: "hidden", background: "rgba(255,255,255,.05)" }}>
+                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -2066,6 +2199,82 @@ function SecaoCultura({ unidades, activeUnitId }: { unidades: Unidade[]; activeU
                       placeholder="Ex: Presença Forte no Centro-Oeste"
                     />
                   </div>
+                </div>
+              )}
+
+              {/* EDITANDO: OUTROS TEMPLATES (team-grid, timeline, campaign, spin, career, benefits, dress-code, tools, marketing, meritocracia) */}
+              {(editingSlide.template === "team-grid" || 
+                editingSlide.template === "timeline" || 
+                editingSlide.template === "campaign" || 
+                editingSlide.template === "spin" || 
+                editingSlide.template === "career" || 
+                editingSlide.template === "benefits" || 
+                editingSlide.template === "dress-code" ||
+                editingSlide.template === "tools" ||
+                editingSlide.template === "marketing" ||
+                editingSlide.template === "meritocracia") && (
+                <div className="pa-grid-2">
+                  <div className="pa-form-row" style={{ gridColumn: "1 / -1" }}>
+                    <label className="pa-label">Subtítulo Superior</label>
+                    <input 
+                      className="pa-input" 
+                      value={editingSlide.subtitle || ""} 
+                      onChange={e => setEditingSlide({ ...editingSlide, subtitle: e.target.value })} 
+                      placeholder="Subtítulo do slide..."
+                    />
+                  </div>
+                  <div className="pa-form-row" style={{ gridColumn: "1 / -1" }}>
+                    <label className="pa-label">Título Principal (Use \n para pular linha)</label>
+                    <textarea 
+                      className="pa-input" 
+                      rows={2}
+                      value={editingSlide.title} 
+                      onChange={e => setEditingSlide({ ...editingSlide, title: e.target.value })} 
+                      placeholder="Título do slide..."
+                    />
+                  </div>
+                  {(editingSlide.template === "campaign" || 
+                    editingSlide.template === "spin" || 
+                    editingSlide.template === "career" || 
+                    editingSlide.template === "dress-code" ||
+                    editingSlide.template === "meritocracia") && (
+                    <div className="pa-form-row" style={{ gridColumn: "1 / -1" }}>
+                      <label className="pa-label">Corpo de Texto / Descrição</label>
+                      <textarea 
+                        className="pa-input" 
+                        rows={4} 
+                        value={editingSlide.body || ""} 
+                        onChange={e => setEditingSlide({ ...editingSlide, body: e.target.value })} 
+                        placeholder="Texto descritivo..."
+                      />
+                    </div>
+                  )}
+                  {editingSlide.image_url !== undefined && (
+                    <div className="pa-form-row" style={{ gridColumn: "1 / -1", borderTop: "1px dashed rgba(255,255,255,.1)", paddingTop: 14 }}>
+                      <label className="pa-label">Imagem do Slide</label>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
+                        <div style={{
+                          width: 90, height: 50, borderRadius: 8, overflow: "hidden",
+                          border: "1px solid rgba(255,255,255,.1)",
+                          background: editingSlide.image_url ? `url(${editingSlide.image_url}) center/cover no-repeat` : "rgba(255,255,255,0.05)",
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                        }}>
+                          {!editingSlide.image_url && <span style={{ fontSize: 10 }}>Visual</span>}
+                        </div>
+                        
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <button
+                            type="button"
+                            className="pa-btn-ghost"
+                            style={{ padding: "6px 12px", fontSize: 13 }}
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            Upload Foto
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

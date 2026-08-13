@@ -259,8 +259,9 @@ function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClo
     try {
       await onSave(draft);
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao salvar imóvel:", err);
+      alert("Erro ao salvar produto: " + (err?.message || "Erro de conexão com o banco de dados."));
     } finally {
       setSaving(false);
     }

@@ -219,6 +219,22 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
           0% { r: 6; opacity: 1; }
           100% { r: 18; opacity: 0; }
         }
+        /* Scrollbar Stylings */
+        .scrollbar-thin::-webkit-scrollbar {
+          height: 6px;
+          width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: rgba(239, 68, 68, 0.35);
+          border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: rgba(239, 68, 68, 0.6);
+        }
       ` }} />
 
       {/* 🔮 Grafismos Vetoriais Animados no Fundo */}
@@ -291,33 +307,44 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
           
           {/* 🌟 TEMPLATE 1: COVER (Capa do Slide) */}
           {currentSlide.template === "cover" && (
-            <div className="text-center flex flex-col items-center justify-center gap-6 max-w-4xl py-12">
-              {/* Selo do Ano */}
-              {currentSlide.year && (
-                <div className="bg-red-600/10 border border-red-500/30 text-red-400 font-extrabold text-sm tracking-[0.2em] px-6 py-2 rounded-full uppercase shadow-lg">
-                  {currentSlide.year}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center w-full max-w-5xl py-4">
+              <div className="lg:col-span-7 text-left flex flex-col gap-6">
+                {currentSlide.year && (
+                  <div className="self-start bg-red-600/10 border border-red-500/30 text-red-400 font-extrabold text-sm tracking-[0.2em] px-5 py-1.5 rounded-full uppercase shadow-lg">
+                    ONBOARDING {currentSlide.year}
+                  </div>
+                )}
+                <h1 className="text-5xl lg:text-7xl font-black tracking-tight text-white uppercase text-glow leading-none font-mono">
+                  {replaceVariables(currentSlide.title)}
+                </h1>
+                <div className="w-24 h-1.5 bg-gradient-to-r from-red-600 to-red-400 rounded-full"></div>
+                {currentSlide.subtitle && (
+                  <p className="text-lg lg:text-2xl text-white/80 font-medium tracking-wide">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </p>
+                )}
+                {currentSlide.unitLabel && (
+                  <div className="self-start mt-4 bg-gradient-to-r from-[#9E0018] to-[#60000E] border border-red-500/20 px-6 py-2.5 rounded-xl shadow-2xl">
+                    <span className="text-xs font-black tracking-[0.3em] text-white">
+                      {replaceVariables(currentSlide.unitLabel)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="lg:col-span-5 hidden lg:flex justify-center">
+                <div className="w-80 h-[380px] rounded-3xl overflow-hidden border-2 border-white/10 shadow-2xl relative">
+                  <img 
+                    src={currentSlide.image_url || "/cultura/FOTOS/LOJA AP.jpg"} 
+                    alt="Lopes Loja" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
+                  <div className="absolute bottom-6 left-6 right-6 text-left">
+                    <p className="text-[10px] font-black text-red-400 tracking-widest uppercase">Unidade Oficial</p>
+                    <p className="text-sm font-bold text-white mt-1">Lopes {unitName}</p>
+                  </div>
                 </div>
-              )}
-              {/* Título Monumental */}
-              <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white uppercase text-glow leading-none whitespace-pre-line font-mono">
-                {replaceVariables(currentSlide.title)}
-              </h1>
-              {/* Linha Divisória */}
-              <div className="w-24 h-1 bg-gradient-to-r from-red-600 to-red-400 rounded-full my-2"></div>
-              {/* Subtítulo */}
-              {currentSlide.subtitle && (
-                <p className="text-lg md:text-2xl text-white/80 font-medium tracking-wide max-w-2xl">
-                  {replaceVariables(currentSlide.subtitle)}
-                </p>
-              )}
-              {/* Unidade em Banner de Aço */}
-              {currentSlide.unitLabel && (
-                <div className="mt-8 bg-gradient-to-r from-[#9E0018] to-[#60000E] border border-red-500/20 px-8 py-3 rounded-xl shadow-2xl">
-                  <span className="text-sm font-black tracking-[0.3em] text-white">
-                    {replaceVariables(currentSlide.unitLabel)}
-                  </span>
-                </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -333,24 +360,23 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
                   {replaceVariables(currentSlide.title)}
                 </h2>
                 <div className="w-16 h-1 bg-red-500 rounded-full"></div>
-                <p className="text-base lg:text-lg text-white/70 leading-relaxed font-light">
+                <p className="text-base lg:text-lg text-white/70 leading-relaxed font-light whitespace-pre-line">
                   {replaceVariables(currentSlide.body)}
                 </p>
               </div>
               {/* Coluna Imagem Representativa */}
               <div className="lg:col-span-5 flex justify-center">
-                <div className="relative p-3 rounded-full animate-float" style={{ backgroundColor: "#190303" }}>
-                  {/* Círculo do Diretor com a Moldura #190303 solicitada no Requisito 4 */}
-                  <div className="w-72 h-72 rounded-full overflow-hidden border-[6px] border-[#E30613]/80 shadow-2xl relative">
+                <div className="relative p-3 rounded-3xl bg-black/40 border border-white/10 shadow-2xl overflow-hidden">
+                  <div className="w-80 h-80 rounded-2xl overflow-hidden border-4 border-[#E30613]/85 relative">
                     <img 
                       src={currentSlide.image_url} 
-                      alt="Direção Lopes" 
-                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                      alt="Lopes Apresentação" 
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   </div>
                   {/* Badge Flutuante */}
-                  <div className="absolute -bottom-2 right-4 bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-black px-4 py-2 rounded-xl border border-red-500/20 shadow-xl uppercase tracking-wider">
+                  <div className="absolute bottom-6 right-6 bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-black px-4 py-2 rounded-xl border border-red-500/20 shadow-xl uppercase tracking-wider">
                     {unitName} Liderança
                   </div>
                 </div>
@@ -360,45 +386,60 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
 
           {/* 📋 TEMPLATE 3: BULLETS (Lista de itens / tópicos) */}
           {currentSlide.template === "bullets" && (
-            <div className="flex flex-col gap-8 w-full max-w-5xl text-left">
-              <div className="flex flex-col gap-2">
-                <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
-                  {replaceVariables(currentSlide.subtitle)}
-                </span>
-                <h2 className="text-3xl lg:text-4xl font-extrabold text-white uppercase tracking-tight whitespace-pre-line">
-                  {replaceVariables(currentSlide.title)}
-                </h2>
-                <div className="w-16 h-1 bg-red-500 rounded"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center w-full max-w-6xl text-left">
+              <div className={currentSlide.image_url ? "lg:col-span-7" : "lg:col-span-12"}>
+                <div className="flex flex-col gap-2 mb-6">
+                  <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </span>
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-white uppercase tracking-tight whitespace-pre-line">
+                    {replaceVariables(currentSlide.title)}
+                  </h2>
+                  <div className="w-16 h-1 bg-red-500 rounded"></div>
+                </div>
+
+                <div className={`grid gap-6 ${currentSlide.image_url ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"}`}>
+                  {currentSlide.bullets?.map((item, idx) => (
+                    <div key={idx} className="glass-card p-6 rounded-2xl flex flex-col gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-red-600/20 flex items-center justify-center border border-red-500/30">
+                          <span className="text-red-400 font-black text-sm">{idx + 1}</span>
+                        </div>
+                        <h3 className="text-base font-bold text-white leading-snug">
+                          {replaceVariables(item.title)}
+                        </h3>
+                      </div>
+                      
+                      <ul className="flex flex-col gap-2 pl-2">
+                        {item.subtexts?.map((sub, sIdx) => (
+                          <li key={sIdx} className="text-xs text-white/70 flex items-start gap-2 leading-relaxed">
+                            <span className="text-red-500 mt-1.5">•</span>
+                            <span>{replaceVariables(sub)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                {currentSlide.bullets?.map((item, idx) => (
-                  <div key={idx} className="glass-card p-6 rounded-2xl flex flex-col gap-4 transition-all duration-300 transform hover:-translate-y-1">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-red-600/20 flex items-center justify-center border border-red-500/30">
-                        <span className="text-red-400 font-black text-sm">{idx + 1}</span>
-                      </div>
-                      <h3 className="text-base font-bold text-white leading-snug">
-                        {replaceVariables(item.title)}
-                      </h3>
-                    </div>
-                    
-                    <ul className="flex flex-col gap-2 pl-2">
-                      {item.subtexts?.map((sub, sIdx) => (
-                        <li key={sIdx} className="text-xs text-white/60 flex items-start gap-2 leading-relaxed">
-                          <span className="text-red-500 mt-1.5">•</span>
-                          <span>{replaceVariables(sub)}</span>
-                        </li>
-                      ))}
-                    </ul>
+              {currentSlide.image_url && (
+                <div className="lg:col-span-5 flex justify-center">
+                  <div className="w-full max-w-sm h-96 rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative">
+                    <img 
+                      src={currentSlide.image_url} 
+                      alt="Cultura Lopes" 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* 🗂️ TEMPLATE 4: GRID (Cartões de Pilares MVV) */}
-          {currentSlide.template === "grid" && (
+          {/* 🗂️ TEMPLATE 4: GRID (Cartões de Pilares MVV, Gmail, Google Calendar, Marketing) */}
+          {(currentSlide.template === "grid" || currentSlide.template === "tools" || currentSlide.template === "marketing") && (
             <div className="flex flex-col gap-8 w-full max-w-5xl text-center items-center">
               <div className="flex flex-col gap-2 items-center">
                 {currentSlide.subtitle && (
@@ -435,7 +476,7 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
                         </span>
                       </div>
 
-                      <p className="text-sm text-white/80 leading-relaxed font-light">
+                      <p className="text-sm text-white/80 leading-relaxed font-light font-sans whitespace-pre-line">
                         {replaceVariables(card.content)}
                       </p>
 
@@ -456,8 +497,8 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
             </div>
           )}
 
-          {/* 📊 TEMPLATE 5: SPLIT-METRICS (Overview com Métricas Gigantes) */}
-          {currentSlide.template === "split-metrics" && (
+          {/* 📊 TEMPLATE 5: SPLIT-METRICS (Overview com Métricas Gigantes, Meritocracia) */}
+          {(currentSlide.template === "split-metrics" || currentSlide.template === "meritocracia") && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full text-left">
               {/* Coluna Dados de Texto */}
               <div className="lg:col-span-6 flex flex-col gap-6">
@@ -465,7 +506,7 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
                   {replaceVariables(currentSlide.title)}
                 </h2>
                 <div className="w-16 h-1 bg-red-500 rounded"></div>
-                <p className="text-base text-white/70 leading-relaxed font-light">
+                <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-line">
                   {replaceVariables(currentSlide.body)}
                 </p>
                 {currentSlide.image_url && (
@@ -475,13 +516,13 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
                       alt="Lopes Overview" 
                       className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent"></div>
                   </div>
                 )}
               </div>
               
               {/* Coluna Contadores Gigantes */}
-              <div className="lg:col-span-6 flex flex-col gap-6">
+              <div className="lg:col-span-6 flex flex-col gap-6 font-sans">
                 {currentSlide.metrics?.map((m, idx) => (
                   <div 
                     key={idx} 
@@ -491,11 +532,11 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
                       <span className="text-xs text-white/50 font-bold uppercase tracking-wider">
                         Indicador {idx + 1}
                       </span>
-                      <span className="text-sm font-semibold text-white/95 mt-1">
+                      <span className="text-sm font-semibold text-white/95 mt-1 leading-tight">
                         {replaceVariables(m.label)}
                       </span>
                     </div>
-                    <div className="text-3xl lg:text-5xl font-black text-red-500 tracking-tight font-mono text-glow">
+                    <div className="text-3xl lg:text-5xl font-black text-red-500 tracking-tight font-mono text-glow shrink-0">
                       {replaceVariables(m.value)}
                     </div>
                   </div>
@@ -504,7 +545,283 @@ export function CulturaLopes({ activeUnitId }: CulturaLopesProps) {
             </div>
           )}
 
-          {/* 🗺️ TEMPLATE 6: MAP (Mapa da Força Lopes no Brasil) */}
+          {/* 👥 TEMPLATE 6: TEAM-GRID (Corpo Administrativo) */}
+          {currentSlide.template === "team-grid" && (
+            <div className="flex flex-col gap-6 w-full max-w-6xl text-center items-center">
+              <div className="flex flex-col gap-2 items-center">
+                {currentSlide.subtitle && (
+                  <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </span>
+                )}
+                <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight uppercase">
+                  {replaceVariables(currentSlide.title)}
+                </h2>
+                <div className="w-16 h-1 bg-red-500 rounded-full"></div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 w-full mt-4 justify-center">
+                {currentSlide.teamMembers?.map((member, idx) => (
+                  <div key={idx} className="glass-card p-4 rounded-2xl flex flex-col items-center gap-3 transition-transform duration-300 transform hover:-translate-y-1">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-red-500/40 shadow-lg relative">
+                      <img src={member.image_url} alt={member.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex flex-col text-center">
+                      <span className="text-sm font-bold text-white leading-tight">{member.name}</span>
+                      <span className="text-[10px] text-white/50 font-semibold uppercase mt-0.5 tracking-wider">{member.role}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 📅 TEMPLATE 7: TIMELINE (Linha do Tempo de Eventos) */}
+          {currentSlide.template === "timeline" && (
+            <div className="flex flex-col gap-6 w-full max-w-5xl text-center items-center">
+              <div className="flex flex-col gap-2 items-center">
+                {currentSlide.subtitle && (
+                  <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </span>
+                )}
+                <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight uppercase">
+                  {replaceVariables(currentSlide.title)}
+                </h2>
+                <div className="w-16 h-1 bg-red-500 rounded-full"></div>
+              </div>
+
+              {/* Scrollable timeline list */}
+              <div className="flex gap-4 w-full overflow-x-auto py-4 px-2 mt-4 justify-start lg:justify-center scrollbar-thin">
+                {currentSlide.timelineItems?.map((item, idx) => (
+                  <div key={idx} className="glass-card p-5 rounded-2xl flex flex-col gap-3 min-w-[280px] max-w-[320px] text-left relative overflow-hidden flex-shrink-0 transition-transform duration-300 hover:-translate-y-1">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-red-400" />
+                    
+                    <span className="text-xs font-black text-red-400 uppercase tracking-widest">
+                      Etapa {idx + 1}
+                    </span>
+                    <h3 className="text-base font-bold text-white mt-1 leading-snug">
+                      {replaceVariables(item.title)}
+                    </h3>
+                    <p className="text-xs text-white/70 leading-relaxed font-light mt-1">
+                      {replaceVariables(item.description)}
+                    </p>
+
+                    {item.image_url && (
+                      <div className="w-full h-24 rounded-lg overflow-hidden border border-white/5 mt-2">
+                        <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 📢 TEMPLATE 8: CAMPAIGN (Campanhas Mobi 0km e Indique e Ganhe) */}
+          {currentSlide.template === "campaign" && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center w-full max-w-6xl text-left">
+              <div className="lg:col-span-7 flex flex-col gap-6">
+                <div className="flex flex-col gap-2">
+                  {currentSlide.subtitle && (
+                    <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                      {replaceVariables(currentSlide.subtitle)}
+                    </span>
+                  )}
+                  <h2 className="text-3xl lg:text-5xl font-black text-white tracking-tight uppercase leading-none">
+                    {replaceVariables(currentSlide.title)}
+                  </h2>
+                  <div className="w-16 h-1 bg-red-500 rounded"></div>
+                </div>
+
+                <p className="text-sm lg:text-base text-white/85 leading-relaxed font-light whitespace-pre-line">
+                  {replaceVariables(currentSlide.body)}
+                </p>
+
+                <div className="flex flex-col gap-4 mt-2">
+                  {currentSlide.bullets?.map((bullet, idx) => (
+                    <div key={idx} className="glass-card p-5 rounded-2xl border-l-4 border-l-red-500">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">
+                        {replaceVariables(bullet.title)}
+                      </h3>
+                      <ul className="flex flex-col gap-1.5">
+                        {bullet.subtexts?.map((sub, sIdx) => (
+                          <li key={sIdx} className="text-xs text-white/75 flex items-start gap-2 leading-relaxed font-light">
+                            <span className="text-red-500 mt-1">•</span>
+                            <span>{replaceVariables(sub)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {currentSlide.image_url && (
+                <div className="lg:col-span-5 flex justify-center">
+                  <div className="w-full max-w-md aspect-[4/3] rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative">
+                    <img 
+                      src={currentSlide.image_url} 
+                      alt={currentSlide.title} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 🌀 TEMPLATE 9: SPIN (Metodologia SPIN Selling) */}
+          {currentSlide.template === "spin" && (
+            <div className="flex flex-col gap-6 w-full max-w-5xl text-center items-center font-sans">
+              <div className="flex flex-col gap-2 items-center">
+                {currentSlide.subtitle && (
+                  <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </span>
+                )}
+                <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight uppercase font-sans">
+                  {replaceVariables(currentSlide.title)}
+                </h2>
+                <div className="w-16 h-1 bg-red-500 rounded-full"></div>
+              </div>
+
+              {currentSlide.body && (
+                <p className="text-sm lg:text-base text-white/80 max-w-3xl leading-relaxed italic font-light">
+                  "{replaceVariables(currentSlide.body)}"
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-4">
+                {currentSlide.spinData?.map((item, idx) => (
+                  <div key={idx} className="glass-card p-6 rounded-2xl flex flex-col items-center text-center gap-4 relative overflow-hidden transition-transform duration-300 hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-red-700 text-white font-black text-2xl flex items-center justify-center shadow-lg border border-red-400/20">
+                      {item.letter}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-base font-bold text-white">{item.title}</h3>
+                      <p className="text-xs text-white/60 leading-normal font-light">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 📈 TEMPLATE 10: CAREER (Plano de Carreira do Corretor) */}
+          {currentSlide.template === "career" && (
+            <div className="flex flex-col gap-6 w-full max-w-5xl text-center items-center">
+              <div className="flex flex-col gap-2 items-center">
+                {currentSlide.subtitle && (
+                  <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </span>
+                )}
+                <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight uppercase">
+                  {replaceVariables(currentSlide.title)}
+                </h2>
+                <div className="w-16 h-1 bg-red-500 rounded-full"></div>
+              </div>
+
+              {currentSlide.body && (
+                <p className="text-sm lg:text-base text-white/80 max-w-3xl leading-relaxed font-light">
+                  {replaceVariables(currentSlide.body)}
+                </p>
+              )}
+
+              <div className="flex flex-col gap-3 w-full max-w-3xl mt-4 font-sans">
+                {currentSlide.careerTiers?.map((tier, idx) => {
+                  const colorClass = idx === 0 
+                    ? "from-red-600 to-red-700 border-red-500" 
+                    : idx === 1
+                    ? "from-red-700/85 to-red-800/85 border-red-600/30"
+                    : "from-white/5 to-white/5 border-white/5";
+                  
+                  return (
+                    <div key={idx} className={`glass-card p-4 rounded-xl flex flex-col sm:flex-row items-center sm:justify-between gap-4 border text-left bg-gradient-to-r ${colorClass} transition-transform duration-300 hover:translate-x-1`}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-black px-2.5 py-1 rounded-lg bg-black/40 text-white min-w-[32px] text-center">
+                          {idx + 1}
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-extrabold text-white leading-tight">{tier.name}</span>
+                          <span className="text-xs text-white/60 leading-tight mt-0.5 font-light">{tier.rule}</span>
+                        </div>
+                      </div>
+                      <div className="text-xl font-black text-white bg-black/30 px-4 py-1.5 rounded-lg border border-white/10 shrink-0 font-mono text-glow">
+                        {tier.percentage}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 🎁 TEMPLATE 11: BENEFITS (Clube de Benefícios) */}
+          {currentSlide.template === "benefits" && (
+            <div className="flex flex-col gap-6 w-full max-w-5xl text-center items-center">
+              <div className="flex flex-col gap-2 items-center">
+                {currentSlide.subtitle && (
+                  <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </span>
+                )}
+                <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight uppercase">
+                  {replaceVariables(currentSlide.title)}
+                </h2>
+                <div className="w-16 h-1 bg-red-500 rounded-full"></div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full mt-4 justify-center items-center">
+                {currentSlide.images?.map((url, idx) => (
+                  <div key={idx} className="glass-card p-4 rounded-2xl flex items-center justify-center aspect-[3/2] overflow-hidden transition-all duration-300 transform hover:scale-105 hover:bg-white/10">
+                    <img src={url} alt={`Parceiro ${idx + 1}`} className="max-w-full max-h-full object-contain filter brightness-95 hover:brightness-100 transition-all" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 👗 TEMPLATE 12: DRESS-CODE (Vestimenta e Aparência Masculina & Feminina) */}
+          {currentSlide.template === "dress-code" && (
+            <div className="flex flex-col gap-6 w-full max-w-5xl text-center items-center">
+              <div className="flex flex-col gap-2 items-center">
+                {currentSlide.subtitle && (
+                  <span className="text-red-400 font-black text-xs tracking-[0.3em] uppercase">
+                    {replaceVariables(currentSlide.subtitle)}
+                  </span>
+                )}
+                <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight uppercase">
+                  {replaceVariables(currentSlide.title)}
+                </h2>
+                <div className="w-16 h-1 bg-red-500 rounded-full"></div>
+              </div>
+
+              {currentSlide.body && (
+                <p className="text-xs lg:text-sm text-white/70 max-w-3xl leading-relaxed font-light">
+                  {replaceVariables(currentSlide.body)}
+                </p>
+              )}
+
+              <div className="flex gap-4 w-full overflow-x-auto py-4 px-2 mt-4 justify-start lg:justify-center scrollbar-thin">
+                {currentSlide.images?.map((url, idx) => (
+                  <div key={idx} className="w-44 h-64 rounded-2xl overflow-hidden border border-white/10 shadow-xl relative flex-shrink-0 transition-transform duration-300 hover:scale-105">
+                    <img src={url} alt={`Estilo ${idx + 1}`} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3 right-3 text-left">
+                      <span className="text-[10px] font-black text-white/90 bg-red-600/80 px-2 py-0.5 rounded uppercase tracking-wider">
+                        Referência {idx + 1}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 🗺️ TEMPLATE 13: MAP (Mapa da Força Lopes no Brasil) */}
           {currentSlide.template === "map" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center w-full">
               {/* Texto Esquerda */}
