@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import logoBranca from "@/assets/logo-branca.png";
 import faviconLopes from "@/assets/favicon-lopes.png";
 import {
@@ -7,7 +7,7 @@ import {
 } from "@/services/placarService";
 import type {
   Pessoa, Unidade, RankingEntry, PrimeiraVenda, ConfigMetas,
-  Cargo, TipoRanking, CategoriaRanking,
+  Cargo, TipoRanking, CategoriaRanking, Pasta, RankingPastaEntry,
 } from "@/types/placar";
 import { Icons } from "@/components/common/Icons";
 import { Slide, DEFAULT_SLIDES } from "@/services/onboardingData";
@@ -760,6 +760,309 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
           }}
           onCancel={() => setCropSrc(null)}
         />
+      )}
+    </>
+  );
+}
+
+// ─── Section: Ranking de Pastas (Unificado) ───────────────────────────────────
+
+function SecaoRankingsPastas({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: () => void; }) {
+  const [pastas, setPastas] = useState<Pasta[]>([]);
+  const [selectedPastaId, setSelectedPastaId] = useState<string>("");
+  const [rankingEntries, setRankingEntries] = useState<(RankingPastaEntry & { pessoa?: Pessoa })[]>([]);
+  const [cat, setCat] = useState<"corretor" | "gestor">("corretor");
+
+  // Modals state
+  const [showPastaModal, setShowPastaModal] = useState(false);
+  const [pastaForm, setPastaForm] = useState<Partial<Pasta>>({ titulo: "", meta_pastas: 30 });
+  const [showEntryModal, setShowEntryModal] = useState(false);
+  const [entryForm, setEntryForm] = useState<Partial<RankingPastaEntry>>({ pessoa_id: "", posicao: 1, quantidade_pastas: 1 });
+  const [saving, setSaving] = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const pList = await placarService.getPastas();
+      setPastas(pList);
+      const activeId = selectedPastaId || pList[0]?.id || "";
+      if (activeId && !selectedPastaId) setSelectedPastaId(activeId);
+      if (activeId) {
+        const rList = await placarService.getRankingPastas(activeId);
+        setRankingEntries(rList);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [selectedPastaId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const activePasta = pastas.find(p => p.id === selectedPastaId);
+
+  const categoryEntries = rankingEntries
+    .filter(e => e.categoria === cat)
+    .sort((a, b) => a.posicao - b.posicao);
+
+  const maxPositions = cat === "corretor" ? 30 : 10;
+  const topLimit = cat === "corretor" ? 10 : 5;
+
+  const handleSavePasta = async () => {
+    if (!pastaForm.titulo) return;
+    setSaving(true);
+    try {
+      const saved = await placarService.savePasta(pastaForm);
+      setShowPastaModal(false);
+      setPastaForm({ titulo: "", meta_pastas: 30 });
+      setSelectedPastaId(saved.id);
+      loadData();
+      onChange();
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao salvar Pasta");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePasta = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este Lançamento / Pasta?")) return;
+    await placarService.deletePasta(id);
+    setSelectedPastaId("");
+    loadData();
+    onChange();
+  };
+
+  const handleSaveEntry = async () => {
+    if (!entryForm.pessoa_id || !selectedPastaId) return;
+    setSaving(true);
+    try {
+      await placarService.saveRankingPastaEntry({
+        ...entryForm,
+        pasta_id: selectedPastaId,
+        categoria: cat,
+      });
+      setShowEntryModal(false);
+      setEntryForm({ pessoa_id: "", posicao: 1, quantidade_pastas: 1 });
+      loadData();
+      onChange();
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao salvar posição no ranking");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteEntry = async (id: string) => {
+    if (!confirm("Remover esta pessoa do ranking de pastas?")) return;
+    await placarService.deleteRankingPastaEntry(id);
+    loadData();
+    onChange();
+  };
+
+  const availablePessoas = pessoas.filter(p => p.ativo && p.cargo === (cat === "gestor" ? "gestor" : "corretor"));
+
+  return (
+    <>
+      <div className="pa-card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div>
+            <div className="pa-title">Ranking de Pastas Unificado</div>
+            <div className="pa-subtitle">Gerencie o ranking de captação de pastas por lançamento (Unificada Lopes)</div>
+          </div>
+          <button className="pa-btn-primary" onClick={() => { setPastaForm({ titulo: "", meta_pastas: 30 }); setShowPastaModal(true); }}>
+            + Novo Lançamento / Pasta
+          </button>
+        </div>
+
+        {pastas.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,.25)", fontSize: 14 }}>
+            Nenhum lançamento de pasta cadastrado. Clique em "+ Novo Lançamento / Pasta".
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.40)", textTransform: "uppercase", letterSpacing: ".06em" }}>Lançamento:</span>
+              {pastas.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPastaId(p.id)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 20,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    border: selectedPastaId === p.id ? "1px solid #FF0080" : "1px solid rgba(255,255,255,.12)",
+                    background: selectedPastaId === p.id ? "linear-gradient(135deg, rgba(255,0,128,.25), rgba(227,6,19,.15))" : "rgba(255,255,255,.04)",
+                    color: selectedPastaId === p.id ? "#fff" : "rgba(255,255,255,.60)"
+                  }}
+                >
+                  📁 {p.titulo} ({p.meta_pastas} pastas)
+                </button>
+              ))}
+            </div>
+
+            {activePasta && (
+              <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 16, padding: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{activePasta.titulo}</div>
+                    <div style={{ fontSize: 13, color: "#FF0080", fontWeight: 600, marginTop: 2 }}>Meta Total de Pastas: {activePasta.meta_pastas}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button className="pa-btn-ghost" onClick={() => { setPastaForm(activePasta); setShowPastaModal(true); }}>✏️ Editar Pasta</button>
+                    <button className="pa-btn-danger" onClick={() => handleDeletePasta(activePasta.id)}>🗑️ Excluir</button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div className="pa-tabs">
+                    <button className={`pa-tab ${cat === "corretor" ? "active" : ""}`} onClick={() => setCat("corretor")}>
+                      🏅 Corretores (Top 30 · Destaque Top 10)
+                    </button>
+                    <button className={`pa-tab ${cat === "gestor" ? "active" : ""}`} onClick={() => setCat("gestor")}>
+                      👔 Gestores (Top 10 · Destaque Top 5)
+                    </button>
+                  </div>
+                  <button className="pa-btn-primary" onClick={() => {
+                    setEntryForm({ pessoa_id: "", posicao: categoryEntries.length + 1, quantidade_pastas: 1 });
+                    setShowEntryModal(true);
+                  }}>
+                    + Adicionar no Ranking
+                  </button>
+                </div>
+
+                {categoryEntries.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "30px 0", color: "rgba(255,255,255,.3)", fontSize: 13 }}>
+                    Nenhum {cat === "corretor" ? "corretor" : "gestor"} vinculado a este ranking de pastas ainda.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {categoryEntries.map(e => {
+                      const isTopLeader = e.posicao <= topLimit;
+                      return (
+                        <div
+                          key={e.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 14,
+                            padding: "12px 18px",
+                            borderRadius: 12,
+                            background: isTopLeader ? "linear-gradient(90deg, rgba(255,0,128,.12), rgba(255,255,255,.03))" : "rgba(255,255,255,.02)",
+                            border: isTopLeader ? "1px solid rgba(255,0,128,.30)" : "1px solid rgba(255,255,255,.05)",
+                          }}
+                        >
+                          <div style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: e.posicao === 1 ? "linear-gradient(135deg,#f59e0b,#b45309)" : e.posicao <= 3 ? "linear-gradient(135deg,#94a3b8,#475569)" : "rgba(255,255,255,.10)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 900,
+                            fontSize: 14,
+                            color: "#fff"
+                          }}>
+                            {e.posicao}º
+                          </div>
+
+                          <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,.1)", flexShrink: 0, border: "1.5px solid rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {e.pessoa?.foto_url ? (
+                              <img src={e.pessoa.foto_url} alt={e.pessoa.nome} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              <span style={{ fontWeight: 800, fontSize: 12, color: "#fff" }}>{e.pessoa?.nome ? e.pessoa.nome.substring(0, 2).toUpperCase() : "??"}</span>
+                            )}
+                          </div>
+
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{e.pessoa?.nome || "Pessoa não encontrada"}</span>
+                              {isTopLeader && (
+                                <span style={{ background: "linear-gradient(90deg,#FF0080,#E30613)", padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                                  TOP {topLimit} LEADER
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)", marginTop: 2 }}>
+                              {e.pessoa?.unidade_id ? `Lopes ${e.pessoa.unidade_id.toUpperCase()}` : "Unificada"}
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: "right", marginRight: 10 }}>
+                            <div style={{ fontSize: 16, fontWeight: 900, color: "#4ade80" }}>{e.quantidade_pastas} {e.quantidade_pastas === 1 ? "Pasta" : "Pastas"}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Entregues</div>
+                          </div>
+
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button className="pa-btn-ghost" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => {
+                              setEntryForm(e);
+                              setShowEntryModal(true);
+                            }}>✏️ Edit</button>
+                            <button className="pa-btn-danger" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => handleDeleteEntry(e.id)}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {showPastaModal && (
+        <div className="pa-overlay" onClick={e => e.target === e.currentTarget && setShowPastaModal(false)}>
+          <div className="pa-modal" style={{ maxWidth: 440 }}>
+            <div className="pa-modal-title">{pastaForm.id ? "Editar Lançamento / Pasta" : "Novo Lançamento / Pasta"}</div>
+            <div className="pa-form-row" style={{ marginTop: 14 }}>
+              <label className="pa-label">Título do Produto / Lançamento</label>
+              <input className="pa-input" value={pastaForm.titulo || ""} onChange={e => setPastaForm((f: Partial<Pasta>) => ({ ...f, titulo: e.target.value }))} placeholder="Ex: Residencial Park Lopes" />
+            </div>
+            <div className="pa-form-row">
+              <label className="pa-label">Meta Total de Pastas</label>
+              <input className="pa-input" type="number" value={pastaForm.meta_pastas || ""} onChange={e => setPastaForm((f: Partial<Pasta>) => ({ ...f, meta_pastas: Number(e.target.value) }))} placeholder="Ex: 50" />
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+              <button className="pa-btn-ghost" onClick={() => setShowPastaModal(false)}>Cancelar</button>
+              <button className="pa-btn-primary" onClick={handleSavePasta} disabled={saving || !pastaForm.titulo}>{saving ? "Salvando…" : "Salvar Pasta"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEntryModal && (
+        <div className="pa-overlay" onClick={e => e.target === e.currentTarget && setShowEntryModal(false)}>
+          <div className="pa-modal" style={{ maxWidth: 440 }}>
+            <div className="pa-modal-title">{entryForm.id ? "Editar Posição no Ranking" : `Adicionar ${cat === "corretor" ? "Corretor" : "Gestor"} no Ranking`}</div>
+            <div className="pa-form-row" style={{ marginTop: 14 }}>
+              <label className="pa-label">Selecione a Pessoa (Unificada Lopes)</label>
+              <select className="pa-input pa-select" value={entryForm.pessoa_id || ""} onChange={e => setEntryForm((f: Partial<RankingPastaEntry>) => ({ ...f, pessoa_id: e.target.value }))}>
+                <option value="">— Selecionar —</option>
+                {availablePessoas.map(p => (
+                  <option key={p.id} value={p.id}>{p.nome} ({p.unidade_id ? `Lopes ${p.unidade_id}` : "Unificada"})</option>
+                ))}
+              </select>
+            </div>
+            <div className="pa-form-row">
+              <label className="pa-label">Posição no Ranking (1 a {maxPositions})</label>
+              <input className="pa-input" type="number" min={1} max={maxPositions} value={entryForm.posicao || 1} onChange={e => setEntryForm((f: Partial<RankingPastaEntry>) => ({ ...f, posicao: Number(e.target.value) }))} />
+            </div>
+            <div className="pa-form-row">
+              <label className="pa-label">Quantidade de Pastas</label>
+              <input className="pa-input" type="number" min={1} value={entryForm.quantidade_pastas || 1} onChange={e => setEntryForm((f: Partial<RankingPastaEntry>) => ({ ...f, quantidade_pastas: Number(e.target.value) }))} />
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+              <button className="pa-btn-ghost" onClick={() => setShowEntryModal(false)}>Cancelar</button>
+              <button className="pa-btn-primary" onClick={handleSaveEntry} disabled={saving || !entryForm.pessoa_id}>{saving ? "Salvando…" : "Salvar no Ranking"}</button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
@@ -2404,7 +2707,7 @@ export function PlacarAdmin({ activeSection, activeUnitId }: { activeSection: st
             <SecaoPessoas pessoas={pessoas} unidades={unidades} activeUnitId={activeUnitId} onChange={reload} />
           )}
           {activeSection === "rankings" && (
-            <SecaoRankings rankings={rankings} pessoas={pessoas} activeUnitId={activeUnitId} onChange={reload} />
+            <SecaoRankingsPastas pessoas={pessoas} onChange={reload} />
           )}
           {activeSection === "pvenda" && config && (
             <SecaoPVenda pvs={pvs} pessoas={pessoas} activeUnitId={activeUnitId} onChange={reload} />

@@ -39,9 +39,9 @@ export function UnifiedAdmin() {
     {
       title: "Placar Envolvente",
       items: [
-        { id: "metas",    label: "Metas",         icon: <Icons.Target /> },
+        { id: "metas",    label: "Meta Mensal",    icon: <Icons.Target /> },
         { id: "pvenda",   label: "Primeira Venda", icon: <Icons.Trophy /> },
-        { id: "rankings", label: "Placar Envolvente", icon: <Icons.Rocket /> },
+        { id: "rankings", label: "Ranking de Pastas", icon: <Icons.Rocket /> },
         { id: "pessoas",  label: "Equipe",         icon: <Icons.Users /> },
       ]
     },

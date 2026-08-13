@@ -3,6 +3,7 @@ import faviconLopes from "@/assets/favicon-lopes.png";
 import logoBranca from "@/assets/logo-branca.png";
 import fogueteImg from "@/assets/foguete-lopes.png";
 import { placarService } from "@/services/placarService";
+import type { Pasta, RankingPastaEntry, Pessoa } from "@/types/placar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,8 +27,16 @@ interface SlideBase { id: string; type: string; category: "Metas Lopes" | "Hist�
 interface SlideMeta extends SlideBase { type: "meta"; valor: string; realizadoNum: number; metaNum: number; periodo: string; showBox?: boolean; }
 interface SlidePVenda extends SlideBase { type: "pvenda"; nome: string; cargo: string; photoUrl?: string; mensagem: string; detalhe: string; updateFreq: string; }
 interface SlideRanking extends SlideBase { type: "ranking"; pessoas: RankingPerson[]; updateFreq: string; }
+interface SlideRankingPastas extends SlideBase {
+  type: "ranking_pasta";
+  pastaTitle: string;
+  metaPastas: number;
+  corretores: (RankingPastaEntry & { pessoa: Pessoa })[];
+  gestores: (RankingPastaEntry & { pessoa: Pessoa })[];
+  updateFreq: string;
+}
 
-type Slide = SlideMeta | SlidePVenda | SlideRanking;
+type Slide = SlideMeta | SlidePVenda | SlideRanking | SlideRankingPastas;
 
 // ─── Default Setup ────────────────────────────────────────────────────────────
 
@@ -347,6 +356,188 @@ function SlideRanking({ slide }: { slide: SlideRanking }) {
   );
 }
 
+// ─── Slide: Ranking de Pastas ──────────────────────────────────────────────────
+
+function SlideRankingPastas({ slide }: { slide: SlideRankingPastas }) {
+  const totalPastasEntregues = [...slide.corretores, ...slide.gestores].reduce((acc, curr) => acc + (curr.quantidade_pastas || 0), 0);
+  const pctMeta = Math.min(100, (totalPastasEntregues / Math.max(1, slide.metaPastas)) * 100);
+
+  const topCorretores = slide.corretores.slice(0, 10);
+  const topGestores = slide.gestores.slice(0, 5);
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 40px", position: "relative", overflow: "hidden" }}>
+      <Starfield />
+      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
+        
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+          <div>
+            <CategoryPill label="Ranking de Pastas Unificado" />
+            <h1 className="slide-up" style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 900, fontSize: 36, color: "#fff", letterSpacing: "-.02em", lineHeight: 1.1 }}>
+              {slide.pastaTitle}
+            </h1>
+          </div>
+
+          {/* Meta Progress Card */}
+          <div style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,0,128,.3)", borderRadius: 16, padding: "12px 24px", minWidth: 260, backdropFilter: "blur(12px)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,.7)", marginBottom: 6 }}>
+              <span>META DO LANÇAMENTO</span>
+              <span style={{ color: "#FF0080" }}>{totalPastasEntregues} / {slide.metaPastas} Pastas</span>
+            </div>
+            <div style={{ height: 10, borderRadius: 9999, background: "rgba(255,255,255,.10)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${pctMeta}%`, background: "linear-gradient(90deg, #FF0080, #E30613)", borderRadius: 9999, transition: "width 800ms" }} />
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", textAlign: "right", marginTop: 4 }}>
+              {pctMeta.toFixed(0)}% Atingido
+            </div>
+          </div>
+        </div>
+
+        {/* Content Grid: Left Top 10 Corretores, Right Top 5 Gestores */}
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, minHeight: 0 }}>
+          
+          {/* TOP 10 CORRETORES */}
+          <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 20, padding: 18, display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+              <span style={{ fontSize: 18 }}>🏅</span>
+              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 16, color: "#fff", textTransform: "uppercase", letterSpacing: ".04em" }}>
+                Top 10 Corretores
+              </span>
+              <span style={{ marginLeft: "auto", background: "linear-gradient(90deg,#FF0080,#E30613)", padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 800, color: "#fff" }}>
+                UNIFICADO LOPES
+              </span>
+            </div>
+
+            {topCorretores.length === 0 ? (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.3)", fontSize: 14 }}>
+                Nenhum corretor pontuou neste lançamento ainda.
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, alignContent: "start" }}>
+                {topCorretores.map((item) => {
+                  const rankColor = item.posicao === 1 ? "#f59e0b" : item.posicao === 2 ? "#94a3b8" : item.posicao === 3 ? "#cd7f32" : "#818cf8";
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "7px 10px",
+                        borderRadius: 12,
+                        background: item.posicao <= 3 ? "linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02))" : "rgba(255,255,255,.03)",
+                        border: `1px solid ${item.posicao <= 3 ? rankColor + "66" : "rgba(255,255,255,.06)"}`,
+                      }}
+                    >
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: rankColor, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 11, color: "#fff", flexShrink: 0 }}>
+                        {item.posicao}º
+                      </div>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,.1)", flexShrink: 0, border: `1.5px solid ${rankColor}` }}>
+                        {item.pessoa?.foto_url ? (
+                          <img src={item.pessoa.foto_url} alt={item.pessoa.nome} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 11, color: "#fff" }}>
+                            {item.pessoa?.nome.substring(0, 2).toUpperCase() || "??"}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {item.pessoa?.nome || "Corretor"}
+                        </div>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>
+                          {item.pessoa?.unidade_id ? `Lopes ${item.pessoa.unidade_id.toUpperCase()}` : "Lopes"}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontWeight: 900, fontSize: 14, color: "#4ade80" }}>{item.quantidade_pastas}</div>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>Pastas</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* TOP 5 GESTORES */}
+          <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 20, padding: 18, display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+              <span style={{ fontSize: 18 }}>👔</span>
+              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 16, color: "#fff", textTransform: "uppercase", letterSpacing: ".04em" }}>
+                Top 5 Gestores
+              </span>
+            </div>
+
+            {topGestores.length === 0 ? (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.3)", fontSize: 14 }}>
+                Nenhum gestor vinculado ainda.
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                {topGestores.map((item) => {
+                  const rankColor = item.posicao === 1 ? "#f59e0b" : item.posicao === 2 ? "#94a3b8" : item.posicao === 3 ? "#cd7f32" : "#38bdf8";
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "8px 12px",
+                        borderRadius: 12,
+                        background: item.posicao <= 3 ? "linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02))" : "rgba(255,255,255,.03)",
+                        border: `1px solid ${item.posicao <= 3 ? rankColor + "66" : "rgba(255,255,255,.06)"}`,
+                      }}
+                    >
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: rankColor, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 11, color: "#fff", flexShrink: 0 }}>
+                        {item.posicao}º
+                      </div>
+                      <div style={{ width: 34, height: 34, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,.1)", flexShrink: 0, border: `1.5px solid ${rankColor}` }}>
+                        {item.pessoa?.foto_url ? (
+                          <img src={item.pessoa.foto_url} alt={item.pessoa.nome} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 11, color: "#fff" }}>
+                            {item.pessoa?.nome.substring(0, 2).toUpperCase() || "??"}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {item.pessoa?.nome || "Gestor"}
+                        </div>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>
+                          {item.pessoa?.unidade_id ? `Lopes ${item.pessoa.unidade_id.toUpperCase()}` : "Lopes"}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontWeight: 900, fontSize: 14, color: "#4ade80" }}>{item.quantidade_pastas}</div>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>Pastas</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Footer info */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 12 }}>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>
+            {slide.updateFreq}
+          </span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>
+            {MES_ANO.toUpperCase()}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Progress Dots ────────────────────────────────────────────────────────────
 
 function ProgressDots({ total, current, onChange }: { total: number; current: number; onChange: (i: number) => void }) {
@@ -390,7 +581,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         // Para queries que requerem um ID concreto, usa o primeiro unidade válida como fallback
         const concreteUnitId = activeUnitId || VALID_UNIT_IDS[0];
 
-        const [config, pv, allRankings, unidades] = await Promise.all([
+        const [config, pv, pastas, unidades] = await Promise.all([
           placarService.getConfig(concreteUnitId).catch(err => {
             console.error("Falha ao carregar config na TV:", err);
             return null;
@@ -399,8 +590,8 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
             console.error("Falha ao carregar primeira venda na TV:", err);
             return null;
           }),
-          placarService.getRankings().catch(err => {
-            console.error("Falha ao carregar rankings na TV:", err);
+          placarService.getPastas().catch(err => {
+            console.error("Falha ao carregar pastas na TV:", err);
             return [];
           }),
           placarService.getUnidades().catch(err => {
@@ -425,7 +616,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         // 2. Gerar os slides dinamicamente
         const generated: Slide[] = [];
 
-        // Slide de Metas (Mensal / Anual)
+        // Slide de Meta Mensal
         if (config) {
           generated.push({
             id: "meta-mensal",
@@ -437,18 +628,6 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
             metaNum: Number(config.meta_mensal_valor),
             periodo: config.meta_mensal_periodo || "MÊS ATUAL",
             showBox: false,
-          });
-
-          generated.push({
-            id: "meta-anual",
-            type: "meta",
-            category: "Metas Lopes",
-            title: config.meta_anual_titulo || "Meta Anual",
-            valor: fmtBRL(Number(config.meta_anual_valor)),
-            realizadoNum: Number(config.meta_anual_realizado),
-            metaNum: Number(config.meta_anual_valor),
-            periodo: `ANO DE ${new Date().getFullYear()}`,
-            showBox: true,
           });
         }
 
@@ -472,40 +651,25 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
           });
         }
 
-        // Slides de Rankings
-        const addRankSlide = (tipo: "mensal" | "anual", categoria: "gestores" | "corretores", title: string) => {
-          const entries = allRankings
-            .filter(r => {
-              if (r.tipo !== tipo || r.categoria !== categoria || !r.pessoa || !r.pessoa.ativo) return false;
-              // Só filtra por unidade se tiver um ID concreto (nunca filtra por 'Todas' ou vazio)
-              if (activeUnitId) return r.pessoa.unidade_id === activeUnitId;
-              return true; // sem filtro de unidade → mostra todos
-            })
-            .sort((a, b) => a.posicao - b.posicao)
-            .slice(0, 3)
-            .map(r => ({
-              name: r.pessoa!.nome.split(" ")[0],
-              value: Number(r.valor),
-              initials: r.pessoa!.nome.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase(),
-              photoUrl: r.pessoa!.foto_url || ""
-            }));
+        // Slides de Ranking de Pastas (Foco Principal do Placar Unificado)
+        for (const p of pastas) {
+          if (!p.ativo) continue;
+          const rankingEntries = await placarService.getRankingPastas(p.id).catch(() => []);
+          const corretores = rankingEntries.filter(e => e.categoria === "corretor").sort((a, b) => a.posicao - b.posicao);
+          const gestores = rankingEntries.filter(e => e.categoria === "gestor").sort((a, b) => a.posicao - b.posicao);
 
-          if (entries.length > 0) {
-            generated.push({
-              id: `top-${categoria}-${tipo}`,
-              type: "ranking",
-              category: "História Lopes",
-              title,
-              pessoas: entries,
-              updateFreq: tipo === "mensal" ? "RANKING ATUALIZADO MENSALMENTE." : "RANKING ATUALIZADO ANUALMENTE."
-            });
-          }
-        };
-
-        addRankSlide("mensal", "gestores", "Top 3 Gestores Mensal");
-        addRankSlide("mensal", "corretores", "Top 3 Corretores Mensal");
-        addRankSlide("anual", "gestores", "Top 3 Gestores Anual");
-        addRankSlide("anual", "corretores", "Top 3 Corretores Anual");
+          generated.push({
+            id: `ranking-pasta-${p.id}`,
+            type: "ranking_pasta",
+            category: "Metas Lopes",
+            title: "Ranking de Pastas Unificado",
+            pastaTitle: p.titulo,
+            metaPastas: p.meta_pastas,
+            corretores: corretores as (RankingPastaEntry & { pessoa: Pessoa })[],
+            gestores: gestores as (RankingPastaEntry & { pessoa: Pessoa })[],
+            updateFreq: "RANKING DE PASTAS ATUALIZADO DIARIAMENTE."
+          });
+        }
 
         // Fallback em caso de base vazia
         if (generated.length === 0) {
@@ -554,7 +718,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
   return (
     <>
       <style>{CSS}</style>
-      <div className="placar-root" style={{ background: slide.type === "ranking" ? "radial-gradient(ellipse at 30% 50%,#080818 0%,#000 70%)" : "#0a0a0a" }}>
+      <div className="placar-root" style={{ background: slide.type.includes("ranking") ? "radial-gradient(ellipse at 30% 50%,#080818 0%,#000 70%)" : "#0a0a0a" }}>
         <Sidebar unit={unitInfo} />
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
@@ -562,6 +726,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
             {slide.type === "meta" && <SlideMeta slide={slide as SlideMeta} />}
             {slide.type === "pvenda" && <SlidePVenda slide={slide as SlidePVenda} />}
             {slide.type === "ranking" && <SlideRanking slide={slide as SlideRanking} />}
+            {slide.type === "ranking_pasta" && <SlideRankingPastas slide={slide as SlideRankingPastas} />}
           </div>
 
           {slides.length > 1 && (

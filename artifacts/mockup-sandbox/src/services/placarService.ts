@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { Unidade, Pessoa, ConfigMetas, RankingEntry, PrimeiraVenda } from "../types/placar";
+import type { Unidade, Pessoa, ConfigMetas, RankingEntry, PrimeiraVenda, Pasta, RankingPastaEntry } from "../types/placar";
 
 export interface Imovel {
   id: number;
@@ -229,6 +229,121 @@ export const placarService = {
   deletePrimeiraVenda: async (id: string): Promise<void> => {
     const { error } = await supabase.from("primeira_venda").delete().eq("id", id);
     if (error) throw error;
+  },
+
+  // ─── Pastas (Ranking de Pastas Unificado) ─────────────────────────────────
+  getPastas: async (): Promise<Pasta[]> => {
+    try {
+      const { data, error } = await supabase.from("pastas").select("*").order("criado_em", { ascending: false });
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {}
+    // Fallback LocalStorage
+    const raw = localStorage.getItem("lopes_pastas");
+    if (raw) {
+      try { return JSON.parse(raw); } catch (e) {}
+    }
+    const defaultPastas: Pasta[] = [
+      { id: "pasta-1", titulo: "Lançamento Residencial Park Lopes", meta_pastas: 50, ativo: true }
+    ];
+    localStorage.setItem("lopes_pastas", JSON.stringify(defaultPastas));
+    return defaultPastas;
+  },
+
+  savePasta: async (p: Partial<Pasta>): Promise<Pasta> => {
+    const newPasta: Pasta = {
+      id: p.id || `pasta_${Date.now()}`,
+      titulo: p.titulo || "Novo Lançamento",
+      meta_pastas: Number(p.meta_pastas) || 30,
+      ativo: p.ativo !== undefined ? p.ativo : true,
+      criado_em: p.criado_em || new Date().toISOString()
+    };
+    try {
+      const { data, error } = await supabase.from("pastas").upsert(newPasta).select().single();
+      if (!error && data) return data;
+    } catch (e) {}
+    // LocalStorage Fallback
+    const existing = await placarService.getPastas();
+    const idx = existing.findIndex(x => x.id === newPasta.id);
+    if (idx >= 0) existing[idx] = newPasta;
+    else existing.push(newPasta);
+    localStorage.setItem("lopes_pastas", JSON.stringify(existing));
+    return newPasta;
+  },
+
+  deletePasta: async (id: string): Promise<void> => {
+    try {
+      await supabase.from("pastas").delete().eq("id", id);
+    } catch (e) {}
+    const existing = await placarService.getPastas();
+    const filtered = existing.filter(x => x.id !== id);
+    localStorage.setItem("lopes_pastas", JSON.stringify(filtered));
+  },
+
+  // ─── Ranking de Pastas ────────────────────────────────────────────────────
+  getRankingPastas: async (pastaId?: string): Promise<(RankingPastaEntry & { pessoa?: Pessoa })[]> => {
+    try {
+      let query = supabase.from("ranking_pastas").select(`*, pessoa:pessoas(*)`);
+      if (pastaId) query = query.eq("pasta_id", pastaId);
+      const { data, error } = await query.order("posicao", { ascending: true });
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {}
+    // Fallback LocalStorage
+    const raw = localStorage.getItem("lopes_ranking_pastas");
+    if (raw) {
+      try {
+        let entries: RankingPastaEntry[] = JSON.parse(raw);
+        if (pastaId) entries = entries.filter(e => e.pasta_id === pastaId);
+        const pessoas = await placarService.getPessoas();
+        return entries.map(e => ({
+          ...e,
+          pessoa: pessoas.find(p => p.id === e.pessoa_id)
+        }));
+      } catch (e) {}
+    }
+    return [];
+  },
+
+  saveRankingPastaEntry: async (entry: Partial<RankingPastaEntry>): Promise<RankingPastaEntry> => {
+    const newEntry: RankingPastaEntry = {
+      id: entry.id || `rpe_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      pasta_id: entry.pasta_id || "",
+      pessoa_id: entry.pessoa_id || "",
+      categoria: entry.categoria || "corretor",
+      posicao: Number(entry.posicao) || 1,
+      quantidade_pastas: Number(entry.quantidade_pastas) || 1,
+      ativo: true
+    };
+    try {
+      const { data, error } = await supabase.from("ranking_pastas").upsert({
+        id: newEntry.id,
+        pasta_id: newEntry.pasta_id,
+        pessoa_id: newEntry.pessoa_id,
+        categoria: newEntry.categoria,
+        posicao: newEntry.posicao,
+        quantidade_pastas: newEntry.quantidade_pastas
+      }).select().single();
+      if (!error && data) return data;
+    } catch (e) {}
+    // LocalStorage Fallback
+    const raw = localStorage.getItem("lopes_ranking_pastas");
+    let list: RankingPastaEntry[] = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex(x => x.id === newEntry.id || (x.pasta_id === newEntry.pasta_id && x.pessoa_id === newEntry.pessoa_id && x.categoria === newEntry.categoria));
+    if (idx >= 0) list[idx] = { ...list[idx], ...newEntry };
+    else list.push(newEntry);
+    localStorage.setItem("lopes_ranking_pastas", JSON.stringify(list));
+    return newEntry;
+  },
+
+  deleteRankingPastaEntry: async (id: string): Promise<void> => {
+    try {
+      await supabase.from("ranking_pastas").delete().eq("id", id);
+    } catch (e) {}
+    const raw = localStorage.getItem("lopes_ranking_pastas");
+    if (raw) {
+      let list: RankingPastaEntry[] = JSON.parse(raw);
+      list = list.filter(x => x.id !== id);
+      localStorage.setItem("lopes_ranking_pastas", JSON.stringify(list));
+    }
   },
 
   // ─── Imóveis ──────────────────────────────────────────────────────────────

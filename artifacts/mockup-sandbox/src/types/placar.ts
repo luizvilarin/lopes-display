@@ -67,11 +67,36 @@ export interface PrimeiraVenda {
   pessoa?: Pessoa;
 }
 
+export interface Pasta {
+  id: string;
+  titulo: string;
+  meta_pastas: number;
+  unidade_id?: string;
+  ativo: boolean;
+  criado_em?: string;
+}
+
+export interface RankingPastaEntry {
+  id: string;
+  pasta_id: string;
+  pessoa_id: string;
+  categoria: "corretor" | "gestor";
+  posicao: number;
+  quantidade_pastas: number;
+  ativo?: boolean;
+  criado_em?: string;
+  // join
+  pessoa?: Pessoa;
+  pasta?: Pasta;
+}
+
 // Payload composto que o PlacarLopes consome
 export interface PlacarData {
   unidade: Unidade;
   config: ConfigMetas;
   primeira_venda?: PrimeiraVenda & { pessoa: Pessoa };
+  pastas: Pasta[];
+  rankings_pastas: RankingPastaEntry[];
   rankings: {
     gestores_mensal: RankingEntry[];
     corretores_mensal: RankingEntry[];
