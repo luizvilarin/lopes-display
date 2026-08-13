@@ -15,6 +15,7 @@ export interface Imovel {
   gradient: string;
   category: string;
   image_url: string;
+  banner_url?: string;
   gallery: string[];
   qr_code_url?: string;
   video_url: string;
@@ -47,6 +48,9 @@ export const MOCK_UNIDADES: Unidade[] = [
 
 const serializeImovelPayload = (i: Partial<Imovel>) => {
   let desc = i.description || "";
+  if (i.banner_url) {
+    desc = desc ? `${desc}\n__BANNER__:${i.banner_url}` : `__BANNER__:${i.banner_url}`;
+  }
   if (i.gallery && Array.isArray(i.gallery) && i.gallery.length > 0) {
     desc = desc ? `${desc}\n__GALLERY__:${JSON.stringify(i.gallery)}` : `__GALLERY__:${JSON.stringify(i.gallery)}`;
   }
@@ -78,8 +82,19 @@ const serializeImovelPayload = (i: Partial<Imovel>) => {
 const deserializeImovelRow = (row: any): Imovel => {
   let cleanDesc = row.description || "";
   let gallery: string[] = row.gallery || [];
+  let bannerUrl: string | undefined = row.banner_url || undefined;
   
-  if (cleanDesc.includes("__GALLERY__:")) {
+  if (cleanDesc.includes("__BANNER__:")) {
+    const parts = cleanDesc.split("__BANNER__:");
+    const subParts = (parts[1] || "").split("\n__GALLERY__:");
+    bannerUrl = subParts[0].trim();
+    cleanDesc = parts[0].trim();
+    if (subParts[1]) {
+      try {
+        gallery = JSON.parse(subParts[1]);
+      } catch (e) {}
+    }
+  } else if (cleanDesc.includes("__GALLERY__:")) {
     const parts = cleanDesc.split("__GALLERY__:");
     cleanDesc = parts[0].trim();
     try {
@@ -101,6 +116,7 @@ const deserializeImovelRow = (row: any): Imovel => {
     gradient: row.gradient || "linear-gradient(160deg,#1a2744,#2d3f6b)",
     category: row.category || row.address || "Geral",
     image_url: row.image_url || "",
+    banner_url: bannerUrl,
     gallery: gallery,
     qr_code_url: row.qr_code_url || "",
     video_url: row.video_url || "",

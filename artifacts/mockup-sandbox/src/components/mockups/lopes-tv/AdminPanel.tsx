@@ -336,7 +336,20 @@ function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClo
               </div>
             </div>
 
-            <ImageDropzone value={draft.image_url || ""} onChange={url => up("image_url", url)} label="Imagem de Capa (Empreendimento)" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <ImageDropzone value={draft.image_url || ""} onChange={url => up("image_url", url)} label="Capa Vertical (Poster 2:3)" />
+              <ImageDropzone value={draft.banner_url || ""} onChange={url => up("banner_url", url)} label="Banner Widescreen Netflix (16:9 Destaque TV)" maxWidth={1920} maxHeight={1080} />
+            </div>
+
+            <div style={{ padding: "14px 16px", background: "rgba(255,0,128,.04)", border: "1px dashed rgba(255,0,128,.25)", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 20 }}>🎬</span>
+              <div>
+                <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "var(--text)" }}>Banner Horizontal Panorâmico (Padrão Netflix)</div>
+                <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
+                  Insira uma imagem horizontal em alta resolução para que o produto ocupe o topo da TV com recorte perfeito e sem esticar!
+                </div>
+              </div>
+            </div>
 
             <div style={{ padding: "20px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: 16 }}>
               <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 14, color: "var(--text)", marginBottom: 4 }}>Galeria de Imagens Adicionais</div>

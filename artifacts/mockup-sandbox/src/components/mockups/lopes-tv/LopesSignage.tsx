@@ -254,35 +254,49 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
     <div className="screen-enter" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 68px)", overflow: "hidden" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 36px 32px" }}>
 
-        {/* Hero banners */}
+        {/* Hero banners (Estilo Netflix Widescreen) */}
         <div style={{ display: "grid", gridTemplateColumns: filtered.length === 1 ? "1fr" : "1fr 1fr", gap: 18, marginBottom: 28 }}>
-          {featured.map((p, i) => (
-            <div key={p.id} onClick={() => onOpen(p.id)} style={{
-              borderRadius: 20, padding: "28px 32px 24px", minHeight: 200,
-              background: p.image_url ? `url(${p.image_url}) center/cover` : p.gradient || "linear-gradient(135deg,#242430,#1c1c24)", 
-              cursor: "pointer", position: "relative", overflow: "hidden",
-              transition: "transform 250ms ease, box-shadow 250ms ease",
-              boxShadow: "0 8px 28px rgba(0,0,0,.30)",
-              animation: `fadeSlideUp 400ms ease ${i * 80}ms both`,
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 20px 60px rgba(0,0,0,.50)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 28px rgba(0,0,0,.30)"; }}
-            >
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right,rgba(0,0,0,.75) 0%,rgba(0,0,0,.30) 60%,transparent 100%)" }} />
-              <div style={{ position: "absolute", right: -50, bottom: -50, width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle,rgba(255,255,255,.08),transparent 70%)" }} />
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 8, background: p.tag_color || "#E30613", color: "#fff", fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase" }}>{p.tag || "DESTAQUE"}</span>
-                <h2 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 24, color: "#F0F2F8", letterSpacing: "-.02em", margin: "10px 0 4px", lineHeight: 1.2 }}>{p.title}</h2>
-                <p style={{ color: "rgba(240,242,248,.75)", fontSize: 14, margin: "0 0 16px" }}>{p.price} · {p.area}</p>
-                <button className="btn" style={{ background: "rgba(255,255,255,.18)", color: "#fff", padding: "9px 18px", borderRadius: 9999, fontSize: 13, display: "flex", alignItems: "center", gap: 7, backdropFilter: "blur(8px)", border: "none" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#E30613"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.18)"; }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>Ver Produto
-                </button>
+          {featured.map((p, i) => {
+            const bannerSrc = p.banner_url || p.image_url;
+            return (
+              <div key={p.id} onClick={() => onOpen(p.id)} style={{
+                borderRadius: 20, padding: "32px 36px 28px", minHeight: 220,
+                background: p.gradient || "linear-gradient(135deg,#1c1c24,#0f0f14)", 
+                cursor: "pointer", position: "relative", overflow: "hidden",
+                transition: "transform 250ms ease, box-shadow 250ms ease",
+                boxShadow: "0 8px 28px rgba(0,0,0,.40)",
+                animation: `fadeSlideUp 400ms ease ${i * 80}ms both`,
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 20px 60px rgba(0,0,0,.60)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 28px rgba(0,0,0,.40)"; }}
+              >
+                {/* Widescreen Banner com object-fit cover (Sem distorção) */}
+                {bannerSrc && (
+                  <img 
+                    src={bannerSrc} 
+                    alt={p.title} 
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%", zIndex: 0 }} 
+                  />
+                )}
+
+                {/* Netflix Vignette / Gradients */}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(10,10,16,0.95) 0%, rgba(10,10,16,0.65) 45%, rgba(10,10,16,0.15) 75%, transparent 100%)", zIndex: 1 }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(10,10,16,0.85) 0%, transparent 60%)", zIndex: 1 }} />
+
+                <div style={{ position: "relative", zIndex: 2 }}>
+                  <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 8, background: p.tag_color || "#E30613", color: "#fff", fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase" }}>{p.tag || "DESTAQUE"}</span>
+                  <h2 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 26, color: "#F0F2F8", letterSpacing: "-.02em", margin: "12px 0 6px", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>{p.title}</h2>
+                  <p style={{ color: "rgba(240,242,248,.85)", fontSize: 14, fontWeight: 500, margin: "0 0 18px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>{p.price} · {p.area}</p>
+                  <button className="btn" style={{ background: "rgba(255,255,255,.22)", color: "#fff", padding: "10px 20px", borderRadius: 9999, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.25)" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#E30613"; (e.currentTarget as HTMLElement).style.borderColor = "#E30613"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.22)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.25)"; }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>Ver Produto
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Category pills */}
@@ -309,14 +323,21 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
             {filtered.map((p, i) => (
               <div key={p.id} className="card-hover" onClick={() => onOpen(p.id)} style={{
                 width: 170, minWidth: 170, borderRadius: 16, overflow: "hidden", position: "relative",
-                background: p.image_url ? `url(${p.image_url}) center/cover` : p.gradient || "linear-gradient(135deg,#242430,#1c1c24)", flexShrink: 0,
+                background: p.gradient || "linear-gradient(135deg,#242430,#1c1c24)", flexShrink: 0,
                 aspectRatio: "2/3", animation: `fadeSlideUp 400ms ease ${i * 50}ms both`,
               }}>
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.15) 50%,transparent 100%)" }} />
-                <div style={{ position: "absolute", top: 8, left: 8 }}>
+                {p.image_url && (
+                  <img 
+                    src={p.image_url} 
+                    alt={p.title} 
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", zIndex: 0 }} 
+                  />
+                )}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,.90) 0%,rgba(0,0,0,.20) 50%,transparent 100%)", zIndex: 1 }} />
+                <div style={{ position: "absolute", top: 8, left: 8, zIndex: 2 }}>
                   <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 7, background: p.tag_color || "#E30613", color: "#fff", fontSize: 10, fontFamily: "'Barlow',sans-serif", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase" }}>{p.tag}</span>
                 </div>
-                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
+                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10, zIndex: 2 }}>
                   <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "#F0F2F8", lineHeight: 1.25, marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.title}</div>
                   <div style={{ color: "#E30613", fontWeight: 700, fontSize: 13 }}>{p.price}</div>
                   <div style={{ color: "rgba(240,242,248,.60)", fontSize: 11, marginTop: 2 }}>{p.area}</div>
@@ -338,11 +359,11 @@ function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imo
   
   const slides = useMemo(() => {
     if (isPlaylistMode) {
-      return imoveis.map(p => ({ type: "product", prop: p, url: p.image_url, video: p.video_url }));
+      return imoveis.map(p => ({ type: "product", prop: p, url: p.banner_url || p.image_url, video: p.video_url }));
     } else if (singleProp) {
       const arr = [];
-      if (singleProp.video_url || singleProp.image_url || singleProp.gradient) {
-        arr.push({ type: "cover", prop: singleProp, url: singleProp.image_url, video: singleProp.video_url });
+      if (singleProp.video_url || singleProp.banner_url || singleProp.image_url || singleProp.gradient) {
+        arr.push({ type: "cover", prop: singleProp, url: singleProp.banner_url || singleProp.image_url, video: singleProp.video_url });
       }
       if (singleProp.gallery && singleProp.gallery.length > 0) {
         singleProp.gallery.forEach(g => arr.push({ type: "gallery", prop: singleProp, url: g }));
@@ -393,10 +414,16 @@ function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imo
       );
     }
 
-    // Caso seja imagem
+    // Caso seja imagem (Redimensionamento proporcional estilo Netflix)
     if (currentSlide.url) {
       return (
-        <div style={{ position: "absolute", inset: 0, background: `url(${currentSlide.url}) center/cover`, opacity: fading ? 0 : 1, transition: "opacity 450ms ease" }} />
+        <div style={{ position: "absolute", inset: 0, opacity: fading ? 0 : 1, transition: "opacity 450ms ease", overflow: "hidden" }}>
+          <img 
+            src={currentSlide.url} 
+            alt={p.title} 
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 35%" }} 
+          />
+        </div>
       );
     }
 
