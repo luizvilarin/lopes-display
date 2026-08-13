@@ -52,7 +52,10 @@ const serializeImovelPayload = (i: Partial<Imovel>) => {
   }
   
   const payload: Record<string, any> = {};
-  if (i.unidade_id !== undefined) payload.unidade_id = i.unidade_id;
+  if (i.unidade_id !== undefined) {
+    // "Todas" ou valor vazio é serializado como null para não violar a FK no Supabase
+    payload.unidade_id = (i.unidade_id === "Todas" || !i.unidade_id) ? null : i.unidade_id;
+  }
   if (i.title !== undefined) payload.title = i.title;
   if (i.tag !== undefined) payload.tag = i.tag;
   if (i.tag_color !== undefined) payload.tag_color = i.tag_color;
@@ -86,7 +89,7 @@ const deserializeImovelRow = (row: any): Imovel => {
   
   return {
     id: row.id,
-    unidade_id: row.unidade_id || "jd-goias",
+    unidade_id: row.unidade_id || "Todas",
     title: row.title || "",
     price: row.price ?? "—",
     area: row.area ?? "—",
@@ -353,7 +356,7 @@ export const placarService = {
       query = query.eq("ativo", true);
     }
     if (unidade_id !== "Todas") {
-      query = query.or(`unidade_id.eq.${unidade_id},unidade_id.eq.Todas`);
+      query = query.or(`unidade_id.eq.${unidade_id},unidade_id.is.null,unidade_id.eq.Todas`);
     }
     const { data, error } = await query;
     if (error) throw error;
@@ -371,13 +374,29 @@ export const placarService = {
   saveImovel: async (i: Omit<Imovel, "id" | "criado_em">): Promise<Imovel> => {
     const payload = serializeImovelPayload(i);
     const { data, error } = await supabase.from("imoveis").insert(payload).select().single();
-    if (error) throw error;
+    if (error) {
+      if (error.message?.includes("foreign key") || error.code === "23503") {
+        payload.unidade_id = null;
+        const { data: retryData, error: retryErr } = await supabase.from("imoveis").insert(payload).select().single();
+        if (retryErr) throw retryErr;
+        return deserializeImovelRow(retryData);
+      }
+      throw error;
+    }
     return deserializeImovelRow(data);
   },
   updateImovel: async (id: number, patch: Partial<Imovel>): Promise<Imovel> => {
     const payload = serializeImovelPayload(patch);
     const { data, error } = await supabase.from("imoveis").update(payload).eq("id", id).select().single();
-    if (error) throw error;
+    if (error) {
+      if (error.message?.includes("foreign key") || error.code === "23503") {
+        payload.unidade_id = null;
+        const { data: retryData, error: retryErr } = await supabase.from("imoveis").update(payload).eq("id", id).select().single();
+        if (retryErr) throw retryErr;
+        return deserializeImovelRow(retryData);
+      }
+      throw error;
+    }
     return deserializeImovelRow(data);
   },
   deleteImovel: async (id: number): Promise<void> => {
