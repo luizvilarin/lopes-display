@@ -27,9 +27,9 @@ export interface ConfigMetas {
   meta_mensal_valor: number;
   meta_mensal_realizado: number;
   meta_mensal_periodo: string;
-  meta_anual_titulo: string;
-  meta_anual_valor: number;
-  meta_anual_realizado: number;
+  meta_anual_titulo?: string;
+  meta_anual_valor?: number;
+  meta_anual_realizado?: number;
   unidade_id: string;
   atualizado_em?: string;
 }

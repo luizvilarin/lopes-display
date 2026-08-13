@@ -1382,7 +1382,15 @@ function SecaoPVenda({ pvs = [], pessoas, activeUnitId, onChange }: {
   );
 }
 
-// ─── Section: Metas ───────────────────────────────────────────────────────────
+// Helper para reconhecer o mês atual automaticamente
+const getDetectedMonthString = () => {
+  const date = new Date();
+  const monthNames = [
+    "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+    "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
+  ];
+  return `${monthNames[date.getMonth()]} DE ${date.getFullYear()}`;
+};
 
 function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUnitId: string; }) {
   const [selectedUnidade, setSelectedUnidade] = useState("");
@@ -1390,6 +1398,8 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const detectedMonth = getDetectedMonthString();
 
   useEffect(() => {
     if (activeUnitId !== "Todas") {
@@ -1404,25 +1414,24 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
     setLoading(true);
     placarService.getConfig(selectedUnidade).then(c => {
       if (c) {
-        setForm(c);
+        setForm({
+          ...c,
+          meta_mensal_periodo: c.meta_mensal_periodo || detectedMonth,
+        });
       } else {
         setForm({
           unidade_id: selectedUnidade,
-          meta_mensal_titulo: "Meta Mensal",
+          meta_mensal_titulo: `Meta Mensal - ${detectedMonth}`,
           meta_mensal_valor: 0,
           meta_mensal_realizado: 0,
-          meta_mensal_periodo: "MÊS ATUAL",
-          meta_anual_titulo: "Meta Anual",
-          meta_anual_valor: 0,
-          meta_anual_realizado: 0,
+          meta_mensal_periodo: detectedMonth,
         });
       }
       setLoading(false);
     });
-  }, [selectedUnidade]);
+  }, [selectedUnidade, detectedMonth]);
 
   const pctMensal = Math.min(100, ((form.meta_mensal_realizado || 0) / (form.meta_mensal_valor || 1)) * 100);
-  const pctAnual  = Math.min(100, ((form.meta_anual_realizado || 0)  / (form.meta_anual_valor || 1))  * 100);
 
   const save = async () => {
     setSaving(true);
@@ -1440,15 +1449,42 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
 
   return (
     <div className="pa-card">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div className="pa-title">Metas da Unidade</div>
-          <div className="pa-subtitle">Gerencie os valores exibidos nos slides de Meta de cada unidade separadamente</div>
+          <div className="pa-title">Meta Mensal</div>
+          <div className="pa-subtitle">Gerencie o objetivo financeiro mensal. A plataforma reconhece automaticamente o mês corrente.</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {saved && <span style={{ color: "#4ade80", fontSize: 13, fontWeight: 600 }}>✓ Salvo!</span>}
-          <button className="pa-btn-primary" onClick={save} disabled={saving || loading}>{saving ? "Salvando…" : "Salvar unidade"}</button>
+          <button className="pa-btn-primary" onClick={save} disabled={saving || loading}>{saving ? "Salvando…" : "Salvar Meta Mensal"}</button>
         </div>
+      </div>
+
+      {/* Monthly Auto-Detection Badge */}
+      <div style={{
+        background: "linear-gradient(90deg, rgba(255,0,128,.15), rgba(227,6,19,.10))",
+        border: "1px solid rgba(255,0,128,.30)",
+        borderRadius: 12,
+        padding: "12px 18px",
+        marginBottom: 20,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>🗓️</span>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.50)", textTransform: "uppercase", letterSpacing: ".08em" }}>Reconhecimento Automático de Data</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Mês Atual Detectado: <span style={{ color: "#FF0080" }}>{detectedMonth}</span></div>
+          </div>
+        </div>
+        <button
+          className="pa-btn-ghost"
+          style={{ padding: "4px 10px", fontSize: 12 }}
+          onClick={() => setForm(f => ({ ...f, meta_mensal_periodo: detectedMonth }))}
+        >
+          Usar Mês Detectado
+        </button>
       </div>
 
       {activeUnitId === "Todas" ? (
@@ -1462,80 +1498,72 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
         </div>
       ) : (
         <div style={{ marginBottom: 14, background: "rgba(255, 255, 255, 0.03)", borderRadius: 6, padding: "8px 12px", border: "1px dashed rgba(255, 255, 255, 0.08)", fontSize: 13, color: "rgba(255, 255, 255, 0.60)" }}>
-          Configurando metas da unidade ativa selecionada no cabeçalho: <strong>{unidades.find(u => u.id === activeUnitId)?.nome ?? activeUnitId}</strong>
+          Configurando metas da unidade ativa: <strong>{unidades.find(u => u.id === activeUnitId)?.nome ?? activeUnitId}</strong>
         </div>
       )}
 
       {loading ? (
         <div style={{ padding: "40px", textAlign: "center", color: "rgba(255,255,255,.30)", fontSize: 14 }}>Carregando dados da unidade...</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          {/* Meta Mensal */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
           <div>
-            <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 16, marginBottom: 14, color: "rgba(255,255,255,.70)", borderBottom: "1px solid rgba(255,255,255,.07)", paddingBottom: 10 }}>
-              📅 Meta Mensal
-            </div>
             <Field
-              label="Título"
+              label="Título do Slide de Meta"
               value={form.meta_mensal_titulo ?? ""}
               onChange={val => setForm(f => ({ ...f, meta_mensal_titulo: val }))}
               disabled={loading}
             />
             <Field
-              label="Meta total (R$)"
+              label="Mês / Período de Exibição"
+              value={form.meta_mensal_periodo ?? ""}
+              onChange={val => setForm(f => ({ ...f, meta_mensal_periodo: val }))}
+              disabled={loading}
+            />
+            <Field
+              label="Meta Total do Mês (R$)"
               value={form.meta_mensal_valor ?? ""}
               onChange={val => setForm(f => ({ ...f, meta_mensal_valor: parseBrazilianNumber(val) }))}
               disabled={loading}
               type="number"
             />
             <Field
-              label="Realizado até hoje (R$)"
+              label="Realizado até o Momento (R$)"
               value={form.meta_mensal_realizado ?? ""}
               onChange={val => setForm(f => ({ ...f, meta_mensal_realizado: parseBrazilianNumber(val) }))}
               disabled={loading}
               type="number"
             />
-            <Field
-              label="Período (ex: ANO DE 2026 - JD. GOIÁS)"
-              value={form.meta_mensal_periodo ?? ""}
-              onChange={val => setForm(f => ({ ...f, meta_mensal_periodo: val }))}
-              disabled={loading}
-            />
-            <div style={{ height: 8, borderRadius: 9999, background: "rgba(255,255,255,.10)", overflow: "hidden", marginTop: 6 }}>
-              <div style={{ height: "100%", width: `${pctMensal}%`, background: "linear-gradient(90deg,#FF0080,#FF6B35)", borderRadius: 9999, transition: "width 600ms" }} />
-            </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.40)", marginTop: 6 }}>{pctMensal.toFixed(1)}% atingido</div>
           </div>
 
-          {/* Meta Anual */}
-          <div>
-            <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 16, marginBottom: 14, color: "rgba(255,255,255,.70)", borderBottom: "1px solid rgba(255,255,255,.07)", paddingBottom: 10 }}>
-              📆 Meta Anual
+          {/* Card de Visualização do Progresso */}
+          <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 16, padding: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,.40)", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 12 }}>
+              Resumo do Desempenho Mensal
             </div>
-            <Field
-              label="Título"
-              value={form.meta_anual_titulo ?? ""}
-              onChange={val => setForm(f => ({ ...f, meta_anual_titulo: val }))}
-              disabled={loading}
-            />
-            <Field
-              label="Meta total (R$)"
-              value={form.meta_anual_valor ?? ""}
-              onChange={val => setForm(f => ({ ...f, meta_anual_valor: parseBrazilianNumber(val) }))}
-              disabled={loading}
-              type="number"
-            />
-            <Field
-              label="Realizado até hoje (R$)"
-              value={form.meta_anual_realizado ?? ""}
-              onChange={val => setForm(f => ({ ...f, meta_anual_realizado: parseBrazilianNumber(val) }))}
-              disabled={loading}
-              type="number"
-            />
-            <div style={{ height: 8, borderRadius: 9999, background: "rgba(255,255,255,.10)", overflow: "hidden", marginTop: 28 }}>
-              <div style={{ height: "100%", width: `${pctAnual}%`, background: "linear-gradient(90deg,#7C3AED,#E30613)", borderRadius: 9999, transition: "width 600ms" }} />
+            
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,.50)" }}>Objetivo do Mês</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: "#fff" }}>
+                R$ {(form.meta_mensal_valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.40)", marginTop: 6 }}>{pctAnual.toFixed(1)}% atingido</div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,.50)" }}>Realizado no Mês</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: "#4ade80" }}>
+                R$ {(form.meta_mensal_realizado || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.60)", marginBottom: 6 }}>
+                <span>Progresso Atingido</span>
+                <span style={{ color: "#FF0080" }}>{pctMensal.toFixed(1)}%</span>
+              </div>
+              <div style={{ height: 10, borderRadius: 9999, background: "rgba(255,255,255,.10)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${pctMensal}%`, background: "linear-gradient(90deg,#FF0080,#FF6B35)", borderRadius: 9999, transition: "width 600ms" }} />
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2683,13 +2711,10 @@ export function PlacarAdmin({ activeSection, activeUnitId }: { activeSection: st
         setConfig(cfg || {
           id: 0,
           unidade_id: "jd-goias",
-          meta_mensal_titulo: "Meta Mensal",
+          meta_mensal_titulo: `Meta Mensal - ${getDetectedMonthString()}`,
           meta_mensal_valor: 0,
           meta_mensal_realizado: 0,
-          meta_mensal_periodo: "MÊS ATUAL",
-          meta_anual_titulo: "Meta Anual",
-          meta_anual_valor: 0,
-          meta_anual_realizado: 0,
+          meta_mensal_periodo: getDetectedMonthString(),
         });
       } catch (err) {
         console.error("Erro geral no PlacarAdmin:", err);
