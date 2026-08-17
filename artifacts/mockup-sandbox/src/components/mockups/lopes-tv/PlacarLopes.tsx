@@ -3,7 +3,8 @@ import faviconLopes from "@/assets/favicon-lopes.png";
 import logoBranca from "@/assets/logo-branca.png";
 import fogueteImg from "@/assets/foguete-lopes.png";
 import { placarService } from "@/services/placarService";
-import type { Pasta, RankingPastaEntry, Pessoa } from "@/types/placar";
+import type { Pasta, RankingPastaEntry, Pessoa, RankingEntry } from "@/types/placar";
+import { SlideReconhecimento } from "./SlideReconhecimento";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,8 +36,13 @@ interface SlideRankingPastas extends SlideBase {
   gestores: (RankingPastaEntry & { pessoa: Pessoa })[];
   updateFreq: string;
 }
+interface SlideReconhecimentoType extends SlideBase {
+  type: "reconhecimento";
+  corretores: (RankingEntry & { pessoa?: Pessoa })[];
+  gestores: (RankingEntry & { pessoa?: Pessoa })[];
+}
 
-type Slide = SlideMeta | SlidePVenda | SlideRanking | SlideRankingPastas;
+type Slide = SlideMeta | SlidePVenda | SlideRanking | SlideRankingPastas | SlideReconhecimentoType;
 
 // ─── Default Setup ────────────────────────────────────────────────────────────
 
@@ -631,6 +637,20 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
           });
         }
 
+        // Slide de Reconhecimento (Destaque do Mês - Padrão Ouro 100% Réplica)
+        const allRankings = await placarService.getRankings().catch(() => []);
+        const corretoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "corretores");
+        const gestoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "gestores");
+
+        generated.push({
+          id: "reconhecimento-mensal",
+          type: "reconhecimento",
+          category: "Metas Lopes",
+          title: "Destaques do Mês",
+          corretores: corretoresMensais,
+          gestores: gestoresMensais,
+        });
+
         // Slide de Primeira Venda
         if (Array.isArray(pv)) {
           pv.forEach((item) => {
@@ -654,7 +674,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         // Slides de Ranking de Pastas (Foco Principal do Placar Unificado)
         for (const p of pastas) {
           if (!p.ativo) continue;
-          const rankingEntries = await placarService.getRankingPastas(p.id).catch(() => []);
+          const rankingEntries = await placarService.getRankingPastas(p.id).catch(() => [] as (RankingPastaEntry & { pessoa?: Pessoa })[]);
           const corretores = rankingEntries.filter(e => e.categoria === "corretor").sort((a, b) => a.posicao - b.posicao);
           const gestores = rankingEntries.filter(e => e.categoria === "gestor").sort((a, b) => a.posicao - b.posicao);
 
@@ -700,9 +720,13 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
   // Loop de Autoplay
   useEffect(() => {
     if (slides.length <= 1) return;
+    const currentType = slides[slideIdx]?.type;
+    // Se for o slide de reconhecimento, o tempo de permanência é gerido dentro do próprio componente de cada indivíduo
+    if (currentType === "reconhecimento") return;
+
     const t = setInterval(() => goTo((slideIdx + 1) % slides.length), INTERVAL);
     return () => clearInterval(t);
-  }, [slideIdx, goTo, slides.length]);
+  }, [slideIdx, goTo, slides]);
 
   if (loading) {
     return (
@@ -714,6 +738,40 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
 
   const slide = slides[slideIdx] || slides[0];
   if (!slide) return null;
+
+  // Se o slide ativo for o de Reconhecimento de Top Corretores / Gerentes, renderiza 100% Fullscreen sem sidebar
+  if (slide.type === "reconhecimento") {
+    return (
+      <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+        <SlideReconhecimento
+          corretores={(slide as SlideReconhecimentoType).corretores}
+          gestores={(slide as SlideReconhecimentoType).gestores}
+          standalone={true}
+          onFinishedCycle={() => {
+            if (slides.length > 1) {
+              goTo((slideIdx + 1) % slides.length);
+            }
+          }}
+        />
+        {slides.length > 1 && (
+          <div style={{ position: "absolute", bottom: 12, right: 16, zIndex: 99, display: "flex", gap: 8 }}>
+            <button
+              onClick={() => goTo((slideIdx + slides.length - 1) % slides.length)}
+              style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(197,160,89,.4)", color: "#C5A059", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
+            >
+              ← Slide Anterior
+            </button>
+            <button
+              onClick={() => goTo((slideIdx + 1) % slides.length)}
+              style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(197,160,89,.4)", color: "#C5A059", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
+            >
+              Próximo Slide →
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
