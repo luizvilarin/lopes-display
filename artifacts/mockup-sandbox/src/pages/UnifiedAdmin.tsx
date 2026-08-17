@@ -9,7 +9,7 @@ import { Icons } from "@/components/common/Icons";
 
 type UnifiedSection = 
   // Placar Sections
-  | "metas" | "pvenda" | "rankings" | "pessoas" | "cultura"
+  | "metas" | "pvenda" | "rankings" | "reconhecimento" | "pessoas" | "cultura"
   // Signage Sections
   | "imoveis" | "ofertao" | "display"
   // System
@@ -39,10 +39,11 @@ export function UnifiedAdmin() {
     {
       title: "Placar Envolvente",
       items: [
-        { id: "metas",    label: "Meta Mensal",    icon: <Icons.Target /> },
-        { id: "pvenda",   label: "Primeira Venda", icon: <Icons.Trophy /> },
-        { id: "rankings", label: "Ranking de Pastas", icon: <Icons.Rocket /> },
-        { id: "pessoas",  label: "Equipe",         icon: <Icons.Users /> },
+        { id: "metas",          label: "Meta Mensal",              icon: <Icons.Target /> },
+        { id: "pvenda",         label: "Primeira Venda",           icon: <Icons.Trophy /> },
+        { id: "rankings",       label: "Ranking de Pastas",        icon: <Icons.Rocket /> },
+        { id: "reconhecimento", label: "Top Corretores & Gestores",icon: <Icons.Trophy /> },
+        { id: "pessoas",        label: "Equipe",                   icon: <Icons.Users /> },
       ]
     },
     {
@@ -62,7 +63,7 @@ export function UnifiedAdmin() {
   ];
 
   const renderSection = () => {
-    if (["metas", "pvenda", "rankings", "pessoas", "cultura"].includes(section)) {
+    if (["metas", "pvenda", "rankings", "reconhecimento", "pessoas", "cultura"].includes(section)) {
       return <PlacarAdmin activeSection={section} activeUnitId={activeUnitId} />;
     }
     if (["imoveis", "ofertao", "display"].includes(section)) {

@@ -2670,6 +2670,351 @@ function SecaoCultura({ unidades, activeUnitId }: { unidades: Unidade[]; activeU
   );
 }
 
+function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: () => void; }) {
+  const [rankings, setRankings] = useState<(RankingEntry & { pessoa?: Pessoa })[]>([]);
+  const [cat, setCat] = useState<"corretores" | "gestores">("corretores");
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<Partial<RankingEntry>>({
+    tipo: "mensal",
+    categoria: "corretores",
+    posicao: 1,
+    valor: 0,
+    pessoa_id: "",
+    periodo: getDetectedMonthString(),
+    ativo: true,
+  });
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await placarService.getRankings();
+      setRankings(data);
+    } catch (err) {
+      console.error("Erro ao carregar rankings de reconhecimento:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const maxPositions = cat === "corretores" ? 10 : 5;
+
+  const currentRankings = rankings
+    .filter(r => r.tipo === "mensal" && r.categoria === cat)
+    .sort((a, b) => a.posicao - b.posicao);
+
+  const handleOpenAdd = (posicao?: number) => {
+    setForm({
+      tipo: "mensal",
+      categoria: cat,
+      posicao: posicao || (currentRankings.length + 1 <= maxPositions ? currentRankings.length + 1 : 1),
+      valor: 0,
+      pessoa_id: pessoas.length > 0 ? pessoas[0].id : "",
+      periodo: getDetectedMonthString(),
+      ativo: true,
+    });
+    setShowModal(true);
+  };
+
+  const handleEdit = (entry: RankingEntry) => {
+    setForm({ ...entry });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja remover esta pessoa do ranking?")) return;
+    try {
+      await placarService.deleteRankingEntry(id);
+      loadData();
+      onChange();
+    } catch (err) {
+      console.error("Erro ao remover:", err);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!form.pessoa_id) {
+      alert("Selecione uma pessoa para a posição!");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (form.id) {
+        await placarService.updateRankingEntry(form.id, form);
+      } else {
+        await placarService.saveRankingEntry({
+          pessoa_id: form.pessoa_id,
+          tipo: "mensal",
+          categoria: cat,
+          posicao: Number(form.posicao) || 1,
+          valor: Number(form.valor) || 0,
+          periodo: form.periodo || getDetectedMonthString(),
+          ativo: true,
+        });
+      }
+      setShowModal(false);
+      loadData();
+      onChange();
+    } catch (err) {
+      console.error("Erro ao salvar destaque de reconhecimento:", err);
+      alert("Falha ao salvar no banco de dados.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      {/* Top Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: "#fff", fontFamily: "'Barlow', sans-serif", margin: 0 }}>
+            Reconhecimento — Ranking Mensal
+          </h2>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", margin: "4px 0 0 0" }}>
+            Gerencie o Top 10 Corretores e Top 5 Gerentes exibidos no slide luxo estilo Netflix.
+          </p>
+        </div>
+
+        <button
+          onClick={() => handleOpenAdd()}
+          className="pa-btn pa-btn-primary"
+          style={{ background: "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)", color: "#fff", border: "none", display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", fontWeight: 800 }}
+        >
+          <span>+ Adicionar Destaque</span>
+        </button>
+      </div>
+
+      {/* Tabs corretores / gestores */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 24, background: "rgba(255,255,255,0.03)", padding: 6, borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", width: "fit-content" }}>
+        <button
+          onClick={() => setCat("corretores")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: 8,
+            background: cat === "corretores" ? "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)" : "transparent",
+            color: cat === "corretores" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
+            fontWeight: 800,
+            fontSize: 13,
+            border: "none",
+            cursor: "pointer",
+            transition: "all 200ms ease"
+          }}
+        >
+          🏆 Top 10 Corretores do Mês
+        </button>
+        <button
+          onClick={() => setCat("gestores")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: 8,
+            background: cat === "gestores" ? "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)" : "transparent",
+            color: cat === "gestores" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
+            fontWeight: 800,
+            fontSize: 13,
+            border: "none",
+            cursor: "pointer",
+            transition: "all 200ms ease"
+          }}
+        >
+          👔 Top 5 Gerentes do Mês
+        </button>
+      </div>
+
+      {/* Cards de Posições (1 ao Max) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+        {Array.from({ length: maxPositions }, (_, i) => {
+          const pos = i + 1;
+          const entry = currentRankings.find(r => r.posicao === pos);
+          const pessoa = entry?.pessoa || pessoas.find(p => p.id === entry?.pessoa_id);
+
+          return (
+            <div
+              key={pos}
+              style={{
+                background: entry ? "rgba(197,160,89,0.06)" : "rgba(255,255,255,0.02)",
+                border: entry ? "1px solid rgba(197,160,89,0.35)" : "1px dashed rgba(255,255,255,0.12)",
+                borderRadius: 14,
+                padding: 16,
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12
+              }}
+            >
+              {/* Badge da posição */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: pos === 1 ? "linear-gradient(135deg, #FFD700, #B8860B)" : pos === 2 ? "linear-gradient(135deg, #E0E0E0, #9E9E9E)" : pos === 3 ? "linear-gradient(135deg, #CD7F32, #8B4513)" : "rgba(255,255,255,0.08)",
+                  color: pos <= 3 ? "#000" : "#C5A059",
+                  fontWeight: 900,
+                  fontSize: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "'Barlow', sans-serif"
+                }}>
+                  {pos}º
+                </div>
+                {entry ? (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      onClick={() => handleEdit(entry)}
+                      style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12 }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Vazio</span>
+                )}
+              </div>
+
+              {/* Informações da Pessoa */}
+              {entry && pessoa ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", border: "2px solid #C5A059", flexShrink: 0 }}>
+                    {pessoa.foto_url ? (
+                      <img src={pessoa.foto_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", background: "#111", color: "#C5A059", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
+                        {pessoa.nome.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {pessoa.nome}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
+                      Lopes {pessoa.unidade_id?.toUpperCase() || "Digital"}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", marginTop: 2 }}>
+                      {entry.valor ? `R$ ${Number(entry.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Sem valor salvo"}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => handleOpenAdd(pos)}
+                  style={{
+                    height: 60,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "rgba(255,255,255,0.4)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                >
+                  + Vincular {cat === "corretores" ? "Corretor" : "Gerente"} ao {pos}º Lugar
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modal Adicionar / Editar */}
+      {showModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#111118", border: "1px solid rgba(197,160,89,0.4)", borderRadius: 16, padding: 28, width: 440, maxWidth: "90vw" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 20px 0" }}>
+              {form.id ? "Editar Posição no Ranking" : `Definir ${form.posicao}º Lugar (${cat === "corretores" ? "Corretor" : "Gerente"})`}
+            </h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label className="pa-label">Posição do Pódio</label>
+                <select
+                  className="pa-input"
+                  value={form.posicao || 1}
+                  onChange={e => setForm({ ...form, posicao: Number(e.target.value) })}
+                >
+                  {Array.from({ length: maxPositions }, (_, idx) => (
+                    <option key={idx + 1} value={idx + 1}>{idx + 1}º Lugar</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="pa-label">Selecione a Pessoa</label>
+                <select
+                  className="pa-input"
+                  value={form.pessoa_id || ""}
+                  onChange={e => setForm({ ...form, pessoa_id: e.target.value })}
+                >
+                  <option value="">-- Escolha uma pessoa da equipe --</option>
+                  {pessoas.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome} ({p.cargo === "gestor" ? "Gerente" : "Corretor"} - Lopes {p.unidade_id?.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="pa-label">Valor Realizado de Vendas (R$)</label>
+                <input
+                  type="number"
+                  className="pa-input"
+                  placeholder="Ex: 1500000"
+                  value={form.valor || ""}
+                  onChange={e => setForm({ ...form, valor: Number(e.target.value) })}
+                />
+              </div>
+
+              <div>
+                <label className="pa-label">Mês / Período</label>
+                <input
+                  type="text"
+                  className="pa-input"
+                  placeholder="Ex: AGOSTO DE 2026"
+                  value={form.periodo || getDetectedMonthString()}
+                  onChange={e => setForm({ ...form, periodo: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowModal(false)}
+                className="pa-btn pa-btn-secondary"
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                className="pa-btn pa-btn-primary"
+                style={{ background: "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)", color: "#fff", fontWeight: 800 }}
+                disabled={saving}
+              >
+                {saving ? "Salvando..." : "Salvar Posição"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export function PlacarAdmin({ activeSection, activeUnitId }: { activeSection: string; activeUnitId: string }) {
@@ -2733,6 +3078,9 @@ export function PlacarAdmin({ activeSection, activeUnitId }: { activeSection: st
           )}
           {activeSection === "rankings" && (
             <SecaoRankingsPastas pessoas={pessoas} onChange={reload} />
+          )}
+          {activeSection === "reconhecimento" && (
+            <SecaoReconhecimentoRankings pessoas={pessoas} onChange={reload} />
           )}
           {activeSection === "pvenda" && config && (
             <SecaoPVenda pvs={pvs} pessoas={pessoas} activeUnitId={activeUnitId} onChange={reload} />
