@@ -195,89 +195,23 @@ export const placarService = {
 
   // ─── Rankings ─────────────────────────────────────────────────────────────
   getRankings: async (): Promise<(RankingEntry & { pessoa?: Pessoa })[]> => {
-    try {
-      const { data, error } = await supabase
-        .from("ranking_entries")
-        .select(`*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, instagram, ativo)`)
-        .eq("ativo", true);
-      if (!error && data && data.length > 0) {
-        localStorage.setItem("lopes_ranking_entries", JSON.stringify(data));
-        return data;
-      }
-    } catch (e) {}
-
-    // Fallback LocalStorage
-    const raw = localStorage.getItem("lopes_ranking_entries");
-    if (raw) {
-      try {
-        const entries: RankingEntry[] = JSON.parse(raw);
-        const pessoas = await placarService.getPessoas();
-        return entries.map(e => ({
-          ...e,
-          pessoa: e.pessoa || pessoas.find(p => p.id === e.pessoa_id)
-        }));
-      } catch (e) {}
-    }
-    return [];
+    const { data, error } = await supabase.from("ranking_entries").select(`*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, ativo)`).eq("ativo", true);
+    if (error) throw error;
+    return data ?? [];
   },
-
   saveRankingEntry: async (e: Omit<RankingEntry, "id" | "criado_em" | "atualizado_em">): Promise<RankingEntry> => {
-    const newEntry: RankingEntry = {
-      id: `re_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      ...e,
-      criado_em: new Date().toISOString()
-    };
-    try {
-      const { data, error } = await supabase.from("ranking_entries").insert(e).select().single();
-      if (!error && data) {
-        newEntry.id = data.id;
-      }
-    } catch (err) {}
-
-    // LocalStorage Fallback & Sync
-    const raw = localStorage.getItem("lopes_ranking_entries");
-    let list: RankingEntry[] = raw ? JSON.parse(raw) : [];
-    const idx = list.findIndex(x => x.posicao === newEntry.posicao && x.categoria === newEntry.categoria && x.tipo === newEntry.tipo);
-    if (idx >= 0) list[idx] = newEntry;
-    else list.push(newEntry);
-    localStorage.setItem("lopes_ranking_entries", JSON.stringify(list));
-
-    return newEntry;
+    const { data, error } = await supabase.from("ranking_entries").insert(e).select().single();
+    if (error) throw error;
+    return data;
   },
-
   updateRankingEntry: async (id: string, patch: Partial<RankingEntry>): Promise<RankingEntry> => {
-    let updated: RankingEntry = { id } as RankingEntry;
-    try {
-      const { data, error } = await supabase.from("ranking_entries").update(patch).eq("id", id).select().single();
-      if (!error && data) {
-        updated = data;
-      }
-    } catch (err) {}
-
-    const raw = localStorage.getItem("lopes_ranking_entries");
-    let list: RankingEntry[] = raw ? JSON.parse(raw) : [];
-    const idx = list.findIndex(x => x.id === id);
-    if (idx >= 0) {
-      list[idx] = { ...list[idx], ...patch };
-      updated = list[idx];
-    }
-    localStorage.setItem("lopes_ranking_entries", JSON.stringify(list));
-    return updated;
+    const { data, error } = await supabase.from("ranking_entries").update(patch).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
   },
-
   deleteRankingEntry: async (id: string): Promise<void> => {
-    try {
-      await supabase.from("ranking_entries").delete().eq("id", id);
-    } catch (e) {}
-
-    const raw = localStorage.getItem("lopes_ranking_entries");
-    if (raw) {
-      try {
-        let list: RankingEntry[] = JSON.parse(raw);
-        list = list.filter(x => x.id !== id);
-        localStorage.setItem("lopes_ranking_entries", JSON.stringify(list));
-      } catch (e) {}
-    }
+    const { error } = await supabase.from("ranking_entries").delete().eq("id", id);
+    if (error) throw error;
   },
 
   // ─── Primeira Venda ───────────────────────────────────────────────────────

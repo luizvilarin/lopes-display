@@ -2677,18 +2677,9 @@ function SecaoCultura({ unidades, activeUnitId }: { unidades: Unidade[]; activeU
 }
 
 function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: () => void; }) {
-  const [rankings, setRankings] = useState<(RankingEntry & { pessoa?: Pessoa })[]>(() => {
-    const raw = localStorage.getItem("lopes_ranking_entries");
-    if (raw) {
-      try {
-        const entries: RankingEntry[] = JSON.parse(raw);
-        return entries;
-      } catch (e) {}
-    }
-    return [];
-  });
+  const [rankings, setRankings] = useState<(RankingEntry & { pessoa?: Pessoa })[]>([]);
   const [cat, setCat] = useState<"corretores" | "gestores">("corretores");
-  const [loading, setLoading] = useState(() => rankings.length === 0);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<RankingEntry>>({
@@ -2701,8 +2692,8 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
     ativo: true,
   });
 
-  const loadData = useCallback(async (showLoader = false) => {
-    if (showLoader) setLoading(true);
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await placarService.getRankings();
       setRankings(data);
@@ -2714,7 +2705,7 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
   }, []);
 
   useEffect(() => {
-    loadData(rankings.length === 0);
+    loadData();
   }, [loadData]);
 
   const maxPositions = cat === "corretores" ? 10 : 5;
@@ -2743,14 +2734,12 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja remover esta pessoa do ranking?")) return;
-    // Optimistic deletion: Remove from screen INSTANTLY (< 5ms)
-    setRankings(prev => prev.filter(r => r.id !== id));
     try {
       await placarService.deleteRankingEntry(id);
+      loadData();
       onChange();
     } catch (err) {
       console.error("Erro ao remover:", err);
-      loadData(false);
     }
   };
 
@@ -2759,29 +2748,6 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
       alert("Selecione uma pessoa para a posição!");
       return;
     }
-
-    const selectedPessoa = pessoas.find(p => p.id === form.pessoa_id);
-    const newEntry: RankingEntry & { pessoa?: Pessoa } = {
-      id: form.id || `temp_${Date.now()}`,
-      pessoa_id: form.pessoa_id,
-      tipo: "mensal",
-      categoria: cat,
-      posicao: Number(form.posicao) || 1,
-      valor: Number(form.valor) || 0,
-      instagram: form.instagram || undefined,
-      periodo: form.periodo || getDetectedMonthString(),
-      ativo: true,
-      pessoa: selectedPessoa
-    };
-
-    // Optimistic UI update: Displays on screen INSTANTLY (< 5ms)
-    setRankings(prev => {
-      const filtered = prev.filter(r => !(r.posicao === newEntry.posicao && r.categoria === newEntry.categoria && r.tipo === newEntry.tipo) && r.id !== form.id);
-      return [...filtered, newEntry];
-    });
-
-    setShowModal(false);
-
     setSaving(true);
     try {
       if (form.id) {
@@ -2798,10 +2764,12 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
           ativo: true,
         });
       }
-      loadData(false);
+      setShowModal(false);
+      loadData();
       onChange();
     } catch (err) {
       console.error("Erro ao salvar destaque de reconhecimento:", err);
+      alert("Falha ao salvar no banco de dados.");
     } finally {
       setSaving(false);
     }
