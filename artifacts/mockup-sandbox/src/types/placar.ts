@@ -17,6 +17,7 @@ export interface Pessoa {
   cargo: Cargo;
   unidade_id: string;
   foto_url?: string;
+  instagram?: string;
   ativo: boolean;
   criado_em?: string;
 }
@@ -44,6 +45,7 @@ export interface RankingEntry {
   categoria: CategoriaRanking;
   posicao: number;
   valor: number;
+  instagram?: string;
   periodo: string; // ex: "MAIO DE 2026"
   ativo: boolean;
   semana?: number;

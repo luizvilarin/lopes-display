@@ -235,7 +235,7 @@ export function SlideReconhecimento({
             cargoText: p.cargo === "gestor" ? "GERENTE" : "CORRETOR",
             equipeText: `LOPES ${p.unidade_id ? p.unidade_id.toUpperCase() : "DIGITAL"}`,
             foto_url: p.foto_url || "",
-            instagram: `@${firstWord.toLowerCase()}.lopes`,
+            instagram: r.instagram || p.instagram || (firstWord ? `@${firstWord.toLowerCase()}.lopes` : undefined),
             valor: r.valor ? `R$ ${Number(r.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : undefined
           };
         });
@@ -318,8 +318,8 @@ export function SlideReconhecimento({
         }
 
         @keyframes photoEmerge {
-          0% { transform: scale(0.91) translateY(24px); opacity: 0; filter: blur(14px); }
-          100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0px); }
+          0% { transform: scale(0.96) translateY(20px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
         }
 
         @keyframes textSlideUp {
@@ -486,17 +486,18 @@ export function SlideReconhecimento({
       {animStep >= 3 && (
         <div style={{
           position: "absolute",
-          left: "8%",
+          left: "6%",
           bottom: 0,
-          width: "42vw",
-          height: "86vh",
+          width: "44vw",
+          height: "88vh",
           zIndex: 3,
           display: "flex",
           alignItems: "flex-end",
           justifyContent: "center",
-          animation: "photoEmerge 900ms cubic-bezier(0.16, 1, 0.3, 1) both"
+          animation: "photoEmerge 900ms cubic-bezier(0.16, 1, 0.3, 1) both",
+          pointerEvents: "none"
         }}>
-          <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
+          <div style={{ position: "relative", width: "100%", height: "100%", background: "transparent" }}>
             {currentItem.foto_url ? (
               <img
                 src={currentItem.foto_url}
@@ -504,9 +505,11 @@ export function SlideReconhecimento({
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
-                  objectPosition: "center top",
-                  filter: "drop-shadow(0 0 35px rgba(212,175,55,0.45))"
+                  objectFit: "contain",
+                  objectPosition: "center bottom",
+                  imageRendering: "-webkit-optimize-contrast",
+                  filter: "drop-shadow(0 0 30px rgba(212,175,55,0.45))",
+                  backfaceVisibility: "hidden"
                 }}
               />
             ) : (
@@ -525,11 +528,12 @@ export function SlideReconhecimento({
               </div>
             )}
 
-            {/* Dark Vignette Bottom Blending for Photo */}
+            {/* Subtle Bottom Fade so cutouts sit nicely at bottom */}
             <div style={{
               position: "absolute",
-              inset: 0,
-              background: "linear-gradient(to top, #070709 0%, transparent 25%)"
+              bottom: 0, left: 0, right: 0, height: "12%",
+              background: "linear-gradient(to top, #070709 0%, transparent 100%)",
+              pointerEvents: "none"
             }} />
 
             {/* ─── PASSO 5: BRILHO FINAL (Golden Sheen Pass over photo) ─── */}

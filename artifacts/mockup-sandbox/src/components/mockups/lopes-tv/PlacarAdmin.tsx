@@ -368,13 +368,15 @@ function ImageCropper({
   const handleConfirm = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // Export at 256x256
+    // Export at 1024x1024 as image/png preserving high clarity and alpha transparency
     const out = document.createElement("canvas");
-    out.width = 256; out.height = 256;
+    out.width = 1024; out.height = 1024;
     const ctx = out.getContext("2d");
     if (!ctx) return;
-    ctx.drawImage(canvas, 0, 0, 256, 256);
-    onConfirm(out.toDataURL("image/jpeg", 0.88));
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(canvas, 0, 0, 1024, 1024);
+    onConfirm(out.toDataURL("image/png"));
   };
 
   return (
@@ -662,7 +664,11 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                 </select>
               </div>
               <div className="pa-form-row" style={{ gridColumn: "1 / -1" }}>
-                <label className="pa-label">Foto do Perfil (opcional)</label>
+                <label className="pa-label">Instagram Handle (ex: @ricardolobo_lopes)</label>
+                <input className="pa-input" value={modal.instagram ?? ""} onChange={e => setModal(m => ({ ...m!, instagram: e.target.value }))} placeholder="Ex: @ricardolobo_lopes" />
+              </div>
+              <div className="pa-form-row" style={{ gridColumn: "1 / -1" }}>
+                <label className="pa-label">Foto do Perfil (Suporta PNG sem fundo transparente HD)</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
                   {/* Preview circular */}
                   <div style={{
@@ -715,7 +721,7 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                         </>
                       )}
                     </div>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Suporta PNG ou JPG de até 5MB</span>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Recomendado: PNG Transparente HD (Manterá fundo transparente)</span>
                   </div>
                 </div>
                 <input
@@ -727,13 +733,13 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                     const file = e.target.files?.[0];
                     if (!file) return;
                     e.target.value = "";
-                    if (file.size > 5 * 1024 * 1024) {
-                      alert("Por favor, selecione uma imagem de até 5MB.");
+                    if (file.size > 10 * 1024 * 1024) {
+                      alert("Por favor, selecione uma imagem de até 10MB.");
                       return;
                     }
                     try {
                       const dataUrl = await readFileAsDataUrl(file);
-                      setCropSrc(dataUrl);
+                      setModal(m => ({ ...m!, foto_url: dataUrl }));
                     } catch {
                       alert("Erro ao ler o arquivo de imagem.");
                     }
@@ -2753,6 +2759,7 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
           categoria: cat,
           posicao: Number(form.posicao) || 1,
           valor: Number(form.valor) || 0,
+          instagram: form.instagram || undefined,
           periodo: form.periodo || getDetectedMonthString(),
           ativo: true,
         });
@@ -2976,6 +2983,17 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
                   placeholder="Ex: 1500000"
                   value={form.valor || ""}
                   onChange={e => setForm({ ...form, valor: Number(e.target.value) })}
+                />
+              </div>
+
+              <div>
+                <label className="pa-label">Instagram Handle Real (ex: @ricardolobo_lopes)</label>
+                <input
+                  type="text"
+                  className="pa-input"
+                  placeholder="Ex: @ricardolobo_lopes"
+                  value={form.instagram || ""}
+                  onChange={e => setForm({ ...form, instagram: e.target.value })}
                 />
               </div>
 
