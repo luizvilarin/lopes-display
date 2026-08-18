@@ -13,15 +13,6 @@ export function SlideProgressaoPromocao({ nome, cargoAnterior, cargoAtual, mensa
   return (
     <div style={{ width: "100vw", height: "100vh", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: "#111", position: "relative", overflow: "hidden", fontFamily: "'DM Sans', sans-serif" }}>
       
-      {/* Background Chevron Arrows (faint) */}
-      <div style={{ position: "absolute", right: "-5%", top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 120, opacity: 0.03, pointerEvents: "none" }}>
-        {[1, 2, 3, 4, 5].map(i => (
-          <svg key={i} width="600" height="200" viewBox="0 0 100 50" preserveAspectRatio="none">
-            <path d="M0,50 L50,0 L100,50" fill="none" stroke="#000" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        ))}
-      </div>
-
       {/* Main Card Wrapper */}
       <div style={{ width: "100%", maxWidth: 1200, aspectRatio: "16/9", display: "flex", gap: 60, position: "relative", zIndex: 5, padding: "40px" }}>
         

@@ -739,6 +739,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
   if (slide.type === "reconhecimento") {
     return (
       <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+        <style>{CSS}</style>
         <SlideReconhecimento
           corretores={(slide as SlideReconhecimentoType).corretores}
           gestores={(slide as SlideReconhecimentoType).gestores}
@@ -777,6 +778,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
 
     return (
       <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+        <style>{CSS}</style>
         {slide.subType === "signature" ? (
           <SlideProgressaoSignature
             nome={nome}
