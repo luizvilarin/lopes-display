@@ -97,13 +97,15 @@ export function mapLojaToUnidadeId(lojaText?: string): string {
 function isIgnoredName(name: string): boolean {
   const norm = normalizeName(name);
   if (!norm) return true;
-  return (
-    norm === "SOCIOS" ||
-    norm === "SOCIO" ||
-    norm === "SOCIAS" ||
-    norm === "SOCIA" ||
-    norm === "GERENTES"
-  );
+  
+  const ignored = [
+    "SOCIOS", "SOCIO", "SOCIAS", "SOCIA", "GERENTES",
+    // Sócios
+    "SERENO LEAO", "RAFAEL BADRA", "DEYVID RHUSSEL", "JANN COSTA", 
+    "LUZIANO", "JOSE SOARES", "MURILO FEITOSA"
+  ];
+  
+  return ignored.some(ignoredName => norm.includes(ignoredName));
 }
 
 // ─── Interfaces de Saída do Processamento da Planilha ─────────────────────────

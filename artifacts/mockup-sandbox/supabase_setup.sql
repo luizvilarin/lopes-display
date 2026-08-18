@@ -76,11 +76,36 @@ create table if not exists ranking_entries (
   criado_em    timestamptz default now(),
   atualizado_em timestamptz default now(),
   -- Garante unicidade por tipo/posicao/semana para evitar colisões
-  unique nulls not distinct (tipo, categoria, posicao, semana, ano)
+  unique nulls not distinct (tipo, categoria, posicao, periodo)
 );
 
 create index if not exists ranking_tipo_cat_idx on ranking_entries(tipo, categoria, ativo);
 create index if not exists ranking_semana_idx   on ranking_entries(semana, ano);
+
+-- ── 4.1. Tabela de Pastas e Ranking de Pastas ────────────────────────────────
+create table if not exists pastas (
+  id          text primary key,
+  titulo      text not null,
+  meta_pastas integer not null default 30,
+  ativo       boolean not null default true,
+  criado_em   timestamptz default now()
+);
+
+create table if not exists ranking_pastas (
+  id                uuid primary key default gen_random_uuid(),
+  pasta_id          text references pastas(id) on delete cascade,
+  pessoa_id         uuid references pessoas(id) on delete cascade,
+  posicao           integer not null check (posicao >= 1),
+  quantidade_pastas integer not null default 0,
+  atualizado_em     timestamptz default now(),
+  unique (pasta_id, pessoa_id)
+);
+
+alter table pastas         enable row level security;
+alter table ranking_pastas enable row level security;
+
+create policy "acesso total publico pastas"         on pastas         for all using (true) with check (true);
+create policy "acesso total publico ranking_pastas" on ranking_pastas for all using (true) with check (true);
 
 -- ── 5. Primeira Venda da Semana (Placar Envolvente) ────────────────────────────
 
