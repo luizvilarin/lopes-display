@@ -274,8 +274,14 @@ export function SlideReconhecimento({
       setItemIdx(prev => {
         const next = prev + 1;
         if (next >= items.length) {
-          if (onFinishedCycle) onFinishedCycle();
-          return 0; // loop back to 1st
+          if (tab === "corretores") {
+            setTab("gestores");
+            return 0;
+          } else {
+            if (onFinishedCycle) onFinishedCycle();
+            setTab("corretores");
+            return 0;
+          }
         }
         return next;
       });
@@ -289,7 +295,7 @@ export function SlideReconhecimento({
       clearTimeout(fadeOutTimer);
       clearTimeout(nextTimer);
     };
-  }, [itemIdx, items.length, displayDuration, onFinishedCycle]);
+  }, [itemIdx, items.length, displayDuration, onFinishedCycle, tab]);
 
   // Wireframe Rank Number string (ex: "01", "02" ... "10" or "1º")
   const rankNumStr = String(currentItem.posicao).padStart(2, "0");
