@@ -91,6 +91,21 @@ export function mapLojaToUnidadeId(lojaText?: string): string {
   return "jd-goias"; // Unidade padrão fallback
 }
 
+/**
+ * Nomes genéricos que devem ser desconsiderados nos rankings.
+ */
+function isIgnoredName(name: string): boolean {
+  const norm = normalizeName(name);
+  if (!norm) return true;
+  return (
+    norm === "SOCIOS" ||
+    norm === "SOCIO" ||
+    norm === "SOCIAS" ||
+    norm === "SOCIA" ||
+    norm === "GERENTES"
+  );
+}
+
 // ─── Interfaces de Saída do Processamento da Planilha ─────────────────────────
 
 export interface ParsedPersonRanking {
@@ -227,8 +242,8 @@ export function parseSalesSpreadsheet(
     monthRecord.totalTransactions += 1;
     validSalesCount++;
 
-    // Agrupa Corretor
-    if (corretorName && corretorName.toUpperCase() !== "GERENTES") {
+    // Agrupa Corretor (Ignora SÓCIOS e GERENTES)
+    if (corretorName && !isIgnoredName(corretorName)) {
       const normC = normalizeName(corretorName);
       if (!monthRecord.corretoresMap[normC]) {
         monthRecord.corretoresMap[normC] = { rawName: corretorName, totalValor: 0, totalVendas: 0, loja: lojaStr };
@@ -237,8 +252,8 @@ export function parseSalesSpreadsheet(
       monthRecord.corretoresMap[normC].totalVendas += 1;
     }
 
-    // Agrupa Gestor
-    if (gestorName) {
+    // Agrupa Gestor (Ignora SÓCIOS e GERENTES)
+    if (gestorName && !isIgnoredName(gestorName)) {
       const normG = normalizeName(gestorName);
       if (!monthRecord.gestoresMap[normG]) {
         monthRecord.gestoresMap[normG] = { rawName: gestorName, totalValor: 0, totalVendas: 0, loja: lojaStr };
@@ -257,7 +272,7 @@ export function parseSalesSpreadsheet(
 
     // Processa Corretores
     const corretoresList: ParsedPersonRanking[] = Object.values(rawData.corretoresMap).map(item => {
-      const match = matchPersonToDatabase(item.rawName, "corretor", pessoasCadastradas);
+      const match = matchPersonToDatabase(item.rawName, "corretor", item.loja, pessoasCadastradas);
       return {
         nameInExcel: item.rawName,
         normalizedName: normalizeName(item.rawName),
@@ -273,7 +288,7 @@ export function parseSalesSpreadsheet(
 
     // Processa Gestores
     const gestoresList: ParsedPersonRanking[] = Object.values(rawData.gestoresMap).map(item => {
-      const match = matchPersonToDatabase(item.rawName, "gestor", pessoasCadastradas);
+      const match = matchPersonToDatabase(item.rawName, "gestor", item.loja, pessoasCadastradas);
       return {
         nameInExcel: item.rawName,
         normalizedName: normalizeName(item.rawName),
@@ -313,14 +328,18 @@ export function parseSalesSpreadsheet(
 
 /**
  * Busca a melhor correspondência para um nome na lista de Pessoas do sistema.
+ * Leva em conta o cargo e a Unidade (LOJA) como fator de pontuação extra.
  */
 function matchPersonToDatabase(
   excelName: string,
   cargoTarget: Cargo,
+  lojaText: string,
   pessoasCadastradas: Pessoa[]
 ): { bestMatch?: Pessoa; score: number } {
   let bestMatch: Pessoa | undefined = undefined;
   let maxScore = 0;
+
+  const targetUnidadeId = mapLojaToUnidadeId(lojaText);
 
   // Filtra pessoas preferencialmente do mesmo cargo
   const candidates = pessoasCadastradas.filter(p => p.cargo === cargoTarget);
@@ -328,7 +347,14 @@ function matchPersonToDatabase(
   const pool = candidates.length > 0 ? candidates : pessoasCadastradas;
 
   pool.forEach(p => {
-    const score = calculateNameSimilarity(excelName, p.nome);
+    let score = calculateNameSimilarity(excelName, p.nome);
+
+    // Se a pessoa pertencer à MESMA unidade que consta na coluna LOJA da planilha,
+    // ganha um bônus de similaridade de +0.15 para reforçar o acerto (ex: Bueno com Bueno)
+    if (p.unidade_id === targetUnidadeId && score >= 0.55) {
+      score = Math.min(1.0, score + 0.15);
+    }
+
     if (score > maxScore) {
       maxScore = score;
       bestMatch = p;
