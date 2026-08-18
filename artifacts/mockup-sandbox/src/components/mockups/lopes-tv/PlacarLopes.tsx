@@ -751,20 +751,19 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
           }}
         />
         {slides.length > 1 && (
-          <div style={{ position: "absolute", bottom: 12, right: 16, zIndex: 99, display: "flex", gap: 8 }}>
-            <button
-              onClick={() => goTo((slideIdx + slides.length - 1) % slides.length)}
-              style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(197,160,89,.4)", color: "#C5A059", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
-            >
-              ← Slide Anterior
-            </button>
-            <button
-              onClick={() => goTo((slideIdx + 1) % slides.length)}
-              style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(197,160,89,.4)", color: "#C5A059", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
-            >
-              Próximo Slide →
-            </button>
-          </div>
+          <>
+            {[[-1, "←"], [1, "→"]].map(([dir, lbl]) => (
+              <button
+                key={String(lbl)}
+                onClick={() => goTo((slideIdx + slides.length + (dir as number)) % slides.length)}
+                style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [dir === -1 ? "left" : "right"]: 12, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.6)", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 16, fontFamily: "monospace", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "all 200ms ease" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.15)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.6)"; }}
+              >
+                {lbl}
+              </button>
+            ))}
+          </>
         )}
       </div>
     );
@@ -797,20 +796,19 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         
         {/* Navigation buttons for admin/manual override */}
         {slides.length > 1 && (
-          <div style={{ position: "absolute", bottom: 12, right: 16, zIndex: 99, display: "flex", gap: 8 }}>
-            <button
-              onClick={() => goTo((slideIdx + slides.length - 1) % slides.length)}
-              style={{ background: "rgba(0,0,0,.5)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
-            >
-              ← Slide Anterior
-            </button>
-            <button
-              onClick={() => goTo((slideIdx + 1) % slides.length)}
-              style={{ background: "rgba(0,0,0,.5)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
-            >
-              Próximo Slide →
-            </button>
-          </div>
+          <>
+            {[[-1, "←"], [1, "→"]].map(([dir, lbl]) => (
+              <button
+                key={String(lbl)}
+                onClick={() => goTo((slideIdx + slides.length + (dir as number)) % slides.length)}
+                style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [dir === -1 ? "left" : "right"]: 12, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.6)", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 16, fontFamily: "monospace", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "all 200ms ease" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.15)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.6)"; }}
+              >
+                {lbl}
+              </button>
+            ))}
+          </>
         )}
       </div>
     );
