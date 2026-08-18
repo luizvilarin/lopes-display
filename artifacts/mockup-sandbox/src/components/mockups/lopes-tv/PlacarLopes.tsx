@@ -797,17 +797,26 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         {/* Navigation buttons for admin/manual override */}
         {slides.length > 1 && (
           <>
-            {[[-1, "←"], [1, "→"]].map(([dir, lbl]) => (
-              <button
-                key={String(lbl)}
-                onClick={() => goTo((slideIdx + slides.length + (dir as number)) % slides.length)}
-                style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [dir === -1 ? "left" : "right"]: 12, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.6)", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 16, fontFamily: "monospace", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "all 200ms ease" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.15)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.6)"; }}
-              >
-                {lbl}
-              </button>
-            ))}
+            {[[-1, "←"], [1, "→"]].map(([dir, lbl]) => {
+              const isDark = slide.subType !== "signature";
+              const bg = isDark ? "rgba(0,0,0,.08)" : "rgba(255,255,255,.08)";
+              const bgHover = isDark ? "rgba(0,0,0,.15)" : "rgba(255,255,255,.15)";
+              const border = isDark ? "rgba(0,0,0,.12)" : "rgba(255,255,255,.12)";
+              const color = isDark ? "rgba(0,0,0,.6)" : "rgba(255,255,255,.6)";
+              const colorHover = isDark ? "#000" : "#fff";
+
+              return (
+                <button
+                  key={String(lbl)}
+                  onClick={() => goTo((slideIdx + slides.length + (dir as number)) % slides.length)}
+                  style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [dir === -1 ? "left" : "right"]: 12, background: bg, border: `1px solid ${border}`, color: color, borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 16, fontFamily: "monospace", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "all 200ms ease" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = bgHover; (e.currentTarget as HTMLElement).style.color = colorHover; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = bg; (e.currentTarget as HTMLElement).style.color = color; }}
+                >
+                  {lbl}
+                </button>
+              );
+            })}
           </>
         )}
       </div>
