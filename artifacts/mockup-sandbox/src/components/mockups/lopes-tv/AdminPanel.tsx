@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { placarService, type Imovel, type SignageSettings } from "@/services/placarService";
+import { placarService, generateQRCodeUrl, type Imovel, type SignageSettings } from "@/services/placarService";
 import type { Unidade } from "@/types/placar";
 import { Icons } from "@/components/common/Icons";
 
@@ -233,7 +233,7 @@ function ImageDropzone({ value, onChange, label, maxWidth = 1024, maxHeight = 57
 function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClose }: { prop: Imovel; categories: string[]; unidades: Unidade[]; activeUnitId: string; onSave: (p: Imovel) => Promise<void>; onClose: () => void }) {
   const [draft, setDraft] = useState<Imovel>({
     ...prop,
-    unidade_id: prop.unidade_id || activeUnitId,
+    unidade_id: prop.unidade_id || (activeUnitId === "Todas" ? "jd-goias" : activeUnitId),
     category: prop.category || "Geral",
     gallery: prop.gallery || []
   });
@@ -372,17 +372,64 @@ function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClo
               </div>
             </div>
 
+            {/* Gerador Automático de QR Code através do Link dos Materiais */}
             <div style={{ padding: "20px", background: "rgba(227,6,19,0.03)", border: "1px dashed rgba(227,6,19,0.2)", borderRadius: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(227,6,19,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icons.QRCode size={18} color="#E30613" />
                 </div>
                 <div>
-                  <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "var(--text)" }}>Material QR Code (Linktree)</div>
-                  <div style={{ fontSize: 11, color: "var(--text3)" }}>Arte com o QR Code para o corretor escanear</div>
+                  <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "var(--text)" }}>Link dos Materiais (Gerador Automático de QR Code)</div>
+                  <div style={{ fontSize: 11, color: "var(--text3)" }}>Cole a URL dos materiais deste produto. O QR Code será criado instantaneamente pelo sistema.</div>
                 </div>
               </div>
-              <ImageDropzone value={draft.qr_code_url || ""} onChange={url => up("qr_code_url", url)} label="Upload da Arte do QR Code" maxWidth={256} maxHeight={256} />
+
+              <input
+                className="adm-input"
+                type="url"
+                placeholder="Ex: https://drive.google.com/drive/folders/... ou https://lopes.com.br/materiais"
+                value={draft.materials_url || ""}
+                onChange={e => {
+                  const url = e.target.value;
+                  const qrUrl = generateQRCodeUrl(url);
+                  setDraft(d => ({
+                    ...d,
+                    materials_url: url,
+                    qr_code_url: qrUrl
+                  }));
+                }}
+                style={{ fontSize: 13, marginBottom: 14 }}
+              />
+
+              {draft.qr_code_url ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 16, background: "var(--bg3)", padding: 14, borderRadius: 12, border: "1px solid var(--border)" }}>
+                  <div style={{ background: "#fff", padding: 8, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <img src={draft.qr_code_url} alt="QR Code Gerado" style={{ width: 90, height: 90, objectFit: "contain" }} />
+                  </div>
+                  <div style={{ overflow: "hidden" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#4ADE80", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>✅ QR Code Gerado Automaticamente</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4, wordBreak: "break-all" }}>
+                      Destino: {draft.materials_url || draft.qr_code_url}
+                    </div>
+                    {draft.materials_url && (
+                      <a
+                        href={draft.materials_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: 11, color: "#E30613", textDecoration: "none", fontWeight: 700, marginTop: 6, display: "inline-block" }}
+                      >
+                        🔗 Testar Link dos Materiais ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--text4)", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>
+                  Insira o link dos materiais no campo acima para gerar o QR Code automaticamente.
+                </div>
+              )}
             </div>
 
             <div>

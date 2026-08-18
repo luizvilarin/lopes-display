@@ -2,6 +2,12 @@ import { supabase } from "../lib/supabase";
 import type { Unidade, Pessoa, ConfigMetas, RankingEntry, PrimeiraVenda, Pasta, RankingPastaEntry } from "../types/placar";
 import type { ParsedMonthData, ParsedPersonRanking } from "./excelImportService";
 
+export function generateQRCodeUrl(link: string): string {
+  if (!link || !link.trim()) return "";
+  const cleanLink = link.trim();
+  return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(cleanLink)}&margin=10`;
+}
+
 export interface Imovel {
   id: number;
   unidade_id: string;
@@ -17,6 +23,7 @@ export interface Imovel {
   category: string;
   image_url: string;
   banner_url?: string;
+  materials_url?: string;
   gallery: string[];
   qr_code_url?: string;
   video_url: string;
@@ -52,30 +59,48 @@ const serializeImovelPayload = (i: Partial<Imovel>) => {
   if (i.banner_url) {
     desc = desc ? `${desc}\n__BANNER__:${i.banner_url}` : `__BANNER__:${i.banner_url}`;
   }
+  if (i.materials_url) {
+    desc = desc ? `${desc}\n__MATERIALS__:${i.materials_url}` : `__MATERIALS__:${i.materials_url}`;
+  }
   if (i.gallery && Array.isArray(i.gallery) && i.gallery.length > 0) {
     desc = desc ? `${desc}\n__GALLERY__:${JSON.stringify(i.gallery)}` : `__GALLERY__:${JSON.stringify(i.gallery)}`;
   }
   
   const payload: Record<string, any> = {};
   if (i.unidade_id !== undefined) {
-    // "Todas" ou valor vazio é serializado como null para não violar a FK no Supabase
     payload.unidade_id = (i.unidade_id === "Todas" || !i.unidade_id) ? null : i.unidade_id;
   }
   if (i.title !== undefined) payload.title = i.title;
   if (i.tag !== undefined) payload.tag = i.tag;
   if (i.tag_color !== undefined) payload.tag_color = i.tag_color;
   if (i.gradient !== undefined) payload.gradient = i.gradient;
+  
+  if (i.category !== undefined) {
+    payload.category = i.category;
+    payload.address = i.category;
+  } else if (i.address !== undefined) {
+    payload.address = i.address;
+    payload.category = i.address;
+  }
+
   if (i.image_url !== undefined) payload.image_url = i.image_url;
   if (i.video_url !== undefined) payload.video_url = i.video_url;
   if (i.ativo !== undefined) payload.ativo = i.ativo;
-  if (i.qr_code_url !== undefined) payload.qr_code_url = i.qr_code_url;
   
-  payload.description = desc;
-  payload.address = i.category || i.address || "Geral";
-  payload.price = i.price ?? "—";
-  payload.area = i.area ?? "—";
-  payload.rooms = i.rooms ?? "—";
-  payload.garage = i.garage ?? "—";
+  if (i.materials_url) {
+    payload.qr_code_url = generateQRCodeUrl(i.materials_url);
+  } else if (i.qr_code_url !== undefined) {
+    payload.qr_code_url = i.qr_code_url;
+  }
+  
+  if (i.description !== undefined || i.banner_url !== undefined || i.materials_url !== undefined || i.gallery !== undefined) {
+    payload.description = desc;
+  }
+
+  if (i.price !== undefined) payload.price = i.price;
+  if (i.area !== undefined) payload.area = i.area;
+  if (i.rooms !== undefined) payload.rooms = i.rooms;
+  if (i.garage !== undefined) payload.garage = i.garage;
 
   return payload;
 };
@@ -84,8 +109,21 @@ const deserializeImovelRow = (row: any): Imovel => {
   let cleanDesc = row.description || "";
   let gallery: string[] = row.gallery || [];
   let bannerUrl: string | undefined = row.banner_url || undefined;
-  
-  if (cleanDesc.includes("__BANNER__:")) {
+  let materialsUrl: string | undefined = undefined;
+
+  if (cleanDesc.includes("__MATERIALS__:")) {
+    const parts = cleanDesc.split("__MATERIALS__:");
+    const subParts = (parts[1] || "").split("\n__GALLERY__:");
+    const bannerParts = subParts[0].split("\n__BANNER__:");
+    materialsUrl = bannerParts[0].trim();
+    if (bannerParts[1]) bannerUrl = bannerParts[1].trim();
+    cleanDesc = parts[0].trim();
+    if (subParts[1]) {
+      try {
+        gallery = JSON.parse(subParts[1]);
+      } catch (e) {}
+    }
+  } else if (cleanDesc.includes("__BANNER__:")) {
     const parts = cleanDesc.split("__BANNER__:");
     const subParts = (parts[1] || "").split("\n__GALLERY__:");
     bannerUrl = subParts[0].trim();
@@ -103,6 +141,18 @@ const deserializeImovelRow = (row: any): Imovel => {
     } catch (e) {}
   }
   
+  // Tenta extrair o link original dos materiais do qr_code_url se não houver tag
+  if (!materialsUrl && row.qr_code_url && row.qr_code_url.includes("data=")) {
+    try {
+      const match = row.qr_code_url.match(/data=([^&]+)/);
+      if (match && match[1]) {
+        materialsUrl = decodeURIComponent(match[1]);
+      }
+    } catch (e) {}
+  }
+
+  const calculatedQrCode = row.qr_code_url || (materialsUrl ? generateQRCodeUrl(materialsUrl) : "");
+
   return {
     id: row.id,
     unidade_id: row.unidade_id || "Todas",
@@ -111,15 +161,16 @@ const deserializeImovelRow = (row: any): Imovel => {
     area: row.area ?? "—",
     rooms: row.rooms ?? "—",
     garage: row.garage ?? "—",
-    address: row.address ?? "—",
+    address: row.address ?? row.category ?? "Geral",
     tag: row.tag || "NOVO",
     tag_color: row.tag_color || "#E30613",
     gradient: row.gradient || "linear-gradient(160deg,#1a2744,#2d3f6b)",
     category: row.category || row.address || "Geral",
     image_url: row.image_url || "",
     banner_url: bannerUrl,
+    materials_url: materialsUrl,
     gallery: gallery,
-    qr_code_url: row.qr_code_url || "",
+    qr_code_url: calculatedQrCode,
     video_url: row.video_url || "",
     ativo: row.ativo !== undefined ? row.ativo : true,
     description: cleanDesc,
