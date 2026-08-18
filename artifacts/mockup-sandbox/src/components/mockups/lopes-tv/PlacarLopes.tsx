@@ -32,8 +32,9 @@ interface SlideRankingPastas extends SlideBase {
   type: "ranking_pasta";
   pastaTitle: string;
   metaPastas: number;
-  corretores: (RankingPastaEntry & { pessoa: Pessoa })[];
-  gestores: (RankingPastaEntry & { pessoa: Pessoa })[];
+  totalPastasEntregues: number;
+  subType: "corretores" | "gestores";
+  entries: (RankingPastaEntry & { pessoa: Pessoa })[];
   updateFreq: string;
 }
 interface SlideReconhecimentoType extends SlideBase {
@@ -365,177 +366,110 @@ function SlideRanking({ slide }: { slide: SlideRanking }) {
 // ─── Slide: Ranking de Pastas ──────────────────────────────────────────────────
 
 function SlideRankingPastas({ slide }: { slide: SlideRankingPastas }) {
-  const totalPastasEntregues = [...slide.corretores, ...slide.gestores].reduce((acc, curr) => acc + (curr.quantidade_pastas || 0), 0);
-  const pctMeta = Math.min(100, (totalPastasEntregues / Math.max(1, slide.metaPastas)) * 100);
-
-  const topCorretores = slide.corretores.slice(0, 10);
-  const topGestores = slide.gestores.slice(0, 5);
+  const pctMeta = Math.min(100, (slide.totalPastasEntregues / Math.max(1, slide.metaPastas)) * 100);
+  const topEntries = slide.entries.slice(0, slide.subType === "corretores" ? 10 : 5);
+  const title = slide.subType === "corretores" ? "Top 10 Corretores" : "Top 5 Gestores";
+  const icon = slide.subType === "corretores" ? "🏅" : "👔";
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 40px", position: "relative", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 48px", position: "relative", overflow: "hidden" }}>
       <Starfield />
       <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
         
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
-            <CategoryPill label="Ranking de Pastas Unificado" />
-            <h1 className="slide-up" style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 900, fontSize: 36, color: "#fff", letterSpacing: "-.02em", lineHeight: 1.1 }}>
+            <CategoryPill label={`Ranking de Pastas Unificado — ${title}`} />
+            <h1 className="slide-up" style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 900, fontSize: 44, color: "#fff", letterSpacing: "-.02em", lineHeight: 1.1 }}>
               {slide.pastaTitle}
             </h1>
           </div>
 
           {/* Meta Progress Card */}
-          <div style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,0,128,.3)", borderRadius: 16, padding: "12px 24px", minWidth: 260, backdropFilter: "blur(12px)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,.7)", marginBottom: 6 }}>
+          <div style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,0,128,.3)", borderRadius: 16, padding: "16px 28px", minWidth: 280, backdropFilter: "blur(12px)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,.7)", marginBottom: 8 }}>
               <span>META DO LANÇAMENTO</span>
-              <span style={{ color: "#FF0080" }}>{totalPastasEntregues} / {slide.metaPastas} Pastas</span>
+              <span style={{ color: "#FF0080" }}>{slide.totalPastasEntregues} / {slide.metaPastas} Pastas</span>
             </div>
-            <div style={{ height: 10, borderRadius: 9999, background: "rgba(255,255,255,.10)", overflow: "hidden" }}>
+            <div style={{ height: 12, borderRadius: 9999, background: "rgba(255,255,255,.10)", overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${pctMeta}%`, background: "linear-gradient(90deg, #FF0080, #E30613)", borderRadius: 9999, transition: "width 800ms" }} />
             </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", textAlign: "right", marginTop: 4 }}>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)", textAlign: "right", marginTop: 6 }}>
               {pctMeta.toFixed(0)}% Atingido
             </div>
           </div>
         </div>
 
-        {/* Content Grid: Left Top 10 Corretores, Right Top 5 Gestores */}
-        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, minHeight: 0 }}>
-          
-          {/* TOP 10 CORRETORES */}
-          <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 20, padding: 18, display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-              <span style={{ fontSize: 18 }}>🏅</span>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 16, color: "#fff", textTransform: "uppercase", letterSpacing: ".04em" }}>
-                Top 10 Corretores
-              </span>
-              <span style={{ marginLeft: "auto", background: "linear-gradient(90deg,#FF0080,#E30613)", padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 800, color: "#fff" }}>
-                UNIFICADO LOPES
-              </span>
-            </div>
-
-            {topCorretores.length === 0 ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.3)", fontSize: 14 }}>
-                Nenhum corretor pontuou neste lançamento ainda.
-              </div>
-            ) : (
-              <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, alignContent: "start" }}>
-                {topCorretores.map((item) => {
-                  const rankColor = item.posicao === 1 ? "#f59e0b" : item.posicao === 2 ? "#94a3b8" : item.posicao === 3 ? "#cd7f32" : "#818cf8";
-                  return (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "7px 10px",
-                        borderRadius: 12,
-                        background: item.posicao <= 3 ? "linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02))" : "rgba(255,255,255,.03)",
-                        border: `1px solid ${item.posicao <= 3 ? rankColor + "66" : "rgba(255,255,255,.06)"}`,
-                      }}
-                    >
-                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: rankColor, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 11, color: "#fff", flexShrink: 0 }}>
-                        {item.posicao}º
-                      </div>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,.1)", flexShrink: 0, border: `1.5px solid ${rankColor}` }}>
-                        {item.pessoa?.foto_url ? (
-                          <img src={item.pessoa.foto_url} alt={item.pessoa.nome} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : (
-                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 11, color: "#fff" }}>
-                            {item.pessoa?.nome.substring(0, 2).toUpperCase() || "??"}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {item.pessoa?.nome || "Corretor"}
-                        </div>
-                        <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>
-                          {item.pessoa?.unidade_id ? `Lopes ${item.pessoa.unidade_id.toUpperCase()}` : "Lopes"}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ fontWeight: 900, fontSize: 14, color: "#4ade80" }}>{item.quantidade_pastas}</div>
-                        <div style={{ fontSize: 9, color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>Pastas</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        {/* Content Box */}
+        <div style={{ flex: 1, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 24, padding: 28, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, paddingBottom: 12, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+            <span style={{ fontSize: 24 }}>{icon}</span>
+            <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 24, color: "#fff", textTransform: "uppercase", letterSpacing: ".04em" }}>
+              {title}
+            </span>
+            <span style={{ marginLeft: "auto", background: "linear-gradient(90deg,#FF0080,#E30613)", padding: "6px 14px", borderRadius: 16, fontSize: 14, fontWeight: 800, color: "#fff" }}>
+              UNIFICADO LOPES
+            </span>
           </div>
 
-          {/* TOP 5 GESTORES */}
-          <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 20, padding: 18, display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-              <span style={{ fontSize: 18 }}>👔</span>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 16, color: "#fff", textTransform: "uppercase", letterSpacing: ".04em" }}>
-                Top 5 Gestores
-              </span>
+          {topEntries.length === 0 ? (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.3)", fontSize: 18 }}>
+              Nenhum participante pontuou neste lançamento ainda.
             </div>
-
-            {topGestores.length === 0 ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.3)", fontSize: 14 }}>
-                Nenhum gestor vinculado ainda.
-              </div>
-            ) : (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                {topGestores.map((item) => {
-                  const rankColor = item.posicao === 1 ? "#f59e0b" : item.posicao === 2 ? "#94a3b8" : item.posicao === 3 ? "#cd7f32" : "#38bdf8";
-                  return (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "8px 12px",
-                        borderRadius: 12,
-                        background: item.posicao <= 3 ? "linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02))" : "rgba(255,255,255,.03)",
-                        border: `1px solid ${item.posicao <= 3 ? rankColor + "66" : "rgba(255,255,255,.06)"}`,
-                      }}
-                    >
-                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: rankColor, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 11, color: "#fff", flexShrink: 0 }}>
-                        {item.posicao}º
-                      </div>
-                      <div style={{ width: 34, height: 34, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,.1)", flexShrink: 0, border: `1.5px solid ${rankColor}` }}>
-                        {item.pessoa?.foto_url ? (
-                          <img src={item.pessoa.foto_url} alt={item.pessoa.nome} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : (
-                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 11, color: "#fff" }}>
-                            {item.pessoa?.nome.substring(0, 2).toUpperCase() || "??"}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {item.pessoa?.nome || "Gestor"}
+          ) : (
+            <div style={{ flex: 1, display: "grid", gridTemplateColumns: slide.subType === "corretores" ? "1fr 1fr" : "1fr", gap: 16, alignContent: "start" }}>
+              {topEntries.map((item) => {
+                const rankColor = item.posicao === 1 ? "#f59e0b" : item.posicao === 2 ? "#94a3b8" : item.posicao === 3 ? "#cd7f32" : (slide.subType === "corretores" ? "#818cf8" : "#38bdf8");
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 16,
+                      padding: "12px 18px",
+                      borderRadius: 16,
+                      background: item.posicao <= 3 ? "linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02))" : "rgba(255,255,255,.03)",
+                      border: `1px solid ${item.posicao <= 3 ? rankColor + "66" : "rgba(255,255,255,.06)"}`,
+                    }}
+                  >
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: rankColor, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#fff", flexShrink: 0 }}>
+                      {item.posicao}º
+                    </div>
+                    <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,.1)", flexShrink: 0, border: `2px solid ${rankColor}` }}>
+                      {item.pessoa?.foto_url ? (
+                        <img src={item.pessoa.foto_url} alt={item.pessoa.nome} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, color: "#fff" }}>
+                          {item.pessoa?.nome.substring(0, 2).toUpperCase() || "??"}
                         </div>
-                        <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>
-                          {item.pessoa?.unidade_id ? `Lopes ${item.pessoa.unidade_id.toUpperCase()}` : "Lopes"}
-                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 22, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {item.pessoa?.nome || "Participante"}
                       </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ fontWeight: 900, fontSize: 14, color: "#4ade80" }}>{item.quantidade_pastas}</div>
-                        <div style={{ fontSize: 9, color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>Pastas</div>
+                      <div style={{ fontSize: 14, color: "rgba(255,255,255,.5)", marginTop: 2, fontWeight: 600 }}>
+                        {item.pessoa?.unidade_id ? `Lopes ${item.pessoa.unidade_id.toUpperCase()}` : "Lopes"}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontWeight: 900, fontSize: 28, color: "#4ade80" }}>{item.quantidade_pastas}</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", textTransform: "uppercase", fontWeight: 700 }}>Pastas</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-
+        
         {/* Footer info */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 12 }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 16 }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>
             {slide.updateFreq}
           </span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>
             {MES_ANO.toUpperCase()}
           </span>
         </div>
@@ -677,18 +611,37 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
           const rankingEntries = await placarService.getRankingPastas(p.id).catch(() => [] as (RankingPastaEntry & { pessoa?: Pessoa })[]);
           const corretores = rankingEntries.filter(e => e.categoria === "corretor").sort((a, b) => a.posicao - b.posicao);
           const gestores = rankingEntries.filter(e => e.categoria === "gestor").sort((a, b) => a.posicao - b.posicao);
+          const totalPastasEntregues = [...corretores, ...gestores].reduce((acc, curr) => acc + (curr.quantidade_pastas || 0), 0);
 
-          generated.push({
-            id: `ranking-pasta-${p.id}`,
-            type: "ranking_pasta",
-            category: "Metas Lopes",
-            title: "Ranking de Pastas Unificado",
-            pastaTitle: p.titulo,
-            metaPastas: p.meta_pastas,
-            corretores: corretores as (RankingPastaEntry & { pessoa: Pessoa })[],
-            gestores: gestores as (RankingPastaEntry & { pessoa: Pessoa })[],
-            updateFreq: "RANKING DE PASTAS ATUALIZADO DIARIAMENTE."
-          });
+          if (corretores.length > 0 || gestores.length === 0) {
+            generated.push({
+              id: `ranking-pasta-corretores-${p.id}`,
+              type: "ranking_pasta",
+              category: "Metas Lopes",
+              title: "Ranking de Pastas Unificado",
+              pastaTitle: p.titulo,
+              metaPastas: p.meta_pastas,
+              totalPastasEntregues,
+              subType: "corretores",
+              entries: corretores as (RankingPastaEntry & { pessoa: Pessoa })[],
+              updateFreq: "RANKING DE PASTAS ATUALIZADO DIARIAMENTE."
+            });
+          }
+
+          if (gestores.length > 0) {
+            generated.push({
+              id: `ranking-pasta-gestores-${p.id}`,
+              type: "ranking_pasta",
+              category: "Metas Lopes",
+              title: "Ranking de Pastas Unificado",
+              pastaTitle: p.titulo,
+              metaPastas: p.meta_pastas,
+              totalPastasEntregues,
+              subType: "gestores",
+              entries: gestores as (RankingPastaEntry & { pessoa: Pessoa })[],
+              updateFreq: "RANKING DE PASTAS ATUALIZADO DIARIAMENTE."
+            });
+          }
         }
 
         // Fallback em caso de base vazia
