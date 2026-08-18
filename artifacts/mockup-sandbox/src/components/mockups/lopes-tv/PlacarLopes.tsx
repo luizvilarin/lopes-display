@@ -582,20 +582,6 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
           });
         }
 
-        // Slide de Reconhecimento (Destaque do Mês - Padrão Ouro 100% Réplica)
-        const allRankings: RankingEntry[] = await placarService.getRankings().catch(() => []);
-        const corretoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "corretores");
-        const gestoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "gestores");
-
-        generated.push({
-          id: "reconhecimento-mensal",
-          type: "reconhecimento",
-          category: "Metas Lopes",
-          title: "Destaques do Mês",
-          corretores: corretoresMensais,
-          gestores: gestoresMensais,
-        });
-
         // Slide de Primeira Venda
         if (Array.isArray(pv)) {
           pv.forEach((item) => {
@@ -671,6 +657,22 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
           }
         }
 
+        // Slide de Reconhecimento (Destaque do Mês - Padrão Ouro 100% Réplica) - ÚLTIMO SLIDE
+        const allRankings: RankingEntry[] = await placarService.getRankings().catch(() => []);
+        const corretoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "corretores");
+        const gestoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "gestores");
+
+        if (corretoresMensais.length > 0 || gestoresMensais.length > 0) {
+          generated.push({
+            id: "reconhecimento-mensal",
+            type: "reconhecimento",
+            category: "Metas Lopes",
+            title: "Destaques do Mês",
+            corretores: corretoresMensais,
+            gestores: gestoresMensais,
+          });
+        }
+
         // Fallback em caso de base vazia
         if (generated.length === 0) {
           generated.push({
@@ -707,6 +709,20 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
     const t = setInterval(() => goTo((slideIdx + 1) % slides.length), INTERVAL);
     return () => clearInterval(t);
   }, [slideIdx, goTo, slides]);
+
+  // Suporte para Setinhas (Manual Override)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (slides.length <= 1) return;
+      if (e.key === "ArrowRight") {
+        goTo((slideIdx + 1) % slides.length);
+      } else if (e.key === "ArrowLeft") {
+        goTo((slideIdx + slides.length - 1) % slides.length);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [slideIdx, slides.length, goTo]);
 
   if (loading) {
     return (

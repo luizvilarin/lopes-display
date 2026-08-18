@@ -3342,7 +3342,6 @@ function SecaoProgressao({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: (
   const [pessoaId, setPessoaId] = useState("");
   const [cargoAnterior, setCargoAnterior] = useState("");
   const [cargoNovo, setCargoNovo] = useState("");
-  const [mensagem, setMensagem] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
 
   const load = async () => {
@@ -3369,14 +3368,13 @@ function SecaoProgressao({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: (
         tipo,
         cargo_anterior: tipo === "promocao" ? cargoAnterior : null,
         cargo_novo: tipo === "promocao" ? cargoNovo : null,
-        mensagem: mensagem || null,
+        mensagem: null,
         foto_especifica: fotoUrl || null,
         ativo: true
       });
       setPessoaId("");
       setCargoAnterior("");
       setCargoNovo("");
-      setMensagem("");
       setFotoUrl("");
       load();
       onChange();
@@ -3447,11 +3445,6 @@ function SecaoProgressao({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: (
               </div>
             </>
           )}
-
-          <div className="pa-form-row">
-            <label className="pa-label">Mensagem (Opcional)</label>
-            <input className="pa-input" value={mensagem} onChange={e => setMensagem(e.target.value)} placeholder={tipo === "signature" ? "Parabéns por fazer parte..." : "Novos desafios, mais conquistas..."} />
-          </div>
 
           <div className="pa-form-row">
             <label className="pa-label">Foto Específica para TV (URL - Opcional)</label>

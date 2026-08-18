@@ -41,7 +41,7 @@ export function SlideProgressaoSignature({ nome, unidadeText, fotoUrl }: Props) 
         {/* Header Logo */}
         <div className="slide-up" style={{ marginBottom: 60, animationDelay: "0.2s", opacity: 0, animationFillMode: "forwards" }}>
           <div style={{ fontSize: 16, letterSpacing: "0.4em", color: "#d4af37", marginBottom: -10, marginLeft: 5 }}>LOPES</div>
-          <div style={{ fontFamily: "'Pinyon Script', cursive", fontSize: 80, color: "#d4af37", lineHeight: 1, className: "gold-text" }}>Signature</div>
+          <div className="gold-text" style={{ fontFamily: "'Pinyon Script', cursive", fontSize: 80, lineHeight: 1 }}>Signature</div>
         </div>
 
         {/* Labels */}
