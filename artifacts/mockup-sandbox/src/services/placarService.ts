@@ -612,6 +612,30 @@ export const placarService = {
   saveAdminPin: async (newPin: string): Promise<void> => {
     const { error } = await supabase.from("admin_auth").update({ pin: newPin }).eq("id", 1);
     if (error) throw error;
+  },
+
+  // ─── Progressão de Carreira ───────────────────────────────────────────────
+  getProgressoes: async () => {
+    const { data, error } = await supabase
+      .from("progressoes_carreira")
+      .select(`*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, ativo)`)
+      .order("criado_em", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  createProgressao: async (patch: any) => {
+    const { data, error } = await supabase.from("progressoes_carreira").insert(patch).select().single();
+    if (error) throw error;
+    return data;
+  },
+  updateProgressao: async (id: string, patch: any) => {
+    const { data, error } = await supabase.from("progressoes_carreira").update(patch).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  deleteProgressao: async (id: string) => {
+    const { error } = await supabase.from("progressoes_carreira").delete().eq("id", id);
+    if (error) throw error;
   }
 };
 

@@ -3,8 +3,10 @@ import faviconLopes from "@/assets/favicon-lopes.png";
 import logoBranca from "@/assets/logo-branca.png";
 import fogueteImg from "@/assets/foguete-lopes.png";
 import { placarService } from "@/services/placarService";
-import type { Pasta, RankingPastaEntry, Pessoa, RankingEntry } from "@/types/placar";
+import type { Pasta, RankingPastaEntry, Pessoa, RankingEntry, ProgressaoCarreira } from "@/types/placar";
 import { SlideReconhecimento } from "./SlideReconhecimento";
+import { SlideProgressaoSignature } from "./SlideProgressaoSignature";
+import { SlideProgressaoPromocao } from "./SlideProgressaoPromocao";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,8 +44,13 @@ interface SlideReconhecimentoType extends SlideBase {
   corretores: (RankingEntry & { pessoa?: Pessoa })[];
   gestores: (RankingEntry & { pessoa?: Pessoa })[];
 }
+interface SlideProgressao extends SlideBase {
+  type: "progressao";
+  subType: "signature" | "promocao";
+  progressao: ProgressaoCarreira;
+}
 
-type Slide = SlideMeta | SlidePVenda | SlideRanking | SlideRankingPastas | SlideReconhecimentoType;
+type Slide = SlideMeta | SlidePVenda | SlideRanking | SlideRankingPastas | SlideReconhecimentoType | SlideProgressao;
 
 // ─── Default Setup ────────────────────────────────────────────────────────────
 
@@ -521,7 +528,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         // Para queries que requerem um ID concreto, usa o primeiro unidade válida como fallback
         const concreteUnitId = activeUnitId || VALID_UNIT_IDS[0];
 
-        const [config, pv, pastas, unidades] = await Promise.all([
+        const [config, pv, pastas, unidades, progressoes] = await Promise.all([
           placarService.getConfig(concreteUnitId).catch(err => {
             console.error("Falha ao carregar config na TV:", err);
             return null;
@@ -536,6 +543,10 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
           }),
           placarService.getUnidades().catch(err => {
             console.error("Falha ao carregar unidades na TV:", err);
+            return [];
+          }),
+          placarService.getProgressoes().catch(err => {
+            console.error("Falha ao carregar progressões na TV:", err);
             return [];
           })
         ]);
@@ -600,6 +611,22 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
                 mensagem: item.mensagem,
                 detalhe: item.detalhe || "Você faz parte do crescimento da nossa empresa, nosso muito obrigado!",
                 updateFreq: "RANKING ATUALIZADO SEMANALMENTE.",
+              });
+            }
+          });
+        }
+
+        // Slides de Progressão de Carreira
+        if (Array.isArray(progressoes)) {
+          progressoes.forEach((p) => {
+            if (p && p.ativo && p.pessoa && p.pessoa.ativo) {
+              generated.push({
+                id: `progressao-${p.id}`,
+                type: "progressao",
+                category: "História Lopes",
+                title: p.tipo === "signature" ? "Novo Membro Signature" : "Progressão de Carreira",
+                subType: p.tipo,
+                progressao: p
               });
             }
           });
@@ -717,6 +744,51 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
             <button
               onClick={() => goTo((slideIdx + 1) % slides.length)}
               style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(197,160,89,.4)", color: "#C5A059", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
+            >
+              Próximo Slide →
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Slide de Progressão de Carreira (Fullscreen)
+  if (slide.type === "progressao") {
+    const p = (slide as SlideProgressao).progressao;
+    const nome = p.pessoa?.nome?.split(" ")[0] || "Lopes";
+    const foto = p.foto_especifica || p.pessoa?.foto_url;
+
+    return (
+      <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+        {slide.subType === "signature" ? (
+          <SlideProgressaoSignature
+            nome={nome}
+            unidadeText={`LOPES ${p.pessoa?.unidade_id || "DIGITAL"}`}
+            fotoUrl={foto}
+          />
+        ) : (
+          <SlideProgressaoPromocao
+            nome={nome}
+            cargoAnterior={p.cargo_anterior || "CORRETOR(A)"}
+            cargoAtual={p.cargo_novo || "LIDERANÇA"}
+            mensagem={p.mensagem || "Novos desafios, mais conquistas. Parabéns por mais essa evolução!"}
+            fotoUrl={foto}
+          />
+        )}
+        
+        {/* Navigation buttons for admin/manual override */}
+        {slides.length > 1 && (
+          <div style={{ position: "absolute", bottom: 12, right: 16, zIndex: 99, display: "flex", gap: 8 }}>
+            <button
+              onClick={() => goTo((slideIdx + slides.length - 1) % slides.length)}
+              style={{ background: "rgba(0,0,0,.5)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
+            >
+              ← Slide Anterior
+            </button>
+            <button
+              onClick={() => goTo((slideIdx + 1) % slides.length)}
+              style={{ background: "rgba(0,0,0,.5)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}
             >
               Próximo Slide →
             </button>

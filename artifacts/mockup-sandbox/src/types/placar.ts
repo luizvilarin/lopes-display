@@ -92,6 +92,20 @@ export interface RankingPastaEntry {
   pasta?: Pasta;
 }
 
+export interface ProgressaoCarreira {
+  id: string;
+  pessoa_id: string;
+  tipo: "signature" | "promocao";
+  cargo_anterior?: string;
+  cargo_novo?: string;
+  mensagem?: string;
+  foto_especifica?: string;
+  ativo: boolean;
+  criado_em?: string;
+  // join
+  pessoa?: Pessoa;
+}
+
 // Payload composto que o PlacarLopes consome
 export interface PlacarData {
   unidade: Unidade;

@@ -8,6 +8,7 @@ import {
 import type {
   Pessoa, Unidade, RankingEntry, PrimeiraVenda, ConfigMetas,
   Cargo, TipoRanking, CategoriaRanking, Pasta, RankingPastaEntry,
+  ProgressaoCarreira
 } from "@/types/placar";
 import { Icons } from "@/components/common/Icons";
 import { Slide, DEFAULT_SLIDES } from "@/services/onboardingData";
@@ -3329,6 +3330,199 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
   );
 }
 
+// ─── Section: Progressão de Carreira ──────────────────────────────────────────
+
+function SecaoProgressao({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: () => void }) {
+  const [progressoes, setProgressoes] = useState<(ProgressaoCarreira & { pessoa?: Pessoa })[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Form State
+  const [tipo, setTipo] = useState<"signature" | "promocao">("signature");
+  const [pessoaId, setPessoaId] = useState("");
+  const [cargoAnterior, setCargoAnterior] = useState("");
+  const [cargoNovo, setCargoNovo] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [fotoUrl, setFotoUrl] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await placarService.getProgressoes();
+      setProgressoes(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pessoaId) return alert("Selecione uma pessoa.");
+    setSaving(true);
+    try {
+      await placarService.createProgressao({
+        pessoa_id: pessoaId,
+        tipo,
+        cargo_anterior: tipo === "promocao" ? cargoAnterior : null,
+        cargo_novo: tipo === "promocao" ? cargoNovo : null,
+        mensagem: mensagem || null,
+        foto_especifica: fotoUrl || null,
+        ativo: true
+      });
+      setPessoaId("");
+      setCargoAnterior("");
+      setCargoNovo("");
+      setMensagem("");
+      setFotoUrl("");
+      load();
+      onChange();
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao salvar progressão.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async (p: ProgressaoCarreira) => {
+    try {
+      await placarService.updateProgressao(p.id, { ativo: !p.ativo });
+      load();
+      onChange();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Remover esta progressão?")) return;
+    try {
+      await placarService.deleteProgressao(id);
+      load();
+      onChange();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <div className="pa-grid-2">
+      {/* Form Card */}
+      <div className="pa-card" style={{ alignSelf: "start" }}>
+        <div className="pa-title">Nova Progressão</div>
+        <div className="pa-subtitle">Adicione uma progressão de carreira para aparecer na TV.</div>
+        
+        <form onSubmit={handleAdd}>
+          <div className="pa-form-row">
+            <label className="pa-label">Pessoa</label>
+            <select className="pa-input pa-select" value={pessoaId} onChange={e => setPessoaId(e.target.value)} required>
+              <option value="">Selecione...</option>
+              {pessoas.filter(p => p.ativo).map(p => (
+                <option key={p.id} value={p.id}>{p.nome} ({p.unidade_id})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="pa-form-row">
+            <label className="pa-label">Categoria de Progressão</label>
+            <select className="pa-input pa-select" value={tipo} onChange={e => setTipo(e.target.value as any)}>
+              <option value="signature">Ingresso LOPES Signature (Alto Padrão)</option>
+              <option value="promocao">Promoção (Gerência, Diretoria, Coordenação)</option>
+            </select>
+          </div>
+
+          {tipo === "promocao" && (
+            <>
+              <div className="pa-form-row">
+                <label className="pa-label">Cargo Anterior (Ex: Corretora)</label>
+                <input className="pa-input" value={cargoAnterior} onChange={e => setCargoAnterior(e.target.value)} required placeholder="Ex: Corretora" />
+              </div>
+              <div className="pa-form-row">
+                <label className="pa-label">Cargo Novo (Ex: Coord. de Incorporações)</label>
+                <input className="pa-input" value={cargoNovo} onChange={e => setCargoNovo(e.target.value)} required placeholder="Ex: Coord. de Incorporações" />
+              </div>
+            </>
+          )}
+
+          <div className="pa-form-row">
+            <label className="pa-label">Mensagem (Opcional)</label>
+            <input className="pa-input" value={mensagem} onChange={e => setMensagem(e.target.value)} placeholder={tipo === "signature" ? "Parabéns por fazer parte..." : "Novos desafios, mais conquistas..."} />
+          </div>
+
+          <div className="pa-form-row">
+            <label className="pa-label">Foto Específica para TV (URL - Opcional)</label>
+            <input className="pa-input" value={fotoUrl} onChange={e => setFotoUrl(e.target.value)} placeholder="Deixe em branco para usar a foto do perfil" />
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>Dica: No Signature fica melhor foto com fundo escuro.</div>
+          </div>
+
+          <button className="pa-btn-primary" style={{ marginTop: 10 }} disabled={saving}>{saving ? "Salvando..." : "Adicionar Progressão"}</button>
+        </form>
+      </div>
+
+      {/* List Card */}
+      <div className="pa-card">
+        <div className="pa-title">Progressões Ativas e Histórico</div>
+        <div className="pa-subtitle">Gerencie quem está sendo exibido na tela de Progressão.</div>
+        
+        {loading ? (
+          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, padding: 20 }}>Carregando...</div>
+        ) : (
+          <div className="pa-table-wrap">
+            <table className="pa-table">
+              <thead>
+                <tr>
+                  <th>Pessoa</th>
+                  <th>Tipo</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: "right" }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {progressoes.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div className="pa-avatar" style={{ background: "rgba(255,255,255,0.1)" }}>
+                          {p.foto_especifica || (p.pessoa?.foto_url) ? (
+                            <img src={p.foto_especifica || p.pessoa?.foto_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : p.pessoa?.nome?.substring(0,2).toUpperCase()}
+                        </div>
+                        <div style={{ fontWeight: 600 }}>{p.pessoa?.nome || "Desconhecido"}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={p.tipo === "signature" ? "badge-gestor" : "badge-corretor"} style={{ background: p.tipo === "signature" ? "rgba(212,175,55,0.15)" : undefined, color: p.tipo === "signature" ? "#d4af37" : undefined, borderColor: p.tipo === "signature" ? "rgba(212,175,55,0.3)" : undefined }}>
+                        {p.tipo === "signature" ? "Signature" : "Promoção"}
+                      </span>
+                    </td>
+                    <td>
+                      <button className={`badge-${p.ativo ? "ativo" : "inativo"}`} onClick={() => handleToggleActive(p)} style={{ cursor: "pointer" }}>
+                        {p.ativo ? "Exibindo" : "Oculto"}
+                      </button>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="pa-btn-danger" onClick={() => handleDelete(p.id)} title="Excluir">
+                        <Icons.Trash size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {progressoes.length === 0 && (
+                  <tr><td colSpan={4} style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.3)" }}>Nenhuma progressão cadastrada.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export function PlacarAdmin({ activeSection, activeUnitId }: { activeSection: string; activeUnitId: string }) {
@@ -3395,6 +3589,9 @@ export function PlacarAdmin({ activeSection, activeUnitId }: { activeSection: st
           )}
           {activeSection === "reconhecimento" && (
             <SecaoReconhecimentoRankings pessoas={pessoas} onChange={reload} />
+          )}
+          {activeSection === "progressao" && (
+            <SecaoProgressao pessoas={pessoas} onChange={reload} />
           )}
           {activeSection === "pvenda" && config && (
             <SecaoPVenda pvs={pvs} pessoas={pessoas} activeUnitId={activeUnitId} onChange={reload} />
