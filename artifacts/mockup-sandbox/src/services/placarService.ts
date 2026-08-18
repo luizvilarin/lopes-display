@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import type { Unidade, Pessoa, ConfigMetas, RankingEntry, PrimeiraVenda, Pasta, RankingPastaEntry } from "../types/placar";
+import type { ParsedMonthData, ParsedPersonRanking } from "./excelImportService";
 
 export interface Imovel {
   id: number;
@@ -212,6 +213,104 @@ export const placarService = {
   deleteRankingEntry: async (id: string): Promise<void> => {
     const { error } = await supabase.from("ranking_entries").delete().eq("id", id);
     if (error) throw error;
+  },
+
+  // ─── Importação de Planilha Excel ─────────────────────────────────────────
+  batchApplySpreadsheetImport: async (monthData: ParsedMonthData): Promise<void> => {
+    // 1. Garante que todas as pessoas (existentes ou novas) existam no banco
+    const processPerson = async (item: ParsedPersonRanking): Promise<string> => {
+      if (item.matchedPessoa && !item.isNewPerson) {
+        return item.matchedPessoa.id;
+      }
+      // Cria nova pessoa
+      try {
+        const newP = await placarService.savePessoa({
+          nome: item.nameInExcel,
+          cargo: item.suggestedCargo,
+          unidade_id: item.suggestedUnidadeId,
+          ativo: true
+        });
+        return newP.id;
+      } catch (err) {
+        console.error("Erro ao criar nova pessoa da planilha:", item.nameInExcel, err);
+        // Fallback: pega a primeira pessoa cadastrada
+        const existing = await placarService.getPessoas();
+        return existing[0]?.id || "";
+      }
+    };
+
+    // 2. Processa Corretores (Top 10)
+    for (let idx = 0; idx < monthData.topCorretores.length; idx++) {
+      const item = monthData.topCorretores[idx];
+      const pessoaId = await processPerson(item);
+      if (!pessoaId) continue;
+
+      const pos = idx + 1;
+      // Procura se já existe entrada nessa posição/categoria/período
+      const existing = await supabase
+        .from("ranking_entries")
+        .select("id")
+        .eq("periodo", monthData.periodo)
+        .eq("categoria", "corretores")
+        .eq("tipo", "mensal")
+        .eq("posicao", pos)
+        .maybeSingle();
+
+      if (existing.data) {
+        await placarService.updateRankingEntry(existing.data.id, {
+          pessoa_id: pessoaId,
+          valor: item.totalValor,
+          instagram: item.matchedPessoa?.instagram || undefined
+        });
+      } else {
+        await placarService.saveRankingEntry({
+          pessoa_id: pessoaId,
+          tipo: "mensal",
+          categoria: "corretores",
+          posicao: pos,
+          valor: item.totalValor,
+          periodo: monthData.periodo,
+          instagram: item.matchedPessoa?.instagram || undefined,
+          ativo: true
+        });
+      }
+    }
+
+    // 3. Processa Gestores (Top 5)
+    for (let idx = 0; idx < monthData.topGestores.length; idx++) {
+      const item = monthData.topGestores[idx];
+      const pessoaId = await processPerson(item);
+      if (!pessoaId) continue;
+
+      const pos = idx + 1;
+      const existing = await supabase
+        .from("ranking_entries")
+        .select("id")
+        .eq("periodo", monthData.periodo)
+        .eq("categoria", "gestores")
+        .eq("tipo", "mensal")
+        .eq("posicao", pos)
+        .maybeSingle();
+
+      if (existing.data) {
+        await placarService.updateRankingEntry(existing.data.id, {
+          pessoa_id: pessoaId,
+          valor: item.totalValor,
+          instagram: item.matchedPessoa?.instagram || undefined
+        });
+      } else {
+        await placarService.saveRankingEntry({
+          pessoa_id: pessoaId,
+          tipo: "mensal",
+          categoria: "gestores",
+          posicao: pos,
+          valor: item.totalValor,
+          periodo: monthData.periodo,
+          instagram: item.matchedPessoa?.instagram || undefined,
+          ativo: true
+        });
+      }
+    }
   },
 
   // ─── Primeira Venda ───────────────────────────────────────────────────────

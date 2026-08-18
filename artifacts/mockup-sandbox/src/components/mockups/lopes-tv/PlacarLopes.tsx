@@ -638,7 +638,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         }
 
         // Slide de Reconhecimento (Destaque do Mês - Padrão Ouro 100% Réplica)
-        const allRankings = await placarService.getRankings().catch(() => []);
+        const allRankings: RankingEntry[] = await placarService.getRankings().catch(() => []);
         const corretoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "corretores");
         const gestoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "gestores");
 
