@@ -235,7 +235,7 @@ export function SlideReconhecimento({
             cargoText: p.cargo === "gestor" ? "GERENTE" : "CORRETOR",
             equipeText: `LOPES ${p.unidade_id ? p.unidade_id.toUpperCase() : "DIGITAL"}`,
             foto_url: p.foto_url || "",
-            instagram: r.instagram || p.instagram || (firstWord ? `@${firstWord.toLowerCase()}.lopes` : undefined),
+            instagram: r.instagram || p.instagram || undefined,
             valor: r.valor ? `R$ ${Number(r.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : undefined
           };
         });
