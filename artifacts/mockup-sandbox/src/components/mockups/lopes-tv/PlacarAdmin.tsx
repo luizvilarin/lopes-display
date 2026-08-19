@@ -265,7 +265,37 @@ function Avatar({ pessoa, size = 32 }: { pessoa: Pessoa; size?: number }) {
 const readFileAsDataUrl = (file: File): Promise<string> =>
   new Promise((res, rej) => {
     const r = new FileReader();
-    r.onload = e => res(e.target?.result as string);
+    r.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1024;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round(height * (maxDim / width));
+            width = maxDim;
+          } else {
+            width = Math.round(width * (maxDim / height));
+            height = maxDim;
+          }
+        }
+        
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return res(e.target?.result as string); // fallback
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress as JPEG to save space (0.8 quality usually results in ~100-300KB)
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        res(compressedDataUrl);
+      };
+      img.onerror = () => rej(new Error("Erro ao carregar imagem para compressão"));
+      img.src = e.target?.result as string;
+    };
     r.onerror = () => rej(new Error("Erro ao ler arquivo"));
     r.readAsDataURL(file);
   });

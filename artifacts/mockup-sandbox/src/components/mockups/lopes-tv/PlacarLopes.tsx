@@ -181,13 +181,29 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
           <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 500, fontSize: 58, color: "#fff", letterSpacing: "0.08em" }}>{slide.valor}</span>
         </div>
       ) : (
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 48 }}>
+          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em", marginBottom: 6 }}>Objetivo do Mês</div>
           <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 500, fontSize: 76, color: "#fff", letterSpacing: "0.08em", lineHeight: 1 }}>{slide.valor}</span>
         </div>
       )}
 
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ height: 12, borderRadius: 9999, background: "rgba(255,255,255,.12)", overflow: "hidden", maxWidth: 520 }}>
+      <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "flex-end", maxWidth: 520 }}>
+        <div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em", marginBottom: 6 }}>Valor Já Realizado</div>
+          <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 36, color: "#4ade80", lineHeight: 1 }}>
+            R$ {slide.realizadoNum.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em", marginBottom: 6 }}>Progresso</div>
+          <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 32, color: "#fff", lineHeight: 1 }}>
+            {pctStr}%
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ height: 16, borderRadius: 9999, background: "rgba(255,255,255,.12)", overflow: "hidden", maxWidth: 520 }}>
           <div style={{
             height: "100%",
             background: "linear-gradient(90deg,#FF0080,#FF6B35,#FF8C00)",
@@ -198,12 +214,6 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
           } as React.CSSProperties} />
         </div>
       </div>
-
-      {slide.showBox && (
-        <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 22, color: "rgba(255,255,255,.88)", marginBottom: 12 }}>
-          {pctStr}% da meta batida
-        </div>
-      )}
 
       <div style={{ fontSize: 13, color: "rgba(255,255,255,.35)", letterSpacing: ".14em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{slide.periodo}</div>
     </div>
