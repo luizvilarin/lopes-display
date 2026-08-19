@@ -190,6 +190,10 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
         <button className="btn btn-ghost" style={{ width: 40, height: 40, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12 }} onClick={() => document.documentElement.requestFullscreen?.()} title="Tela cheia">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
         </button>
+        {/* Reload */}
+        <button className="btn btn-ghost" style={{ width: 40, height: 40, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12 }} onClick={() => window.location.reload()} title="Recarregar tela">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/></svg>
+        </button>
         {/* Manager */}
         <button className="btn" style={{ background: "#E30613", color: "#fff", padding: "8px 16px", borderRadius: 10, fontSize: 12, letterSpacing: ".10em", display: "flex", alignItems: "center", gap: 6 }} onClick={handleAdminBtn}>
           <Icons.LayoutGrid size={14} />
@@ -601,6 +605,9 @@ function ScreenTimer({ config, onUpdate }: { config: SignageSettings, onUpdate: 
         </button>
         <button className="btn btn-ghost" style={{ width: 44, height: 44, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => document.documentElement.requestFullscreen?.()} title="Tela cheia">
           <Icons.Maximize size={16} />
+        </button>
+        <button className="btn btn-ghost" style={{ width: 44, height: 44, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => window.location.reload()} title="Recarregar tela">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/></svg>
         </button>
       </div>
 

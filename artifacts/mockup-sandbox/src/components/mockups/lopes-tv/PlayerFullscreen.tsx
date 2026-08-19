@@ -323,16 +323,27 @@ export function PlayerFullscreen() {
             ))}
           </div>
 
-          {/* Fullscreen button */}
-          <button
-            className="fullscreen-trigger-btn"
-            onClick={() => document.documentElement.requestFullscreen?.()}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-            </svg>
-            Tela Cheia
-          </button>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              className="fullscreen-trigger-btn"
+              onClick={() => window.location.reload()}
+              title="Recarregar tela"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              </svg>
+              Recarregar
+            </button>
+            <button
+              className="fullscreen-trigger-btn"
+              onClick={() => document.documentElement.requestFullscreen?.()}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+              </svg>
+              Tela Cheia
+            </button>
+          </div>
 
           {/* Slide counter */}
           <div style={{ color: "rgba(240,242,248,0.45)", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
