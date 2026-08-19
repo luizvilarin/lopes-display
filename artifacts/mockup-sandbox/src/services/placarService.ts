@@ -308,8 +308,7 @@ export const placarService = {
       if (existing.data) {
         await placarService.updateRankingEntry(existing.data.id, {
           pessoa_id: pessoaId,
-          valor: item.totalValor,
-          instagram: item.matchedPessoa?.instagram || undefined
+          valor: item.totalValor
         });
       } else {
         await placarService.saveRankingEntry({
@@ -319,7 +318,6 @@ export const placarService = {
           posicao: pos,
           valor: item.totalValor,
           periodo: monthData.periodo,
-          instagram: item.matchedPessoa?.instagram || undefined,
           ativo: true
         });
       }
@@ -344,8 +342,7 @@ export const placarService = {
       if (existing.data) {
         await placarService.updateRankingEntry(existing.data.id, {
           pessoa_id: pessoaId,
-          valor: item.totalValor,
-          instagram: item.matchedPessoa?.instagram || undefined
+          valor: item.totalValor
         });
       } else {
         await placarService.saveRankingEntry({
@@ -355,7 +352,6 @@ export const placarService = {
           posicao: pos,
           valor: item.totalValor,
           periodo: monthData.periodo,
-          instagram: item.matchedPessoa?.instagram || undefined,
           ativo: true
         });
       }
