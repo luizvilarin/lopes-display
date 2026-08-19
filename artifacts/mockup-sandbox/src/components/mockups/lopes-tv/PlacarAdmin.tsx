@@ -1403,7 +1403,6 @@ const getDetectedMonthString = () => {
 };
 
 function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUnitId: string; }) {
-  const [selectedUnidade, setSelectedUnidade] = useState("");
   const [form, setForm] = useState<Partial<ConfigMetas>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1412,17 +1411,8 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
   const detectedMonth = getDetectedMonthString();
 
   useEffect(() => {
-    if (activeUnitId !== "Todas") {
-      setSelectedUnidade(activeUnitId);
-    } else if (!selectedUnidade && unidades.length > 0) {
-      setSelectedUnidade(unidades[0]?.id || "");
-    }
-  }, [activeUnitId, unidades]);
-
-  useEffect(() => {
-    if (!selectedUnidade) return;
     setLoading(true);
-    placarService.getConfig(selectedUnidade).then(c => {
+    placarService.getConfig().then(c => {
       if (c) {
         setForm({
           ...c,
@@ -1430,7 +1420,7 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
         });
       } else {
         setForm({
-          unidade_id: selectedUnidade,
+          unidade_id: "jd-goias",
           meta_mensal_titulo: `Meta Mensal - ${detectedMonth}`,
           meta_mensal_valor: 0,
           meta_mensal_realizado: 0,
@@ -1439,14 +1429,14 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
       }
       setLoading(false);
     });
-  }, [selectedUnidade, detectedMonth]);
+  }, [detectedMonth]);
 
   const pctMensal = Math.min(100, ((form.meta_mensal_realizado || 0) / (form.meta_mensal_valor || 1)) * 100);
 
   const save = async () => {
     setSaving(true);
     try {
-      await placarService.saveConfig({ ...form, unidade_id: selectedUnidade });
+      await placarService.saveConfig({ ...form });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
@@ -1509,14 +1499,14 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
             <Field
               label="Título do Slide de Meta"
               value={form.meta_mensal_titulo ?? ""}
-              onChange={val => setForm(f => ({ ...f, meta_mensal_titulo: val }))}
-              disabled={loading}
+              onChange={val => {}}
+              disabled={true}
             />
             <Field
               label="Mês / Período de Exibição"
               value={form.meta_mensal_periodo ?? ""}
-              onChange={val => setForm(f => ({ ...f, meta_mensal_periodo: val }))}
-              disabled={loading}
+              onChange={val => {}}
+              disabled={true}
             />
             <Field
               label="Meta Total do Mês (R$)"

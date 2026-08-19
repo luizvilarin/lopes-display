@@ -234,11 +234,12 @@ export const placarService = {
     }
   },
 
-  // ─── Rankings ─────────────────────────────────────────────────────────────
   getRankings: async (): Promise<(RankingEntry & { pessoa?: Pessoa })[]> => {
-    const { data, error } = await supabase.from("ranking_entries").select(`*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, ativo)`).eq("ativo", true);
+    // Busca sem .eq("ativo", true) para evitar timeout do planner do Supabase
+    const { data, error } = await supabase.from("ranking_entries").select(`*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, ativo)`);
     if (error) throw error;
-    return data ?? [];
+    const all = data ?? [];
+    return all.filter(r => r.ativo === true);
   },
   saveRankingEntry: async (e: Omit<RankingEntry, "id" | "criado_em" | "atualizado_em">): Promise<RankingEntry> => {
     const { data, error } = await supabase.from("ranking_entries").insert(e).select().single();
@@ -354,7 +355,8 @@ export const placarService = {
       await placarService.saveConfig({
         id: config.id,
         meta_mensal_realizado: monthData.totalVolume,
-        meta_mensal_periodo: monthData.periodo
+        meta_mensal_periodo: monthData.periodo,
+        meta_mensal_titulo: `Meta Mensal - ${monthData.periodo}`
       });
     }
   },
