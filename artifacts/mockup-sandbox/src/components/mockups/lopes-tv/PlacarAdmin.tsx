@@ -289,8 +289,8 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
         if (!ctx) return res(e.target?.result as string); // fallback
         
         ctx.drawImage(img, 0, 0, width, height);
-        // Compress as JPEG to save space (0.8 quality usually results in ~100-300KB)
-        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        // Usa WebP para suportar fundo transparente e manter excelente compressão
+        const compressedDataUrl = canvas.toDataURL("image/webp", 0.8);
         res(compressedDataUrl);
       };
       img.onerror = () => rej(new Error("Erro ao carregar imagem para compressão"));
