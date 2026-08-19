@@ -211,23 +211,14 @@ export const placarService = {
 
   // ─── Config Metas ─────────────────────────────────────────────────────────
   getConfig: async (unidade_id?: string): Promise<ConfigMetas | null> => {
-    let query = supabase.from("config_metas").select("*");
-    if (unidade_id) {
-      query = query.eq("unidade_id", unidade_id);
-    }
-    const { data, error } = await query.limit(1);
+    // Meta unificada: busca sempre a primeira configuração (ID mais baixo)
+    const { data, error } = await supabase.from("config_metas").select("*").order("id", { ascending: true }).limit(1);
     if (error) throw error;
     return data && data.length > 0 ? data[0] : null;
   },
   saveConfig: async (patch: Partial<ConfigMetas>): Promise<ConfigMetas> => {
-    // Se tiver ID, atualiza. Caso contrário tenta pegar o primeiro ou inserir.
-    if (patch.id) {
-      const { data, error } = await supabase.from("config_metas").update(patch).eq("id", patch.id).select().single();
-      if (error) throw error;
-      return data;
-    }
-    
-    const existing = await placarService.getConfig(patch.unidade_id || undefined);
+    // Meta unificada: atualiza sempre a configuração global existente
+    const existing = await placarService.getConfig();
     if (existing) {
       const { data, error } = await supabase.from("config_metas").update(patch).eq("id", existing.id).select().single();
       if (error) throw error;

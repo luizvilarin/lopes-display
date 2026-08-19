@@ -1497,20 +1497,9 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
         </button>
       </div>
 
-      {activeUnitId === "Todas" ? (
-        <div style={{ marginBottom: 14 }}>
-          <div className="pa-form-row">
-            <label className="pa-label">Selecione a Unidade para Configurar</label>
-            <select className="pa-input pa-select" value={selectedUnidade} onChange={e => setSelectedUnidade(e.target.value)}>
-              {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-            </select>
-          </div>
-        </div>
-      ) : (
-        <div style={{ marginBottom: 14, background: "rgba(255, 255, 255, 0.03)", borderRadius: 6, padding: "8px 12px", border: "1px dashed rgba(255, 255, 255, 0.08)", fontSize: 13, color: "rgba(255, 255, 255, 0.60)" }}>
-          Configurando metas da unidade ativa: <strong>{unidades.find(u => u.id === activeUnitId)?.nome ?? activeUnitId}</strong>
-        </div>
-      )}
+      <div style={{ marginBottom: 14, background: "rgba(255, 255, 255, 0.03)", borderRadius: 6, padding: "8px 12px", border: "1px dashed rgba(255, 255, 255, 0.08)", fontSize: 13, color: "rgba(255, 255, 255, 0.60)" }}>
+        Configurando metas globais do <strong>Grupo Lopes</strong>
+      </div>
 
       {loading ? (
         <div style={{ padding: "40px", textAlign: "center", color: "rgba(255,255,255,.30)", fontSize: 14 }}>Carregando dados da unidade...</div>
@@ -1537,10 +1526,10 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
               type="number"
             />
             <Field
-              label="Realizado até o Momento (R$)"
+              label="Realizado até o Momento (R$) - Atualizado via Planilha"
               value={form.meta_mensal_realizado ?? ""}
-              onChange={val => setForm(f => ({ ...f, meta_mensal_realizado: parseBrazilianNumber(val) }))}
-              disabled={loading}
+              onChange={val => {}}
+              disabled={true}
               type="number"
             />
           </div>
