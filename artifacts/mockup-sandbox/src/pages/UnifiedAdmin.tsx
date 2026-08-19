@@ -4,7 +4,7 @@ import { AdminPanel } from "@/components/mockups/lopes-tv/AdminPanel";
 import { PlacarAdmin } from "@/components/mockups/lopes-tv/PlacarAdmin";
 import { placarService } from "@/services/placarService";
 import logoBranca from "@/assets/logo-branca.png";
-import faviconLopes from "@/assets/favicon-lopes.png";
+import faviconLopes from "@/assets/favicon-lopes.svg";
 import { Icons } from "@/components/common/Icons";
 
 type UnifiedSection = 

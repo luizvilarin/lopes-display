@@ -1,0 +1,76 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo Gradiente Vermelho -->
+  <rect width="512" height="512" rx="128" fill="url(#bg-grad)"/>
+  
+  <!-- O formato base do coração -->
+  <path d="M128 256C128 174 194 128 256 128C318 128 384 174 384 256L256 384L128 256Z" fill="white" />
+  
+  <!-- Recorte circular/coração simplificado - Estilo Coração Lopes -->
+  <!-- Vamos desenhar a exata logo do coração que é uma bolinha e um semi-círculo encostado num polígono diagonal. 
+       A logo real da Lopes é uma combinação de 2 formas: um círculo menor, e uma gota com o lado superior côncavo, 
+       mas na versão simplificada é apenas um formato arredondado lembrando um coração. -->
+       
+  <g transform="translate(112, 132)">
+    <path d="M43.3 54C28.2 54 16 66.2 16 81.3V129C16 166.5 46.5 197 84 197H129.5C144.6 197 156.8 184.8 156.8 169.7C156.8 154.6 144.6 142.4 129.5 142.4H84C76.6 142.4 70.6 136.4 70.6 129V81.3C70.6 66.2 58.4 54 43.3 54Z" fill="white"/>
+    <circle cx="160" cy="85" r="50" fill="white"/>
+    
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M141.5 241C102.5 241 68.3 219.7 50 187.8C49.8 187.5 49.6 187.2 49.5 186.8C47.8 183.7 46.3 180.3 45.1 176.9C36.7 155.6 36.7 132 45.1 110.7C46.3 107.3 47.8 103.9 49.5 100.8C49.6 100.4 49.8 100.1 50 99.8C59.9 82.2 75.3 68.2 93.9 59.9C104.5 55.1 116.1 52.6 128 52.6C128 52.6 128 52.6 128.1 52.6C129.9 52.6 131.7 52.7 133.4 52.8C134.4 52.9 135.5 53.0 136.5 53.2L136.5 53.2V53.2C136.5 53.2 136.5 53.2 136.5 53.2C138.8 53.5 141 54 143.2 54.5C146 55.2 148.8 56 151.5 56.9C154.8 58.1 157.9 59.4 161 60.9C168.1 64.3 174.6 68.5 180.5 73.4C180.6 73.4 180.6 73.5 180.7 73.5C184 76.3 187.1 79.4 189.9 82.7C191.8 84.8 193.5 87 195.2 89.3C198.8 94.4 201.7 99.9 203.9 105.7C204.6 107.6 205.3 109.5 205.9 111.4C208.5 119.8 209.8 128.8 209.8 138C209.8 178 181 211.5 143.2 216.5V170C155 167 165 153.5 165 138C165 119.2 150.2 104 132 104C114.5 104 100 117.8 100 135C100 148 108 159 120 163.5L141.5 241Z" fill="white" stroke="white" stroke-width="2"/>
+    <circle cx="178" cy="115" r="62" fill="white" />
+  </g>
+  <rect x="0" y="0" width="512" height="512" fill="url(#bg-grad)" />
+  
+  <path d="M120 236 c 0 68 85 140 136 170 c 51 -30 136 -102 136 -170 c 0 -48 -35 -85 -81 -85 c -32 0 -60 22 -72 53 h 34 c 10 -15 26 -23 43 -23 c 26 0 47 21 47 47 s -21 47 -47 47 c -26 0 -47 -21 -47 -47 h -34 c 0 45 36 81 81 81 c 45 0 81 -36 81 -81 c 0 -45 -36 -81 -81 -81 c -22 0 -42 9 -55 23 c -13 -14 -33 -23 -55 -23 c -46 0 -81 37 -81 85 z" fill="white"/>
+
+  <!-- Logo perfeitamente desenhada para ficar similar à imagem -->
+  <rect x="0" y="0" width="512" height="512" fill="url(#bg-grad)" />
+  
+  <g transform="translate(70, 70) scale(1.1)">
+    <!-- Circulo -->
+    <circle cx="240" cy="160" r="76" fill="white"/>
+    <!-- Curva coração vazado -->
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M140 110 C80 110 50 160 50 210 C50 280 160 350 180 365 L270 300 C270 300 130 220 130 200 C130 180 140 170 160 170 C190 170 190 200 190 200 L240 200 C240 200 240 110 140 110 Z" fill="white"/>
+    
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M182 360 C 130 315 48 240 48 160 C 48 80 120 50 170 70 C 170 70 200 15 280 40 C 280 40 250 80 250 110 C 250 110 170 90 120 140 C 120 140 100 180 140 210 C 140 210 240 270 310 210 L 290 290 C 290 290 240 330 182 360 Z" fill="white" />
+  </g>
+  
+  <rect x="0" y="0" width="512" height="512" fill="url(#bg-grad)" />
+  
+  <path d="M96 210 C 96 110 160 80 220 110 C 220 110 260 50 350 70 C 350 70 310 120 310 150 C 310 150 220 130 160 190 C 160 190 140 240 190 280 C 190 280 300 350 380 280 L 350 380 C 350 380 300 420 230 460 C 160 400 96 300 96 210 Z" fill="white" />
+  
+  <!-- Apenas uma aproximação visual baseada na descrição: "um coração branco com um círculo inserido" -->
+  <rect x="0" y="0" width="512" height="512" fill="url(#bg-grad)" />
+  <g transform="translate(60, 90)">
+    <!-- O contorno esquerdo do coração -->
+    <path d="M 196 350 C 80 280 30 200 30 120 C 30 50 90 20 150 40 L 150 100 C 110 90 90 110 90 140 C 90 200 180 240 270 200 L 270 260 C 240 280 210 320 196 350 Z" fill="white"/>
+    <!-- O Círculo direito -->
+    <circle cx="260" cy="110" r="70" fill="white"/>
+    
+    <!-- Novo approach Lopes digital -->
+    <rect x="-60" y="-90" width="512" height="512" fill="url(#bg-grad)" />
+    
+    <path d="M196 350 C 50 250 20 160 20 100 C 20 30 100 0 160 30 C 160 30 190 60 180 110 C 180 110 130 100 100 140 C 100 140 80 190 130 220 C 130 220 240 280 320 210 L 300 280 C 300 280 250 320 196 350 Z" fill="white" />
+    <circle cx="290" cy="100" r="70" fill="white" />
+  </g>
+  <rect x="0" y="0" width="512" height="512" fill="url(#bg-grad)" />
+  
+  <!-- Forma real da lopes -->
+  <g transform="translate(90, 110) scale(0.9)">
+    <path d="M 195 330 C 70 220 20 140 20 80 C 20 10 90 -20 150 10 C 190 30 210 80 200 130 C 160 120 110 130 90 170 C 80 190 85 220 120 240 C 180 270 250 260 290 220 C 310 200 320 170 330 140 L 360 210 C 320 280 250 310 195 330 Z" fill="white" />
+    <circle cx="285" cy="80" r="75" fill="white" />
+  </g>
+
+  <rect x="0" y="0" width="512" height="512" fill="url(#bg-grad)" />
+  <g transform="translate(60, 60)">
+    <!-- Final Lopes Heart -->
+    <path d="M195 365C85 260 30 170 30 100C30 30 100 -5 160 20C205 38 230 85 220 140C180 130 120 140 100 185C85 220 95 250 135 270C200 300 280 270 325 210L360 270C315 340 245 355 195 365Z" fill="white"/>
+    <circle cx="295" cy="90" r="85" fill="white"/>
+  </g>
+
+  <!-- Definições -->
+  <defs>
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F0000" />
+      <stop offset="100%" stop-color="#E30613" />
+    </linearGradient>
+  </defs>
+</svg>

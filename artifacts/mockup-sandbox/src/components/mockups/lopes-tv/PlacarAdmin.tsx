@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import logoBranca from "@/assets/logo-branca.png";
-import faviconLopes from "@/assets/favicon-lopes.png";
+import faviconLopes from "@/assets/favicon-lopes.svg";
 import {
   placarService,
   MOCK_UNIDADES,
@@ -427,14 +427,16 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
     setUnidadeFilter(activeUnitId === "Todas" ? "todas" : activeUnitId);
   }, [activeUnitId]);
 
-  // Apply cargo, unit, subtab, and sorting filters
   const filteredList = pessoas
-    .filter(p => (subTab === "ativos" ? p.ativo : !p.ativo))
+    .filter(p => {
+      const isAtivo = p.ativo !== false;
+      return subTab === "ativos" ? isAtivo : !isAtivo;
+    })
     .filter(p => (cargoFilter === "todos" ? true : p.cargo === cargoFilter))
     .filter(p => (unidadeFilter === "todas" ? true : p.unidade_id === unidadeFilter))
     .sort((a, b) => {
-      const nameA = a.nome.toLowerCase();
-      const nameB = b.nome.toLowerCase();
+      const nameA = (a.nome || "").toLowerCase();
+      const nameB = (b.nome || "").toLowerCase();
       return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
     });
 
@@ -2748,7 +2750,7 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
 
     setApplyingImport(true);
     try {
-      await placarService.batchApplySpreadsheetImport(monthData);
+      await placarService.batchApplySpreadsheetImport(monthData, activeUnitId);
       alert(`✨ Rankings de ${selectedMonthKey} atualizados com sucesso a partir da planilha!`);
       setShowExcelModal(false);
       setExcelResult(null);

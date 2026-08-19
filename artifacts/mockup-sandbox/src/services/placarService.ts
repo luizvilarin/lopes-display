@@ -76,11 +76,9 @@ const serializeImovelPayload = (i: Partial<Imovel>) => {
   if (i.gradient !== undefined) payload.gradient = i.gradient;
   
   if (i.category !== undefined) {
-    payload.category = i.category;
     payload.address = i.category;
   } else if (i.address !== undefined) {
     payload.address = i.address;
-    payload.category = i.address;
   }
 
   if (i.image_url !== undefined) payload.image_url = i.image_url;
@@ -267,7 +265,7 @@ export const placarService = {
   },
 
   // ─── Importação de Planilha Excel ─────────────────────────────────────────
-  batchApplySpreadsheetImport: async (monthData: ParsedMonthData): Promise<void> => {
+  batchApplySpreadsheetImport: async (monthData: ParsedMonthData, unidadeId?: string): Promise<void> => {
     // 1. Garante que todas as pessoas (existentes ou novas) existam no banco
     const processPerson = async (item: ParsedPersonRanking): Promise<string> => {
       if (item.matchedPessoa && !item.isNewPerson) {
@@ -361,6 +359,16 @@ export const placarService = {
           ativo: true
         });
       }
+    }
+
+    // 4. Atualiza a meta mensal da unidade com o volume financeiro do mês
+    const config = await placarService.getConfig(unidadeId === "Todas" ? undefined : unidadeId);
+    if (config) {
+      await placarService.saveConfig({
+        id: config.id,
+        meta_mensal_realizado: monthData.totalVolume,
+        meta_mensal_periodo: monthData.periodo
+      });
     }
   },
 
