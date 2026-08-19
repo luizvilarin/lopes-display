@@ -1416,7 +1416,8 @@ function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUni
       if (c) {
         setForm({
           ...c,
-          meta_mensal_periodo: c.meta_mensal_periodo || detectedMonth,
+          meta_mensal_titulo: `Meta Mensal - ${detectedMonth}`,
+          meta_mensal_periodo: detectedMonth,
         });
       } else {
         setForm({
