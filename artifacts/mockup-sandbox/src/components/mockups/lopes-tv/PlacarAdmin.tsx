@@ -2729,7 +2729,7 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
 
     setApplyingImport(true);
     try {
-      await placarService.batchApplySpreadsheetImport(monthData, activeUnitId);
+      await placarService.batchApplySpreadsheetImport(monthData);
       alert(`✨ Rankings de ${selectedMonthKey} atualizados com sucesso a partir da planilha!`);
       setShowExcelModal(false);
       setExcelResult(null);

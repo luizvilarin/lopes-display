@@ -257,7 +257,7 @@ export const placarService = {
   },
 
   // ─── Importação de Planilha Excel ─────────────────────────────────────────
-  batchApplySpreadsheetImport: async (monthData: ParsedMonthData, unidadeId?: string): Promise<void> => {
+  batchApplySpreadsheetImport: async (monthData: ParsedMonthData): Promise<void> => {
     // 1. Garante que todas as pessoas (existentes ou novas) existam no banco
     const processPerson = async (item: ParsedPersonRanking): Promise<string> => {
       if (item.matchedPessoa && !item.isNewPerson) {
@@ -350,13 +350,20 @@ export const placarService = {
     }
 
     // 4. Atualiza a meta mensal da unidade com o volume financeiro do mês
-    const config = await placarService.getConfig(unidadeId === "Todas" ? undefined : unidadeId);
+    const config = await placarService.getConfig();
     if (config) {
+      const date = new Date();
+      const monthNames = [
+        "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
+      ];
+      const currentMonthStr = `${monthNames[date.getMonth()]} DE ${date.getFullYear()}`;
+      
       await placarService.saveConfig({
         id: config.id,
         meta_mensal_realizado: monthData.totalVolume,
-        meta_mensal_periodo: monthData.periodo,
-        meta_mensal_titulo: `Meta Mensal - ${monthData.periodo}`
+        meta_mensal_periodo: currentMonthStr,
+        meta_mensal_titulo: `Meta Mensal - ${currentMonthStr}`
       });
     }
   },
