@@ -286,7 +286,7 @@ export function parseSalesSpreadsheet(
         suggestedUnidadeId: match.bestMatch?.unidade_id || mapLojaToUnidadeId(item.loja),
         suggestedCargo: "corretor"
       };
-    });
+    }).filter(p => !(p.matchedPessoa && p.matchedPessoa.ativo === false));
 
     // Processa Gestores
     const gestoresList: ParsedPersonRanking[] = Object.values(rawData.gestoresMap).map(item => {
@@ -302,7 +302,7 @@ export function parseSalesSpreadsheet(
         suggestedUnidadeId: match.bestMatch?.unidade_id || mapLojaToUnidadeId(item.loja),
         suggestedCargo: "gestor"
       };
-    });
+    }).filter(p => !(p.matchedPessoa && p.matchedPessoa.ativo === false));
 
     // Ordena por maior valor de vendas e pega Top 10 e Top 5
     corretoresList.sort((a, b) => b.totalValor - a.totalValor);
