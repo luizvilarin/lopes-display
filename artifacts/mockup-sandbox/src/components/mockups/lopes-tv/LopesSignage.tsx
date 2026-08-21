@@ -10,7 +10,7 @@ import { Icons } from "@/components/common/Icons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Screen = "streaming" | "player" | "timer" | "placar" | "cultura";
+type Screen = "streaming" | "player" | "timer" | "placar" | "cultura" | "automix";
 type Theme = "dark" | "light";
 
 const FALLBACK_GRADIENTS: Record<string, string> = {
@@ -147,16 +147,18 @@ function Navbar({ theme, onThemeToggle, onBack, activeUnit, unidades, onNav, cur
       />
 
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-        {(["streaming", "timer", "placar"] as Screen[]).map(s => {
+        {(["streaming", "timer", "placar", "automix"] as Screen[]).map(s => {
           const labels: Record<string, string> = { 
             streaming: "Sinalização", 
             timer: "Temporizador", 
             placar: "Placar",
+            automix: "Automático"
           };
           const icons: Record<string, React.ReactNode> = { 
             streaming: <Icons.TV size={16} />, 
             timer: <Icons.Timer size={16} />, 
             placar: <Icons.Rocket size={16} />,
+            automix: <Icons.Play size={16} />
           };
           const isAct = currentScreen === s || (currentScreen === "player" && s === "streaming");
           return (
@@ -357,7 +359,7 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
 
 // ─── Screen 3: Player / Fullscreen ───────────────────────────────────────────
 
-function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imovel[]; config: SignageSettings; initialPropId: number | null; onBack: () => void }) {
+function ScreenPlayer({ imoveis, config, initialPropId, onBack, onFinishedCycle }: { imoveis: Imovel[]; config: SignageSettings; initialPropId: number | null; onBack: () => void; onFinishedCycle?: () => void; }) {
   const isPlaylistMode = initialPropId === null;
   const singleProp = initialPropId ? imoveis.find(p => p.id === initialPropId) : null;
   
@@ -394,10 +396,25 @@ function ScreenPlayer({ imoveis, config, initialPropId, onBack }: { imoveis: Imo
   }, []);
 
   useEffect(() => {
-    if (!autoRot || slides.length <= 1) return;
-    const t = setInterval(() => go((idx + 1) % slides.length), interval * 1000);
+    if (!autoRot || slides.length <= 1) {
+      // Se não há rotação (apenas 1 slide), precisamos ainda assim avisar que finalizou depois do tempo
+      if (slides.length === 1 && onFinishedCycle && autoRot) {
+        const fallbackT = setTimeout(() => onFinishedCycle(), interval * 1000);
+        return () => clearTimeout(fallbackT);
+      }
+      return;
+    }
+    const t = setInterval(() => {
+      const next = idx + 1;
+      if (next >= slides.length) {
+        if (onFinishedCycle) onFinishedCycle();
+        go(0);
+      } else {
+        go(next);
+      }
+    }, interval * 1000);
     return () => clearInterval(t);
-  }, [autoRot, interval, idx, slides.length, go]);
+  }, [autoRot, interval, idx, slides.length, go, onFinishedCycle]);
 
   if (!p || !currentSlide) return null;
 
@@ -711,6 +728,7 @@ function QuickConfigModal({ config, onClose, onSave }: { config: SignageSettings
 
 export function LopesSignage() {
   const [screen, setScreen] = useState<Screen>("streaming");
+  const [automixState, setAutomixState] = useState<"player" | "placar">("player");
   const [theme, setTheme] = useState<Theme>("dark");
   
   const [unidades, setUnidades] = useState<Unidade[]>([]);
@@ -724,6 +742,13 @@ export function LopesSignage() {
   const [playerPlaylist, setPlayerPlaylist] = useState<Imovel[] | null>(null);
 
   const toggleTheme = () => setTheme(t => t === "dark" ? "light" : "dark");
+
+  // Reset automixState when entering automix screen
+  useEffect(() => {
+    if (screen === "automix") {
+      setAutomixState("player");
+    }
+  }, [screen]);
 
   // Load initial dependencies
   useEffect(() => {
@@ -807,7 +832,7 @@ export function LopesSignage() {
           <Navbar
             theme={theme}
             onThemeToggle={toggleTheme}
-            onBack={screen !== "streaming" && screen !== "placar" && screen !== "cultura" ? () => setScreen("streaming") : undefined}
+            onBack={screen !== "streaming" && screen !== "placar" && screen !== "cultura" && screen !== "automix" ? () => setScreen("streaming") : undefined}
             activeUnit={activeUnit}
             unidades={unidades}
             onNav={s => setScreen(s)}
@@ -816,6 +841,22 @@ export function LopesSignage() {
           
           {screen === "streaming" && config && <ScreenStreaming imoveis={imoveis} onOpen={handleOpenProp} config={config} />}
           {screen === "player"    && config && <ScreenPlayer imoveis={playerPlaylist || imoveis} config={config} initialPropId={openPropId} onBack={() => setScreen("streaming")} />}
+          
+          {/* Automix render logic */}
+          {screen === "automix" && config && automixState === "player" && (
+            <ScreenPlayer 
+              imoveis={imoveis} 
+              config={config} 
+              initialPropId={null} 
+              onBack={() => setScreen("streaming")}
+              onFinishedCycle={() => setAutomixState("placar")}
+            />
+          )}
+          {screen === "automix" && config && automixState === "placar" && (
+            <div className="screen-enter" style={{ height: "calc(100vh - 68px)", overflow: "hidden" }}>
+              <PlacarLopes activeUnitId={activeUnit} onFinishedCycle={() => setAutomixState("player")} standalone={false} />
+            </div>
+          )}
           {screen === "timer"     && config && <ScreenTimer config={config} onUpdate={(c) => setConfig(c)} />}
           {screen === "placar"    && <div className="screen-enter" style={{ height: "calc(100vh - 68px)", overflow: "hidden" }}><PlacarLopes activeUnitId={activeUnit} /></div>}
           {screen === "cultura"   && <div className="screen-enter" style={{ height: "calc(100vh - 68px)", overflow: "hidden" }}><CulturaLopes activeUnitId={activeUnit} /></div>}

@@ -509,7 +509,7 @@ function ProgressDots({ total, current, onChange }: { total: number; current: nu
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?: string }) {
+export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, standalone = true }: { activeUnitId?: string; onFinishedCycle?: () => void; standalone?: boolean; }) {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [unitInfo, setUnitInfo] = useState<UnitInfo>(FALLBACK_UNIT);
   const [slideIdx, setSlideIdx] = useState(0);
@@ -716,9 +716,17 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
     // Se for o slide de reconhecimento, o tempo de permanência é gerido dentro do próprio componente de cada indivíduo
     if (currentType === "reconhecimento") return;
 
-    const t = setInterval(() => goTo((slideIdx + 1) % slides.length), INTERVAL);
+    const t = setInterval(() => {
+      const nextIdx = slideIdx + 1;
+      if (nextIdx >= slides.length) {
+        if (onFinishedCycle) onFinishedCycle();
+        goTo(0);
+      } else {
+        goTo(nextIdx);
+      }
+    }, INTERVAL);
     return () => clearInterval(t);
-  }, [slideIdx, goTo, slides]);
+  }, [slideIdx, goTo, slides, onFinishedCycle]);
 
   // Suporte para Setinhas (Manual Override)
   useEffect(() => {
@@ -753,10 +761,14 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId }: { activeUnitId?:
         <SlideReconhecimento
           corretores={(slide as SlideReconhecimentoType).corretores}
           gestores={(slide as SlideReconhecimentoType).gestores}
-          standalone={true}
+          standalone={standalone}
           onFinishedCycle={() => {
-            if (slides.length > 1) {
-              goTo((slideIdx + 1) % slides.length);
+            const nextIdx = slideIdx + 1;
+            if (nextIdx >= slides.length) {
+              if (onFinishedCycle) onFinishedCycle();
+              goTo(0);
+            } else {
+              goTo(nextIdx);
             }
           }}
         />
