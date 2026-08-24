@@ -408,7 +408,7 @@ export const placarService = {
   getPastas: async (): Promise<Pasta[]> => {
     try {
       const { data, error } = await supabase.from("pastas").select("*").order("criado_em", { ascending: false });
-      if (!error && data && data.length > 0) return data;
+      if (!error && data) return data;
     } catch (e) {}
     // Fallback LocalStorage
     const raw = localStorage.getItem("lopes_pastas");

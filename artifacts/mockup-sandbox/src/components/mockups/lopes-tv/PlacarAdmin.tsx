@@ -702,7 +702,7 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                 <input className="pa-input" value={modal.instagram ?? ""} onChange={e => setModal(m => ({ ...m!, instagram: e.target.value }))} placeholder="Ex: @ricardolobo_lopes" />
               </div>
               <div className="pa-form-row" style={{ gridColumn: "1 / -1" }}>
-                <label className="pa-label">Foto do Perfil (Suporta PNG sem fundo transparente HD)</label>
+                <label className="pa-label">Link da Foto do Perfil (Use Imgur ou similar para evitar sobrecarga no banco)</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
                   {/* Preview circular */}
                   <div style={{
@@ -719,66 +719,14 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                       </svg>
                     )}
                   </div>
-                  {/* Botões */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        className="pa-btn-ghost"
-                        style={{ padding: "6px 12px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                        </svg>
-                        {modal.foto_url ? "Trocar Foto" : "Carregar Foto"}
-                      </button>
-                      {modal.foto_url && (
-                        <>
-                          <button
-                            type="button"
-                            className="pa-btn-ghost"
-                            style={{ padding: "6px 12px", fontSize: 13, display: "flex", alignItems: "center", gap: 6, borderColor: "rgba(99,102,241,.35)", color: "#818cf8" }}
-                            onClick={() => setCropSrc(modal.foto_url!)}
-                          >
-                            ✂️ Recortar
-                          </button>
-                          <button
-                            type="button"
-                            className="pa-btn-danger"
-                            style={{ padding: "6px 12px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}
-                            onClick={() => setModal(m => ({ ...m!, foto_url: "" }))}
-                          >
-                            <Icons.Trash size={14} />
-                            Remover
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Recomendado: PNG Transparente HD (Manterá fundo transparente)</span>
-                  </div>
+                  <input 
+                    className="pa-input" 
+                    style={{ flex: 1 }}
+                    placeholder="https://i.imgur.com/suafoto.png" 
+                    value={modal.foto_url ?? ""} 
+                    onChange={e => setModal(m => ({ ...m!, foto_url: e.target.value }))} 
+                  />
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={async e => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    e.target.value = "";
-                    if (file.size > 10 * 1024 * 1024) {
-                      alert("Por favor, selecione uma imagem de até 10MB.");
-                      return;
-                    }
-                    try {
-                      const dataUrl = await readFileAsDataUrl(file);
-                      setModal(m => ({ ...m!, foto_url: dataUrl }));
-                    } catch {
-                      alert("Erro ao ler o arquivo de imagem.");
-                    }
-                  }}
-                />
               </div>
             </div>
 

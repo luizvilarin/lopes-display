@@ -284,7 +284,7 @@ export function parseSalesSpreadsheet(
         similarityScore: match.score,
         isNewPerson: !match.bestMatch || match.score < 0.75,
         suggestedUnidadeId: match.bestMatch?.unidade_id || mapLojaToUnidadeId(item.loja),
-        suggestedCargo: "corretor"
+        suggestedCargo: "corretor" as Cargo
       };
     }).filter(p => !(p.matchedPessoa && p.matchedPessoa.ativo === false));
 
@@ -300,7 +300,7 @@ export function parseSalesSpreadsheet(
         similarityScore: match.score,
         isNewPerson: !match.bestMatch || match.score < 0.75,
         suggestedUnidadeId: match.bestMatch?.unidade_id || mapLojaToUnidadeId(item.loja),
-        suggestedCargo: "gestor"
+        suggestedCargo: "gestor" as Cargo
       };
     }).filter(p => !(p.matchedPessoa && p.matchedPessoa.ativo === false));
 
