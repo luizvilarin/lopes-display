@@ -445,8 +445,23 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
 }) {
   const [modal, setModal] = useState<Partial<Pessoa> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSync = async () => {
+    if (!confirm("Sincronizar corretores do Cultura Lopes? (Pode demorar alguns segundos)")) return;
+    setIsSyncing(true);
+    try {
+      const res = await placarService.syncPessoasFromCultura();
+      alert(`Sincronização concluída!\nNovos: ${res.added}\nAtualizados: ${res.updated}`);
+      onChange();
+    } catch (err) {
+      alert("Erro ao sincronizar. Verifique o console.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const [subTab, setSubTab] = useState<"ativos" | "arquivados">("ativos");
   const [cargoFilter, setCargoFilter] = useState<string>("todos");
@@ -522,7 +537,17 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
             <div className="pa-title">Pessoas</div>
             <div className="pa-subtitle">Corretores e gestores cadastrados — {filteredList.length} exibidos</div>
           </div>
-          <button className="pa-btn-primary" onClick={openAdd}>+ Novo</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button 
+              className="pa-btn-ghost" 
+              onClick={handleSync}
+              disabled={isSyncing}
+              style={{ borderColor: "rgba(99,102,241,.35)", color: "#818cf8" }}
+            >
+              {isSyncing ? "Sincronizando..." : "🔄 Sincronizar Cultura"}
+            </button>
+            <button className="pa-btn-primary" onClick={openAdd}>+ Novo</button>
+          </div>
         </div>
 
         {/* Sub-tabs switcher */}

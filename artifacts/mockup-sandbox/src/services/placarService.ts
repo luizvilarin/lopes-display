@@ -208,6 +208,61 @@ export const placarService = {
     const { error } = await supabase.from("pessoas").delete().eq("id", id);
     if (error) throw error;
   },
+  syncPessoasFromCultura: async (): Promise<{ added: number, updated: number }> => {
+    try {
+      const { culturaService } = await import('./culturaService');
+      const corretores = await culturaService.getCorretores();
+      const dbPessoas = await placarService.getPessoas(undefined, false);
+      const unidades = await placarService.getUnidades();
+      
+      let added = 0;
+      let updated = 0;
+      
+      const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      for (const c of corretores) {
+        if (!c.nome_completo) continue;
+        
+        // Match unit based on string
+        let unitId = "jd-goias"; // fallback
+        if (c.loja) {
+          const matchUnit = unidades.find(u => normalize(u.nome).includes(normalize(c.loja)));
+          if (matchUnit) unitId = matchUnit.id;
+        }
+
+        const isActive = c.status_ativo === "Ativo";
+        const cargo = (c.cargo && c.cargo.toLowerCase().includes("gestor")) ? "gestor" : "corretor";
+
+        const existing = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(c.nome_completo));
+        if (existing) {
+          // Update only if changed
+          if (existing.ativo !== isActive || existing.cargo !== cargo || existing.unidade_id !== unitId) {
+            await placarService.updatePessoa(existing.id, {
+              ativo: isActive,
+              cargo: cargo,
+              unidade_id: unitId
+            });
+            updated++;
+          }
+        } else if (isActive) {
+          // Insert new
+          await placarService.savePessoa({
+            nome: c.nome_completo,
+            cargo: cargo,
+            unidade_id: unitId,
+            ativo: true,
+            foto_url: "", // Leave blank for manual premium Imgur upload
+            instagram: ""
+          });
+          added++;
+        }
+      }
+      return { added, updated };
+    } catch (err) {
+      console.error("Erro na sincronização:", err);
+      throw err;
+    }
+  },
 
   // ─── Config Metas ─────────────────────────────────────────────────────────
   getConfig: async (unidade_id?: string): Promise<ConfigMetas | null> => {
