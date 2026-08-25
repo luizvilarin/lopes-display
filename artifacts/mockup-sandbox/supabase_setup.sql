@@ -29,6 +29,7 @@ create table if not exists pessoas (
   cargo       text    not null check (cargo in ('gestor', 'corretor')),
   unidade_id  text    references unidades(id) on delete set null,
   foto_url    text,
+  instagram   text,
   ativo       boolean not null default true,
   criado_em   timestamptz default now()
 );

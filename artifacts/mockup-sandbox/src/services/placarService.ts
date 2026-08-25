@@ -251,8 +251,7 @@ export const placarService = {
             cargo: cargo,
             unidade_id: unitId,
             ativo: true,
-            foto_url: "", // Leave blank for manual premium Imgur upload
-            instagram: ""
+            foto_url: ""
           });
           added++;
         }

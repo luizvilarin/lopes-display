@@ -4,14 +4,17 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function test() {
-  console.log("Testing getPessoas...");
-  const { data: p, error: pe } = await supabase.from("pessoas").select("id, nome, cargo, unidade_id, foto_url, ativo").order("nome");
-  if (pe) console.error("Error getPessoas:", pe);
-  else console.log("getPessoas OK", p.length);
-
-  console.log("Testing getRankings...");
-  const { data: r, error: re } = await supabase.from("ranking_entries").select("*, pessoa:pessoas(id, nome, cargo, unidade_id, foto_url, ativo)").eq("ativo", true);
-  if (re) console.error("Error getRankings:", re);
-  else console.log("getRankings OK", r.length);
+  console.log("Testing insert Pessoas...");
+  const p = {
+            nome: "ZTest API",
+            cargo: "corretor",
+            unidade_id: "jd-goias",
+            ativo: true,
+            foto_url: "",
+            instagram: ""
+  };
+  const { data, error } = await supabase.from("pessoas").insert(p).select().single();
+  console.log("Error:", error);
+  console.log("Data:", data);
 }
 test();
