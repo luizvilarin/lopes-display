@@ -792,6 +792,22 @@ function SecaoRankingsPastas({ pessoas, onChange }: { pessoas: Pessoa[]; onChang
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [entryForm, setEntryForm] = useState<Partial<RankingPastaEntry>>({ pessoa_id: "", posicao: 1, quantidade_pastas: 1 });
   const [saving, setSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    if (!confirm("Sincronizar a Fila de Pastas com o Cultura Lopes? (Isso pode demorar alguns segundos)")) return;
+    setIsSyncing(true);
+    try {
+      const res = await placarService.syncPastasFromCultura();
+      alert(`Sincronização concluída!\nLançamentos Atualizados: ${res.updated_pastas}\nEntradas de Ranking Processadas: ${res.updated_rankings}`);
+      loadData();
+      onChange();
+    } catch (err) {
+      alert("Erro ao sincronizar Pastas. Verifique o console.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -885,9 +901,19 @@ function SecaoRankingsPastas({ pessoas, onChange }: { pessoas: Pessoa[]; onChang
             <div className="pa-title">Ranking de Pastas Unificado</div>
             <div className="pa-subtitle">Gerencie o ranking de captação de pastas por lançamento (Unificada Lopes)</div>
           </div>
-          <button className="pa-btn-primary" onClick={() => { setPastaForm({ titulo: "", meta_pastas: 30 }); setShowPastaModal(true); }}>
-            + Novo Lançamento / Pasta
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button 
+              className="pa-btn-ghost" 
+              onClick={handleSync}
+              disabled={isSyncing}
+              style={{ borderColor: "rgba(99,102,241,.35)", color: "#818cf8" }}
+            >
+              {isSyncing ? "Sincronizando..." : "🔄 Sincronizar Fila de Pastas"}
+            </button>
+            <button className="pa-btn-primary" onClick={() => { setPastaForm({ titulo: "", meta_pastas: 30 }); setShowPastaModal(true); }}>
+              + Novo Lançamento / Pasta
+            </button>
+          </div>
         </div>
 
         {pastas.length === 0 ? (

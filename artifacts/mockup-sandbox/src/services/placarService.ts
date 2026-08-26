@@ -506,6 +506,124 @@ export const placarService = {
     localStorage.setItem("lopes_pastas", JSON.stringify(filtered));
   },
 
+  syncPastasFromCultura: async (): Promise<{ updated_pastas: number, updated_rankings: number }> => {
+    try {
+      const { culturaService } = await import('./culturaService');
+      const filaPastas = await culturaService.getFilaPastas();
+      
+      const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      // Group pastas by lancamento
+      const grouped: Record<string, {
+        corretores: Record<string, number>,
+        gestores: Record<string, number>
+      }> = {};
+
+      for (const p of filaPastas) {
+        if (!p.lancamento) continue;
+        const lanc = p.lancamento.trim();
+        if (!grouped[lanc]) {
+          grouped[lanc] = { corretores: {}, gestores: {} };
+        }
+        
+        // Count for corretor
+        if (p.corretor) {
+          const cName = p.corretor.trim();
+          grouped[lanc].corretores[cName] = (grouped[lanc].corretores[cName] || 0) + 1;
+        }
+        
+        // Count for gestor
+        if (p.gestor) {
+          const gName = p.gestor.trim();
+          grouped[lanc].gestores[gName] = (grouped[lanc].gestores[gName] || 0) + 1;
+        }
+      }
+
+      const dbPessoas = await placarService.getPessoas(undefined, false);
+      const dbPastas = await placarService.getPastas();
+      
+      let updated_pastas = 0;
+      let updated_rankings = 0;
+
+      for (const lancamento of Object.keys(grouped)) {
+        // Find or create Pasta
+        let pasta = dbPastas.find(p => p.titulo.toLowerCase() === lancamento.toLowerCase());
+        if (!pasta) {
+          pasta = await placarService.savePasta({
+            titulo: lancamento,
+            meta_pastas: 100, // Default goal
+            ativo: true
+          });
+          updated_pastas++;
+        }
+
+        // Delete old rankings for this pasta
+        try {
+          await supabase.from("ranking_pastas").delete().eq("pasta_id", pasta.id);
+        } catch (e) {}
+        
+        // Insert new rankings - Corretores
+        const corretoresSorted = Object.entries(grouped[lancamento].corretores)
+          .sort((a, b) => b[1] - a[1]); // Sort by count descending
+
+        let currentPos = 1;
+        let lastCount = -1;
+        for (let i = 0; i < corretoresSorted.length; i++) {
+          const [nome, count] = corretoresSorted[i];
+          const matchPessoa = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
+          if (!matchPessoa) continue; // Only rank registered people
+
+          if (count !== lastCount) {
+            currentPos = i + 1;
+            lastCount = count;
+          }
+
+          await placarService.saveRankingPastaEntry({
+            pasta_id: pasta.id,
+            pessoa_id: matchPessoa.id,
+            categoria: "corretor",
+            posicao: currentPos,
+            quantidade_pastas: count,
+            ativo: true
+          });
+          updated_rankings++;
+        }
+
+        // Insert new rankings - Gestores
+        const gestoresSorted = Object.entries(grouped[lancamento].gestores)
+          .sort((a, b) => b[1] - a[1]); // Sort by count descending
+
+        currentPos = 1;
+        lastCount = -1;
+        for (let i = 0; i < gestoresSorted.length; i++) {
+          const [nome, count] = gestoresSorted[i];
+          const matchPessoa = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
+          if (!matchPessoa) continue; // Only rank registered people
+
+          if (count !== lastCount) {
+            currentPos = i + 1;
+            lastCount = count;
+          }
+
+          await placarService.saveRankingPastaEntry({
+            pasta_id: pasta.id,
+            pessoa_id: matchPessoa.id,
+            categoria: "gestor",
+            posicao: currentPos,
+            quantidade_pastas: count,
+            ativo: true
+          });
+          updated_rankings++;
+        }
+      }
+
+      return { updated_pastas, updated_rankings };
+    } catch (err) {
+      console.error("Erro na sincronização de pastas:", err);
+      throw err;
+    }
+  },
+
   // ─── Ranking de Pastas ────────────────────────────────────────────────────
   getRankingPastas: async (pastaId?: string): Promise<(RankingPastaEntry & { pessoa?: Pessoa })[]> => {
     try {

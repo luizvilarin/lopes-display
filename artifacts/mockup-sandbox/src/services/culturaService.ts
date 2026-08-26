@@ -27,13 +27,26 @@ async function fetchCultura<T>(endpoint: string): Promise<T[]> {
   return response.json();
 }
 
+export interface CulturaFilaPasta {
+  id: string;
+  lancamento: string;
+  gestor: string;
+  corretor: string;
+  pasta_anexada: boolean;
+  status_escolha: string;
+  created_date: string;
+}
+
 export const culturaService = {
   getCorretores: async (): Promise<CulturaCorretor[]> => {
-    // API suporta limit e skip, se houver muitos corretores podemos precisar paginar no futuro.
     return fetchCultura<CulturaCorretor>("/entities/Corretor?limit=1000");
   },
   
   getGestores: async (): Promise<CulturaCorretor[]> => {
     return fetchCultura<CulturaCorretor>("/entities/User?q={\"role\":\"gestor\"}&limit=1000");
+  },
+
+  getFilaPastas: async (): Promise<CulturaFilaPasta[]> => {
+    return fetchCultura<CulturaFilaPasta>("/entities/FilaPasta?limit=2000");
   }
 };
