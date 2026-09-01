@@ -513,6 +513,17 @@ export const placarService = {
       
       const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
+      const isIgnoredName = (name: string): boolean => {
+        const norm = normalize(name);
+        if (!norm) return true;
+        const ignored = [
+          "socios", "socio", "socias", "socia", "gerentes", "diretor",
+          "sereno leao", "rafael badra", "deyvid rhussel", "jann costa", 
+          "luziano", "jose soares", "murilo feitosa"
+        ];
+        return ignored.some(ignoredName => norm.includes(ignoredName));
+      };
+
       // Group pastas by lancamento
       const grouped: Record<string, {
         corretores: Record<string, number>,
@@ -527,23 +538,45 @@ export const placarService = {
         }
         
         // Count for corretor
-        if (p.corretor) {
+        if (p.corretor && !isIgnoredName(p.corretor)) {
           const cName = p.corretor.trim();
           grouped[lanc].corretores[cName] = (grouped[lanc].corretores[cName] || 0) + 1;
         }
         
         // Count for gestor
-        if (p.gestor) {
+        if (p.gestor && !isIgnoredName(p.gestor)) {
           const gName = p.gestor.trim();
           grouped[lanc].gestores[gName] = (grouped[lanc].gestores[gName] || 0) + 1;
         }
       }
 
-      const dbPessoas = await placarService.getPessoas(undefined, false);
+      const dbPessoas = await placarService.getPessoas(undefined, false); // Fetch all to check who exists
       const dbPastas = await placarService.getPastas();
       
       let updated_pastas = 0;
       let updated_rankings = 0;
+
+      const getOrRegisterPessoa = async (nome: string, cargo: "corretor" | "gestor"): Promise<Pessoa | null> => {
+        let match = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
+        if (match) {
+          if (!match.ativo) return null; // Ignorar pessoas inativas (arquivadas)
+          return match;
+        }
+        // Auto-register
+        try {
+          const novaPessoa = await placarService.savePessoa({
+            nome,
+            cargo,
+            unidade_id: "jd-goias", // fallback unit
+            ativo: true
+          });
+          dbPessoas.push(novaPessoa);
+          return novaPessoa;
+        } catch (e) {
+          console.error("Erro ao auto-cadastrar pessoa:", nome, e);
+          return null;
+        }
+      };
 
       for (const lancamento of Object.keys(grouped)) {
         // Find or create Pasta
@@ -570,8 +603,8 @@ export const placarService = {
         let lastCount = -1;
         for (let i = 0; i < corretoresSorted.length; i++) {
           const [nome, count] = corretoresSorted[i];
-          const matchPessoa = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
-          if (!matchPessoa) continue; // Only rank registered people
+          const matchPessoa = await getOrRegisterPessoa(nome, "corretor");
+          if (!matchPessoa) continue; 
 
           if (count !== lastCount) {
             currentPos = i + 1;
@@ -597,8 +630,8 @@ export const placarService = {
         lastCount = -1;
         for (let i = 0; i < gestoresSorted.length; i++) {
           const [nome, count] = gestoresSorted[i];
-          const matchPessoa = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
-          if (!matchPessoa) continue; // Only rank registered people
+          const matchPessoa = await getOrRegisterPessoa(nome, "gestor");
+          if (!matchPessoa) continue; 
 
           if (count !== lastCount) {
             currentPos = i + 1;

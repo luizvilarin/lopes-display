@@ -2705,12 +2705,7 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
     ativo: true,
   });
 
-  // Estados para Importação de Planilha Excel
-  const [showExcelModal, setShowExcelModal] = useState(false);
-  const [excelResult, setExcelResult] = useState<SpreadsheetParseResult | null>(null);
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
-  const [applyingImport, setApplyingImport] = useState(false);
-  const excelFileInputRef = useRef<HTMLInputElement>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -2734,42 +2729,17 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
     .filter(r => r.tipo === "mensal" && r.categoria === cat)
     .sort((a, b) => a.posicao - b.posicao);
 
-  const handleExcelFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
+  const handleSyncRankings = async () => {
+    if (!confirm("Sincronizar Ranking Mensal com Cultura Lopes? Os dados atuais serão substituídos pelos do último mês fechado na API.")) return;
+    setIsSyncing(true);
     try {
-      const buffer = await file.arrayBuffer();
-      const result = parseSalesSpreadsheet(buffer, file.name, pessoas);
-      setExcelResult(result);
-      if (result.availableMonths.length > 0) {
-        setSelectedMonthKey(result.availableMonths[0]);
-      }
-      setShowExcelModal(true);
-    } catch (err: any) {
-      console.error("Erro no parse do Excel:", err);
-      alert(err.message || "Erro ao processar planilha de vendas.");
-    }
-  };
-
-  const handleApplyImport = async () => {
-    if (!excelResult || !selectedMonthKey) return;
-    const monthData = excelResult.monthsData[selectedMonthKey];
-    if (!monthData) return;
-
-    setApplyingImport(true);
-    try {
-      await placarService.batchApplySpreadsheetImport(monthData);
-      alert(`✨ Rankings de ${selectedMonthKey} atualizados com sucesso a partir da planilha!`);
-      setShowExcelModal(false);
-      setExcelResult(null);
-      loadData();
-      onChange();
+      // Stub: will be implemented in placarService
+      alert("Integração com Ranking do Cultura Lopes em desenvolvimento.");
     } catch (err) {
-      console.error("Erro ao aplicar importação:", err);
-      alert("Falha ao salvar importação no banco de dados.");
+      console.error("Erro na sincronização:", err);
+      alert("Erro ao sincronizar rankings.");
     } finally {
-      setApplyingImport(false);
+      setIsSyncing(false);
     }
   };
 
@@ -2851,7 +2821,8 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
-            onClick={() => excelFileInputRef.current?.click()}
+            onClick={handleSyncRankings}
+            disabled={isSyncing}
             className="pa-btn pa-btn-secondary"
             style={{
               display: "flex",
@@ -2864,15 +2835,8 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
               color: "#FFD700"
             }}
           >
-            <span>📥 Importar Planilha (Excel)</span>
+            <span>{isSyncing ? "Sincronizando..." : "🔄 Sincronizar Rankings (Cultura Lopes)"}</span>
           </button>
-          <input
-            type="file"
-            ref={excelFileInputRef}
-            accept=".xlsx, .xls"
-            style={{ display: "none" }}
-            onChange={handleExcelFileSelected}
-          />
           <button
             onClick={() => handleOpenAdd()}
             className="pa-btn pa-btn-primary"
@@ -3115,194 +3079,6 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
           </div>
         </div>
       )}
-
-      {/* Modal de Revisão da Importação da Planilha Excel */}
-      {showExcelModal && excelResult && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.85)",
-          backdropFilter: "blur(8px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-          padding: 20
-        }}>
-          <div style={{
-            background: "#14141F",
-            border: "1px solid rgba(255, 215, 0, 0.3)",
-            borderRadius: 16,
-            width: "100%",
-            maxWidth: 960,
-            maxHeight: "90vh",
-            display: "flex",
-            flexDirection: "column",
-            boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
-            overflow: "hidden",
-            animation: "scalePop 200ms ease-out"
-          }}>
-            {/* Header Modal */}
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255, 215, 0, 0.04)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <h3 style={{ fontSize: 20, fontWeight: 900, color: "#FFD700", margin: 0, fontFamily: "'Barlow', sans-serif" }}>
-                  📥 Importação Automatizada de Vendas
-                </h3>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", margin: "4px 0 0 0" }}>
-                  Arquivo: <strong>{excelResult.fileName}</strong> ({excelResult.validSalesCount} vendas processadas)
-                </p>
-              </div>
-
-              {/* Seletor de Mês */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>Período:</span>
-                <select
-                  className="pa-input"
-                  style={{ width: "auto", padding: "8px 14px", fontWeight: 800, background: "#1F1F2E", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)" }}
-                  value={selectedMonthKey}
-                  onChange={e => setSelectedMonthKey(e.target.value)}
-                >
-                  {excelResult.availableMonths.map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Conteúdo com Scroll */}
-            <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
-              {currentMonthData ? (
-                <>
-                  {/* Metric Card */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: 14, borderRadius: 10 }}>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontWeight: 700 }}>Volume Total Vendido</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: "#4ADE80", marginTop: 4 }}>
-                        R$ {currentMonthData.totalVolume.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: 14, borderRadius: 10 }}>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontWeight: 700 }}>Top 10 Corretores</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", marginTop: 4 }}>
-                        {currentMonthData.topCorretores.length} pessoas
-                      </div>
-                    </div>
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: 14, borderRadius: 10 }}>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontWeight: 700 }}>Top 5 Gerentes</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", marginTop: 4 }}>
-                        {currentMonthData.topGestores.length} pessoas
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tabela Top 10 Corretores */}
-                  <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 800, color: "#FFD700", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                      <span>🏆 Top 10 Corretores Calculados ({selectedMonthKey})</span>
-                    </h4>
-                    <div style={{ background: "#111118", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textIndent: 0 }}>
-                        <thead>
-                          <tr style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)", textAlign: "left", color: "rgba(255,255,255,0.6)" }}>
-                            <th style={{ padding: "10px 14px", width: 50 }}>#</th>
-                            <th style={{ padding: "10px 14px" }}>Nome na Planilha</th>
-                            <th style={{ padding: "10px 14px" }}>Reconhecimento (Fuzzy Match)</th>
-                            <th style={{ padding: "10px 14px", textAlign: "right" }}>Valor Realizado (R$)</th>
-                            <th style={{ padding: "10px 14px", textAlign: "center" }}>Status Cadastro</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentMonthData.topCorretores.map((item, idx) => (
-                            <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                              <td style={{ padding: "10px 14px", fontWeight: 900, color: "#C5A059" }}>{idx + 1}º</td>
-                              <td style={{ padding: "10px 14px", fontWeight: 700, color: "#fff" }}>{item.nameInExcel}</td>
-                              <td style={{ padding: "10px 14px", color: "rgba(255,255,255,0.8)" }}>
-                                {item.matchedPessoa ? (
-                                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span>👤 {item.matchedPessoa.nome}</span>
-                                    <span style={{ fontSize: 11, background: "rgba(74, 222, 128, 0.15)", color: "#4ADE80", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>
-                                      {Math.round(item.similarityScore * 100)}% match
-                                    </span>
-                                  </span>
-                                ) : (
-                                  <span style={{ color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}>Nenhum pré-existente</span>
-                                )}
-                              </td>
-                              <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 800, color: "#4ADE80" }}>
-                                R$ {item.totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </td>
-                              <td style={{ padding: "10px 14px", textAlign: "center" }}>
-                                {item.isNewPerson ? (
-                                  <span style={{ background: "rgba(234, 179, 8, 0.2)", color: "#FACC15", border: "1px solid rgba(234, 179, 8, 0.4)", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 800 }}>
-                                    🆕 Auto-Criar ({item.suggestedUnidadeId.toUpperCase()})
-                                  </span>
-                                ) : (
-                                  <span style={{ background: "rgba(74, 222, 128, 0.15)", color: "#4ADE80", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 800 }}>
-                                    ✅ Vinculado
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Tabela Top 5 Gestores */}
-                  <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 800, color: "#FFD700", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                      <span>👔 Top 5 Gerentes Calculados ({selectedMonthKey})</span>
-                    </h4>
-                    <div style={{ background: "#111118", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textIndent: 0 }}>
-                        <thead>
-                          <tr style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)", textAlign: "left", color: "rgba(255,255,255,0.6)" }}>
-                            <th style={{ padding: "10px 14px", width: 50 }}>#</th>
-                            <th style={{ padding: "10px 14px" }}>Nome na Planilha</th>
-                            <th style={{ padding: "10px 14px" }}>Reconhecimento (Fuzzy Match)</th>
-                            <th style={{ padding: "10px 14px", textAlign: "right" }}>Valor Realizado (R$)</th>
-                            <th style={{ padding: "10px 14px", textAlign: "center" }}>Status Cadastro</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentMonthData.topGestores.map((item, idx) => (
-                            <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                              <td style={{ padding: "10px 14px", fontWeight: 900, color: "#C5A059" }}>{idx + 1}º</td>
-                              <td style={{ padding: "10px 14px", fontWeight: 700, color: "#fff" }}>{item.nameInExcel}</td>
-                              <td style={{ padding: "10px 14px", color: "rgba(255,255,255,0.8)" }}>
-                                {item.matchedPessoa ? (
-                                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span>👤 {item.matchedPessoa.nome}</span>
-                                    <span style={{ fontSize: 11, background: "rgba(74, 222, 128, 0.15)", color: "#4ADE80", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>
-                                      {Math.round(item.similarityScore * 100)}% match
-                                    </span>
-                                  </span>
-                                ) : (
-                                  <span style={{ color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}>Nenhum pré-existente</span>
-                                )}
-                              </td>
-                              <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 800, color: "#4ADE80" }}>
-                                R$ {item.totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </td>
-                              <td style={{ padding: "10px 14px", textAlign: "center" }}>
-                                {item.isNewPerson ? (
-                                  <span style={{ background: "rgba(234, 179, 8, 0.2)", color: "#FACC15", border: "1px solid rgba(234, 179, 8, 0.4)", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 800 }}>
-                                    🆕 Auto-Criar ({item.suggestedUnidadeId.toUpperCase()})
-                                  </span>
-                                ) : (
-                                  <span style={{ background: "rgba(74, 222, 128, 0.15)", color: "#4ADE80", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 800 }}>
-                                    ✅ Vinculado
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
                     </div>
                   </div>
                 </>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import faviconLopes from "@/assets/favicon-lopes.png";
 import logoBranca from "@/assets/logo-branca.png";
+import logoPreta from "@/assets/logo-preta.png";
 import fogueteImg from "@/assets/foguete-lopes.png";
 import { placarService } from "@/services/placarService";
 import type { Pasta, RankingPastaEntry, Pessoa, RankingEntry, ProgressaoCarreira } from "@/types/placar";
@@ -49,8 +50,12 @@ interface SlideProgressao extends SlideBase {
   subType: "signature" | "promocao";
   progressao: ProgressaoCarreira;
 }
+interface SlideCapa extends SlideBase {
+  type: "capa";
+  imageUrl: string;
+}
 
-type Slide = SlideMeta | SlidePVenda | SlideRanking | SlideRankingPastas | SlideReconhecimentoType | SlideProgressao;
+type Slide = SlideMeta | SlidePVenda | SlideRanking | SlideRankingPastas | SlideReconhecimentoType | SlideProgressao | SlideCapa;
 
 // ─── Default Setup ────────────────────────────────────────────────────────────
 
@@ -223,43 +228,143 @@ function SlideMeta({ slide }: { slide: SlideMeta }) {
 // ─── Slide: Primeira Venda ────────────────────────────────────────────────────
 
 function SlidePVenda({ slide }: { slide: SlidePVenda }) {
-  const initials = slide.nome.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-  return (
-    <div className="slide-up" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 52px 0", overflow: "hidden" }}>
-      <CategoryPill label={slide.category} />
-      <h1 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 52, color: "#fff", letterSpacing: "-.02em", marginBottom: 20, flexShrink: 0 }}>{slide.title}</h1>
+  const firstName = slide.nome.split(" ")[0];
+  const initials = firstName.substring(0, 2).toUpperCase();
 
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 0, flex: 1 }}>
-        <div style={{ width: 280, borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 72px rgba(0,0,0,.75)", border: "1px solid rgba(255,255,255,.10)" }}>
+  return (
+    <div className="slide-up" style={{
+      width: "100%", height: "100%",
+      background: "#FFFFFF",
+      display: "flex",
+      fontFamily: "'Montserrat', sans-serif",
+      padding: "80px",
+      color: "#000000",
+      position: "relative",
+      boxSizing: "border-box"
+    }}>
+      {/* Coluna Esquerda */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        paddingRight: "60px",
+        position: "relative",
+        zIndex: 10
+      }}>
+        {/* Top title area */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "24px", marginBottom: "80px" }}>
+          {/* Check Icon */}
           <div style={{
-            width: "100%", height: 260,
-            background: slide.photoUrl ? `url(${slide.photoUrl}) center/cover` : "linear-gradient(145deg,#1e1e38,#2e2e50)",
-            display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
+            width: "80px", height: "80px",
+            background: "#000000",
+            borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center"
           }}>
-            {!slide.photoUrl && (
-              <div style={{ width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,.14)", border: "2px solid rgba(255,255,255,.22)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 36, color: "#fff" }}>
-                {initials}
-              </div>
-            )}
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "12px 16px", background: "linear-gradient(to top, rgba(0,0,0,.82), transparent)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 14, color: "#fff", letterSpacing: ".06em", textTransform: "uppercase" }}>{slide.nome}</span>
-              <img src={logoBranca} alt="Lopes" style={{ height: 13, width: "auto", filter: "brightness(0) invert(1)", opacity: 0.85 }} />
-            </div>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+              <path d="M5 13l4 4L19 7" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
-          <div style={{ background: "#fff", padding: "16px 20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-              <span style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 16, color: "#111", lineHeight: 1.2 }}>{slide.mensagem}</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" fill="#22c55e" /><path d="M8 12l3 3 5-5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </div>
-            <div style={{ width: 40, height: 2, background: "rgba(0,0,0,.12)", marginBottom: 12 }} />
-            <div style={{ fontSize: 12, color: "#555", lineHeight: 1.55, textTransform: "uppercase", letterSpacing: ".05em", fontFamily: "'DM Sans',sans-serif" }}>{slide.detalhe}</div>
+          <div style={{
+            fontSize: "56px",
+            fontWeight: 500,
+            lineHeight: 1.1,
+            color: "#000000"
+          }}>
+            Primeira<br />venda.
+          </div>
+        </div>
+
+        {/* Nome Principal & Elementos Decorativos */}
+        <div style={{ position: "relative", marginBottom: "40px", width: "fit-content" }}>
+          <h1 style={{
+            fontSize: "120px",
+            fontWeight: 800,
+            color: "#000000",
+            margin: 0,
+            lineHeight: 1,
+            letterSpacing: "-0.02em"
+          }}>
+            {firstName}
+          </h1>
+          {/* Quadrados pretos à direita do nome */}
+          <div style={{
+            position: "absolute",
+            right: "-120px",
+            top: "10%",
+            display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px"
+          }}>
+             {/* Small square */}
+             <div style={{ width: "30px", height: "30px", background: "#000000", marginRight: "30px" }} />
+             {/* Medium square */}
+             <div style={{ width: "60px", height: "60px", background: "#000000" }} />
+          </div>
+        </div>
+
+        {/* Quadrado Vermelho e Legenda */}
+        <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "120px" }}>
+          <div style={{ width: "50px", height: "50px", background: "#FF0000" }} />
+          <div style={{ fontSize: "36px", fontWeight: 400, color: "#000000" }}>
+            Primeira venda
+          </div>
+        </div>
+
+        {/* Legenda Inferior & Logo */}
+        <div style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "40px",
+          marginTop: "auto"
+        }}>
+          <img src={logoPreta} alt="Lopes" style={{ height: "40px", width: "auto" }} />
+          <div style={{
+            fontSize: "20px",
+            fontWeight: 400,
+            color: "#555555",
+            lineHeight: 1.5,
+            maxWidth: "400px"
+          }}>
+            O início de uma jornada de sucesso com o pé direito. Parabéns, essa é a primeira de muitas!
           </div>
         </div>
       </div>
 
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 18, paddingTop: 14 }}>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{slide.updateFreq}</span>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,.30)", letterSpacing: ".16em", textTransform: "uppercase", fontFamily: "'Barlow',sans-serif", fontWeight: 600 }}>{MES_ANO.toUpperCase()}</span>
+      {/* Coluna Direita */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative"
+      }}>
+        {/* Contêiner da Foto */}
+        <div style={{
+          width: "550px",
+          height: "550px",
+          borderRadius: "80px",
+          border: "24px solid #0B192C",
+          boxShadow: "inset 0 0 40px rgba(0,0,0,0.5), 0 20px 50px rgba(0,0,0,0.15)",
+          overflow: "hidden",
+          position: "relative",
+          background: slide.photoUrl ? `url(${slide.photoUrl}) center/cover` : "#e0e0e0",
+          zIndex: 2
+        }}>
+          {!slide.photoUrl && (
+             <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "64px", fontWeight: 800, color: "#777" }}>
+               {initials}
+             </div>
+          )}
+        </div>
+
+        {/* Terceiro quadrado preto borda inferior direita da moldura */}
+        <div style={{
+          position: "absolute",
+          width: "45px", height: "45px",
+          background: "#000000",
+          bottom: "15%",
+          right: "10%",
+          zIndex: 1
+        }} />
       </div>
     </div>
   );
@@ -593,7 +698,15 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
         }
 
         // Slide de Primeira Venda
-        if (Array.isArray(pv)) {
+        if (Array.isArray(pv) && pv.some(p => p && p.pessoa && p.pessoa.ativo)) {
+          // Placeholder para Capa Primeira Venda
+          generated.push({
+            id: "capa-pv",
+            type: "capa",
+            category: "História Lopes",
+            title: "Primeira Venda",
+            imageUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+          });
           pv.forEach((item) => {
             if (item && item.pessoa && item.pessoa.ativo) {
               generated.push({
@@ -613,7 +726,15 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
         }
 
         // Slides de Progressão de Carreira
-        if (Array.isArray(progressoes)) {
+        if (Array.isArray(progressoes) && progressoes.some(p => p && p.ativo && p.pessoa && p.pessoa.ativo)) {
+          // Placeholder para Capa Progressão
+          generated.push({
+            id: "capa-progressao",
+            type: "capa",
+            category: "História Lopes",
+            title: "Progressão de Carreira",
+            imageUrl: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+          });
           progressoes.forEach((p) => {
             if (p && p.ativo && p.pessoa && p.pessoa.ativo) {
               generated.push({
@@ -629,6 +750,16 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
         }
 
         // Slides de Ranking de Pastas (Foco Principal do Placar Unificado)
+        if (pastas.length > 0 && pastas.some(p => p.ativo)) {
+          // Placeholder para Capa Ranking de Pastas
+          generated.push({
+            id: "capa-pastas",
+            type: "capa",
+            category: "Metas Lopes",
+            title: "Corrida de Pastas",
+            imageUrl: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+          });
+        }
         for (const p of pastas) {
           if (!p.ativo) continue;
           const rankingEntries = await placarService.getRankingPastas(p.id).catch(() => [] as (RankingPastaEntry & { pessoa?: Pessoa })[]);
@@ -673,6 +804,14 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
         const gestoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "gestores");
 
         if (corretoresMensais.length > 0 || gestoresMensais.length > 0) {
+          // Placeholder para Capa Ranking
+          generated.push({
+            id: "capa-ranking-mensal",
+            type: "capa",
+            category: "Metas Lopes",
+            title: "Ranking do Mês",
+            imageUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+          });
           generated.push({
             id: "reconhecimento-mensal",
             type: "reconhecimento",
@@ -787,6 +926,28 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
             ))}
           </>
         )}
+      </div>
+    );
+  }
+
+  // Slide de Capa (Fullscreen Image)
+  if (slide.type === "capa") {
+    const s = slide as SlideCapa;
+    return (
+      <div key={`capa-${s.id}-${key}`} style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}>
+        <style>{CSS}</style>
+        <img
+          src={s.imageUrl}
+          alt={s.title}
+          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", animation: "scalePop 8s linear" }}
+        />
+        {/* ProgressBar overlay na base */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 6, background: "rgba(0,0,0,0.5)" }}>
+          <div style={{
+            height: "100%", background: "#E30613",
+            transformOrigin: "left", animation: `barFill ${INTERVAL}ms linear forwards`
+          }} />
+        </div>
       </div>
     );
   }
