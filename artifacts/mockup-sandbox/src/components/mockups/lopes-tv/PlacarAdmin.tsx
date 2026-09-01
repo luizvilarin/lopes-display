@@ -3079,40 +3079,6 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
           </div>
         </div>
       )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div style={{ padding: 40, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
-                  Nenhum dado encontrado para o mês selecionado.
-                </div>
-              )}
-            </div>
-
-            {/* Footer Modal */}
-            <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.08)", background: "#0D0D14", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <button
-                onClick={() => {
-                  setShowExcelModal(false);
-                  setExcelResult(null);
-                }}
-                className="pa-btn pa-btn-secondary"
-                disabled={applyingImport}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleApplyImport}
-                className="pa-btn pa-btn-primary"
-                style={{ background: "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)", color: "#fff", fontWeight: 800, padding: "10px 24px" }}
-                disabled={applyingImport}
-              >
-                {applyingImport ? "⏳ Atualizando Rankings..." : "🚀 Confirmar e Importar no Ranking"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
