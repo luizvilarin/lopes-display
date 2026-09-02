@@ -2804,8 +2804,6 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
     }
   };
 
-  const currentMonthData = excelResult && selectedMonthKey ? excelResult.monthsData[selectedMonthKey] : null;
-
   return (
     <div>
       {/* Top Header */}
