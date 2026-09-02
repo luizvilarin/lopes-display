@@ -1431,6 +1431,21 @@ const getDetectedMonthString = () => {
   return `${monthNames[date.getMonth()]} DE ${date.getFullYear()}`;
 };
 
+const parseBrazilianNumber = (valStr: string): number => {
+  if (!valStr) return 0;
+  const num = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
+  return isNaN(num) ? 0 : num;
+};
+
+function Field({ label, value, onChange, disabled = false, type = "text" }: { label: string; value: string | number; onChange: (v: string) => void; disabled?: boolean; type?: string }) {
+  return (
+    <div className="pa-form-row">
+      <label className="pa-label">{label}</label>
+      <input className="pa-input" type={type} value={value} onChange={e => onChange(e.target.value)} disabled={disabled} style={{ background: disabled ? "rgba(255,255,255,.02)" : undefined }} />
+    </div>
+  );
+}
+
 function SecaoMetas({ unidades, activeUnitId }: { unidades: Unidade[]; activeUnitId: string; }) {
   const [form, setForm] = useState<Partial<ConfigMetas>>({});
   const [loading, setLoading] = useState(false);
