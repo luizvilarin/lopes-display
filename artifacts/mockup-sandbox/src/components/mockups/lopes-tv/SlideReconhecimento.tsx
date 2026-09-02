@@ -251,8 +251,8 @@ export function SlideReconhecimento({
   const [fadingOut, setFadingOut] = useState(false);
 
   // Timing configuration
-  // 1º lugar: 8 segundos; Outros (2º ao 10º/5º): 4 segundos
-  const displayDuration = currentItem?.posicao === 1 ? 8000 : 4000;
+  // 1º lugar: 8 segundos; Outros (2º ao 10º/5º): 5 segundos
+  const displayDuration = currentItem?.posicao === 1 ? 8000 : 5000;
 
   // Intro Sequence Orchestration
   useEffect(() => {
