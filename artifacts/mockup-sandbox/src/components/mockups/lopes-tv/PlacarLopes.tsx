@@ -796,7 +796,10 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
         const corretoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "corretores");
         const gestoresMensais = allRankings.filter(r => r.tipo === "mensal" && r.categoria === "gestores");
 
-        if (corretoresMensais.length > 0 || gestoresMensais.length > 0) {
+        const isSurpriseWeek = placarService.isWeek4();
+        const showRanking = config?.forcar_exibir_ranking ? true : !isSurpriseWeek;
+
+        if (showRanking && (corretoresMensais.length > 0 || gestoresMensais.length > 0)) {
           // Placeholder para Capa Ranking
           generated.push({
             id: "capa-ranking-mensal",

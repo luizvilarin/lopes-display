@@ -32,6 +32,7 @@ export interface ConfigMetas {
   meta_anual_valor?: number;
   meta_anual_realizado?: number;
   unidade_id: string;
+  forcar_exibir_ranking?: boolean;
   atualizado_em?: string;
 }
 

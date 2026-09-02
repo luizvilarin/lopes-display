@@ -2691,6 +2691,7 @@ function SecaoCultura({ unidades, activeUnitId }: { unidades: Unidade[]; activeU
 
 function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[]; onChange: () => void; }) {
   const [rankings, setRankings] = useState<(RankingEntry & { pessoa?: Pessoa })[]>([]);
+  const [config, setConfig] = useState<ConfigMetas | null>(null);
   const [cat, setCat] = useState<"corretores" | "gestores">("corretores");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -2712,6 +2713,8 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
     try {
       const data = await placarService.getRankings();
       setRankings(data);
+      const conf = await placarService.getConfig();
+      setConfig(conf);
     } catch (err) {
       console.error("Erro ao carregar rankings de reconhecimento:", err);
     } finally {
@@ -2733,13 +2736,26 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
     if (!confirm("Sincronizar Ranking Mensal com Cultura Lopes? Os dados atuais serão substituídos pelos do último mês fechado na API.")) return;
     setIsSyncing(true);
     try {
-      // Stub: will be implemented in placarService
-      alert("Integração com Ranking do Cultura Lopes em desenvolvimento.");
-    } catch (err) {
+      await placarService.syncVendasFromCultura();
+      alert("Ranking sincronizado com sucesso!");
+      loadData();
+      onChange();
+    } catch (err: any) {
       console.error("Erro na sincronização:", err);
-      alert("Erro ao sincronizar rankings.");
+      alert(err.message || "Erro ao sincronizar rankings.");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleToggleForcarExibicao = async () => {
+    if (!config) return;
+    const newVal = !config.forcar_exibir_ranking;
+    try {
+      await placarService.saveConfig({ id: config.id, forcar_exibir_ranking: newVal });
+      setConfig({ ...config, forcar_exibir_ranking: newVal });
+    } catch (err) {
+      alert("Erro ao alterar configuração.");
     }
   };
 
@@ -2846,39 +2862,75 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
       </div>
 
       {/* Tabs corretores / gestores */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, background: "rgba(255,255,255,0.03)", padding: 6, borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", width: "fit-content" }}>
-        <button
-          onClick={() => setCat("corretores")}
-          style={{
-            padding: "8px 20px",
-            borderRadius: 8,
-            background: cat === "corretores" ? "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)" : "transparent",
-            color: cat === "corretores" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
-            fontWeight: 800,
-            fontSize: 13,
-            border: "none",
-            cursor: "pointer",
-            transition: "all 200ms ease"
-          }}
-        >
-          🏆 Top 10 Corretores do Mês
-        </button>
-        <button
-          onClick={() => setCat("gestores")}
-          style={{
-            padding: "8px 20px",
-            borderRadius: 8,
-            background: cat === "gestores" ? "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)" : "transparent",
-            color: cat === "gestores" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
-            fontWeight: 800,
-            fontSize: 13,
-            border: "none",
-            cursor: "pointer",
-            transition: "all 200ms ease"
-          }}
-        >
-          👔 Top 5 Gerentes do Mês
-        </button>
+      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 12, background: "rgba(255,255,255,0.03)", padding: 6, borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", width: "fit-content" }}>
+          <button
+            onClick={() => setCat("corretores")}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 8,
+              background: cat === "corretores" ? "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)" : "transparent",
+              color: cat === "corretores" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
+              fontWeight: 800,
+              fontSize: 13,
+              border: "none",
+              cursor: "pointer",
+              transition: "all 200ms ease"
+            }}
+          >
+            🏆 Top 10 Corretores do Mês
+          </button>
+          <button
+            onClick={() => setCat("gestores")}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 8,
+              background: cat === "gestores" ? "linear-gradient(135deg, #C5A059 0%, #8A6D3B 100%)" : "transparent",
+              color: cat === "gestores" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
+              fontWeight: 800,
+              fontSize: 13,
+              border: "none",
+              cursor: "pointer",
+              transition: "all 200ms ease"
+            }}
+          >
+            👔 Top 5 Gerentes do Mês
+          </button>
+        </div>
+
+        {config && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.02)", padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Forçar Exibição (4ª Semana)</span>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Mostra o ranking na TV ignorando a ocultação automática.</span>
+            </div>
+            <button 
+              onClick={handleToggleForcarExibicao}
+              style={{
+                width: 44,
+                height: 24,
+                borderRadius: 12,
+                background: config.forcar_exibir_ranking ? "#4ade80" : "rgba(255,255,255,0.1)",
+                border: "none",
+                position: "relative",
+                cursor: "pointer",
+                transition: "background 200ms"
+              }}
+            >
+              <div style={{
+                width: 20,
+                height: 20,
+                borderRadius: "50%",
+                background: "#fff",
+                position: "absolute",
+                top: 2,
+                left: config.forcar_exibir_ranking ? 22 : 2,
+                transition: "left 200ms",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.3)"
+              }} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Cards de Posições (1 ao Max) */}

@@ -311,114 +311,146 @@ export const placarService = {
   },
 
   // ─── Importação de Planilha Excel ─────────────────────────────────────────
-  batchApplySpreadsheetImport: async (monthData: ParsedMonthData): Promise<void> => {
-    // 1. Garante que todas as pessoas (existentes ou novas) existam no banco
-    const processPerson = async (item: ParsedPersonRanking): Promise<string> => {
-      if (item.matchedPessoa && !item.isNewPerson) {
-        return item.matchedPessoa.id;
-      }
-      // Cria nova pessoa
-      try {
-        const newP = await placarService.savePessoa({
-          nome: item.nameInExcel,
-          cargo: item.suggestedCargo,
-          unidade_id: item.suggestedUnidadeId,
-          ativo: true
-        });
-        return newP.id;
-      } catch (err) {
-        console.error("Erro ao criar nova pessoa da planilha:", item.nameInExcel, err);
-        // Fallback: pega a primeira pessoa cadastrada
-        const existing = await placarService.getPessoas();
-        return existing[0]?.id || "";
-      }
-    };
+  isWeek4: (): boolean => {
+    return new Date().getDate() >= 22;
+  },
 
-    // 2. Processa Corretores (Top 10)
-    for (let idx = 0; idx < monthData.topCorretores.length; idx++) {
-      const item = monthData.topCorretores[idx];
-      const pessoaId = await processPerson(item);
-      if (!pessoaId) continue;
-
-      const pos = idx + 1;
-      // Procura se já existe entrada nessa posição/categoria/período
-      const existing = await supabase
-        .from("ranking_entries")
-        .select("id")
-        .eq("periodo", monthData.periodo)
-        .eq("categoria", "corretores")
-        .eq("tipo", "mensal")
-        .eq("posicao", pos)
-        .maybeSingle();
-
-      if (existing.data) {
-        await placarService.updateRankingEntry(existing.data.id, {
-          pessoa_id: pessoaId,
-          valor: item.totalValor
-        });
-      } else {
-        await placarService.saveRankingEntry({
-          pessoa_id: pessoaId,
-          tipo: "mensal",
-          categoria: "corretores",
-          posicao: pos,
-          valor: item.totalValor,
-          periodo: monthData.periodo,
-          ativo: true
-        });
-      }
+  syncVendasFromCultura: async (): Promise<{ updated_corretores: number, updated_gestores: number }> => {
+    if (placarService.isWeek4()) {
+      throw new Error("Sincronização bloqueada: o resultado final está congelado para a surpresa do pódio (4ª Semana).");
     }
 
-    // 3. Processa Gestores (Top 5)
-    for (let idx = 0; idx < monthData.topGestores.length; idx++) {
-      const item = monthData.topGestores[idx];
-      const pessoaId = await processPerson(item);
-      if (!pessoaId) continue;
-
-      const pos = idx + 1;
-      const existing = await supabase
-        .from("ranking_entries")
-        .select("id")
-        .eq("periodo", monthData.periodo)
-        .eq("categoria", "gestores")
-        .eq("tipo", "mensal")
-        .eq("posicao", pos)
-        .maybeSingle();
-
-      if (existing.data) {
-        await placarService.updateRankingEntry(existing.data.id, {
-          pessoa_id: pessoaId,
-          valor: item.totalValor
-        });
-      } else {
-        await placarService.saveRankingEntry({
-          pessoa_id: pessoaId,
-          tipo: "mensal",
-          categoria: "gestores",
-          posicao: pos,
-          valor: item.totalValor,
-          periodo: monthData.periodo,
-          ativo: true
-        });
-      }
-    }
-
-    // 4. Atualiza a meta mensal da unidade com o volume financeiro do mês
-    const config = await placarService.getConfig();
-    if (config) {
+    try {
+      const { culturaService } = await import('./culturaService');
+      const espelhos = await culturaService.getEspelhosUnidade();
+      
       const date = new Date();
+      const currentMonth = date.getMonth();
+      const currentYear = date.getFullYear();
+
+      const validEspelhos = espelhos.filter(e => {
+        if (!e.created_date) return false;
+        const eDate = new Date(e.created_date);
+        if (eDate.getMonth() !== currentMonth || eDate.getFullYear() !== currentYear) return false;
+        
+        const status = (e.status || "").toLowerCase();
+        if (status.includes("distratado") || status.includes("cancelad")) return false;
+        return true;
+      });
+
+      const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      const isIgnoredName = (name: string): boolean => {
+        const norm = normalize(name);
+        if (!norm) return true;
+        const ignored = [
+          "socios", "socio", "socias", "socia", "gerentes", "diretor",
+          "sereno leao", "rafael badra", "deyvid rhussel", "jann costa", 
+          "luziano", "jose soares", "murilo feitosa"
+        ];
+        return ignored.some(ignoredName => norm.includes(ignoredName));
+      };
+
+      const groupedCorretores: Record<string, number> = {};
+      const groupedGestores: Record<string, number> = {};
+
+      for (const espelho of validEspelhos) {
+        const val = Number(espelho.valor) || 0;
+        
+        if (espelho.corretor && !isIgnoredName(espelho.corretor)) {
+          const cName = espelho.corretor.trim();
+          groupedCorretores[cName] = (groupedCorretores[cName] || 0) + val;
+        }
+
+        if (espelho.gestor && !isIgnoredName(espelho.gestor)) {
+          const gName = espelho.gestor.trim();
+          groupedGestores[gName] = (groupedGestores[gName] || 0) + val;
+        }
+      }
+
+      const dbPessoas = await placarService.getPessoas(undefined, false);
+
+      const getOrRegisterPessoa = async (nome: string, cargo: "corretor" | "gestor"): Promise<Pessoa | null> => {
+        let match = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
+        if (match) {
+          if (!match.ativo) return null;
+          return match;
+        }
+        try {
+          const novaPessoa = await placarService.savePessoa({
+            nome,
+            cargo,
+            unidade_id: "jd-goias", // fallback unit
+            ativo: true
+          });
+          dbPessoas.push(novaPessoa);
+          return novaPessoa;
+        } catch (e) {
+          console.error("Erro ao auto-cadastrar pessoa:", nome, e);
+          return null;
+        }
+      };
+
       const monthNames = [
         "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
         "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
       ];
-      const currentMonthStr = `${monthNames[date.getMonth()]} DE ${date.getFullYear()}`;
-      
-      await placarService.saveConfig({
-        id: config.id,
-        meta_mensal_realizado: monthData.totalVolume,
-        meta_mensal_periodo: currentMonthStr,
-        meta_mensal_titulo: `Meta Mensal - ${currentMonthStr}`
-      });
+      const periodoStr = `${monthNames[currentMonth]} DE ${currentYear}`;
+
+      await supabase.from("ranking_entries")
+        .delete()
+        .eq("periodo", periodoStr)
+        .eq("tipo", "mensal");
+
+      let updated_corretores = 0;
+      let updated_gestores = 0;
+
+      const corretoresSorted = Object.entries(groupedCorretores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      for (let i = 0; i < corretoresSorted.length; i++) {
+        const [nome, val] = corretoresSorted[i];
+        const matchPessoa = await getOrRegisterPessoa(nome, "corretor");
+        if (!matchPessoa) continue;
+
+        await placarService.saveRankingEntry({
+          pessoa_id: matchPessoa.id,
+          tipo: "mensal",
+          categoria: "corretores",
+          posicao: i + 1,
+          valor: val,
+          periodo: periodoStr,
+          ativo: true
+        });
+        updated_corretores++;
+      }
+
+      const gestoresSorted = Object.entries(groupedGestores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      for (let i = 0; i < gestoresSorted.length; i++) {
+        const [nome, val] = gestoresSorted[i];
+        const matchPessoa = await getOrRegisterPessoa(nome, "gestor");
+        if (!matchPessoa) continue;
+
+        await placarService.saveRankingEntry({
+          pessoa_id: matchPessoa.id,
+          tipo: "mensal",
+          categoria: "gestores",
+          posicao: i + 1,
+          valor: val,
+          periodo: periodoStr,
+          ativo: true
+        });
+        updated_gestores++;
+      }
+
+      return { updated_corretores, updated_gestores };
+    } catch (err) {
+      console.error("Erro na sincronização de vendas:", err);
+      throw err;
     }
   },
 

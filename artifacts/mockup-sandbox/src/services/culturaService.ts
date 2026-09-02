@@ -37,6 +37,20 @@ export interface CulturaFilaPasta {
   created_date: string;
 }
 
+export interface CulturaEspelhoUnidade {
+  id: string;
+  fila_pasta_id: string;
+  cliente: string;
+  lancamento: string;
+  numero: string;
+  valor: number;
+  corretor: string;
+  gestor: string;
+  lopes_unidade: string;
+  status: string;
+  created_date: string;
+}
+
 export const culturaService = {
   getCorretores: async (): Promise<CulturaCorretor[]> => {
     return fetchCultura<CulturaCorretor>("/entities/Corretor?limit=1000");
@@ -48,5 +62,9 @@ export const culturaService = {
 
   getFilaPastas: async (): Promise<CulturaFilaPasta[]> => {
     return fetchCultura<CulturaFilaPasta>("/entities/FilaPasta?limit=2000");
+  },
+
+  getEspelhosUnidade: async (): Promise<CulturaEspelhoUnidade[]> => {
+    return fetchCultura<CulturaEspelhoUnidade>("/entities/EspelhoUnidade?limit=5000");
   }
 };
