@@ -51,6 +51,23 @@ export interface CulturaEspelhoUnidade {
   created_date: string;
 }
 
+export interface CulturaConfigDashboardVendas {
+  id: string;
+  spreadsheetId: string;
+  sheetName: string;
+  colVGV: string;
+  colGestor: string;
+  colCorretor: string;
+  colEmpreendimento: string;
+  colIncorporadora: string;
+  colData: string;
+  colUnidade: string;
+  colDia: string;
+  colMes: string;
+  colAno: string;
+  created_date: string;
+}
+
 export const culturaService = {
   getCorretores: async (): Promise<CulturaCorretor[]> => {
     return fetchCultura<CulturaCorretor>("/entities/Corretor?limit=1000");
@@ -66,5 +83,9 @@ export const culturaService = {
 
   getEspelhosUnidade: async (): Promise<CulturaEspelhoUnidade[]> => {
     return fetchCultura<CulturaEspelhoUnidade>("/entities/EspelhoUnidade?limit=5000");
+  },
+
+  getConfigDashboardVendas: async (): Promise<CulturaConfigDashboardVendas[]> => {
+    return fetchCultura<CulturaConfigDashboardVendas>("/entities/ConfigDashboardVendas?limit=1");
   }
 };

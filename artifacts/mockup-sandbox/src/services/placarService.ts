@@ -322,23 +322,61 @@ export const placarService = {
 
     try {
       const { culturaService } = await import('./culturaService');
-      const espelhos = await culturaService.getEspelhosUnidade();
+      const configs = await culturaService.getConfigDashboardVendas();
       
+      if (!configs || configs.length === 0) {
+        throw new Error("Configuração do Dashboard (ConfigDashboardVendas) não encontrada no Cultura Lopes.");
+      }
+      
+      const config = configs[0];
+      const spreadsheetId = config.spreadsheetId;
+      const sheetName = config.sheetName || "GERAL";
+      
+      if (!spreadsheetId) {
+        throw new Error("O ID da planilha não está configurado na API do Cultura.");
+      }
+
+      // Baixar a planilha (requer que esteja pública para leitura)
+      const exportUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&sheet=${encodeURIComponent(sheetName)}`;
+      const res = await fetch(exportUrl);
+      
+      if (!res.ok) {
+        throw new Error(`Falha ao baixar a planilha: HTTP ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        throw new Error("A planilha do Cultura (Google Sheets) está PRIVADA e retornou a página de login. Por favor, torne-a pública com 'Qualquer pessoa com o link pode visualizar'.");
+      }
+
+      const arrayBuffer = await res.arrayBuffer();
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      
+      let actualSheetName = sheetName;
+      if (!workbook.Sheets[actualSheetName]) {
+        if (workbook.SheetNames.length > 0) {
+          actualSheetName = workbook.SheetNames[0];
+        } else {
+          throw new Error("Nenhuma aba encontrada na planilha.");
+        }
+      }
+      
+      const sheet = workbook.Sheets[actualSheetName];
+      const rows = XLSX.utils.sheet_to_json<any>(sheet);
+
       const date = new Date();
       const currentMonth = date.getMonth();
       const currentYear = date.getFullYear();
+      
+      const monthNamesToMatch = [
+        "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO",
+        "JANEIRO", "FEVEREIRO", "MARCO", "ABRIL", "MAIO", "JUNHO",
+        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
+      ];
 
-      const validEspelhos = espelhos.filter(e => {
-        if (!e.created_date) return false;
-        const eDate = new Date(e.created_date);
-        if (eDate.getMonth() !== currentMonth || eDate.getFullYear() !== currentYear) return false;
-        
-        const status = (e.status || "").toLowerCase();
-        if (status.includes("distratado") || status.includes("cancelad")) return false;
-        return true;
-      });
-
-      const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const normalize = (str: string) => str ? String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
 
       const isIgnoredName = (name: string): boolean => {
         const norm = normalize(name);
@@ -354,17 +392,89 @@ export const placarService = {
       const groupedCorretores: Record<string, number> = {};
       const groupedGestores: Record<string, number> = {};
 
-      for (const espelho of validEspelhos) {
-        const val = Number(espelho.valor) || 0;
+      const extractDateStr = (val: any) => {
+        if (!val) return "";
+        if (typeof val === 'number') {
+          // Tratar data do excel
+          const dateObj = XLSX.SSF.parse_date_code(val);
+          if (dateObj) return `${dateObj.d}/${dateObj.m}/${dateObj.y}`;
+        }
+        return String(val);
+      };
+      
+      const extractNum = (val: any) => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+          const c = val.replace(/[^0-9,-]/g, '').replace(',', '.');
+          return Number(c) || 0;
+        }
+        return 0;
+      };
+
+      for (const row of rows) {
+        // Obter os valores usando os nomes de coluna configurados
+        const mesVal = extractDateStr(row[config.colMes]);
+        const anoVal = extractDateStr(row[config.colAno] || row[config.colData]);
+        const dateVal = extractDateStr(row[config.colData]);
         
-        if (espelho.corretor && !isIgnoredName(espelho.corretor)) {
-          const cName = espelho.corretor.trim();
-          groupedCorretores[cName] = (groupedCorretores[cName] || 0) + val;
+        // Verifica se a venda é do mês atual
+        let isCurrentMonth = false;
+        
+        // Se temos uma string de data 10/08/2026
+        if (dateVal) {
+          const parts = dateVal.split(/[/.-]/);
+          if (parts.length >= 2) {
+             const m = parseInt(parts[1], 10) - 1;
+             const yPart = parts[2] && parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+             const y = parseInt(yPart || "", 10);
+             if (m === currentMonth && (!y || y === currentYear)) {
+               isCurrentMonth = true;
+             }
+          }
+        }
+        
+        // Se temos colMes, ex: "AGOSTO" ou "08" ou data
+        if (!isCurrentMonth && mesVal) {
+          const mesNorm = normalize(mesVal);
+          const currentMonthNorm = normalize(monthNamesToMatch[currentMonth]);
+          const currentMonthNormNoAccent = normalize(monthNamesToMatch[currentMonth + 12]);
+          if (mesNorm === currentMonthNorm || mesNorm === currentMonthNormNoAccent) {
+            isCurrentMonth = true;
+          } else {
+             // Caso colMes seja a data
+             const parts = mesVal.split(/[/.-]/);
+             if (parts.length >= 2) {
+                const m = parseInt(parts[1], 10) - 1;
+                if (m === currentMonth) isCurrentMonth = true;
+             }
+          }
+        }
+        
+        // Vamos checar pelo menos se um bateu, se bater vamos ler VGV
+        if (!isCurrentMonth) {
+          // Talvez as colunas de datas estejam nulas, podemos tentar ver se há colAno e colMes explicitos?
+          // Para evitar pular vendas válidas, e se for tudo num mês só, podemos tentar parsing geral
+          // Se não houver coluna de data, podemos considerar tudo?
+          if (config.colData || config.colMes) {
+            continue; 
+          }
         }
 
-        if (espelho.gestor && !isIgnoredName(espelho.gestor)) {
-          const gName = espelho.gestor.trim();
-          groupedGestores[gName] = (groupedGestores[gName] || 0) + val;
+        // Pega valor da venda
+        const valVGV = extractNum(row[config.colVGV]);
+        if (valVGV <= 0) continue;
+
+        const corretor = row[config.colCorretor];
+        const gestor = row[config.colGestor];
+
+        if (corretor && !isIgnoredName(String(corretor))) {
+          const cName = String(corretor).trim();
+          groupedCorretores[cName] = (groupedCorretores[cName] || 0) + valVGV;
+        }
+
+        if (gestor && !isIgnoredName(String(gestor))) {
+          const gName = String(gestor).trim();
+          groupedGestores[gName] = (groupedGestores[gName] || 0) + valVGV;
         }
       }
 
