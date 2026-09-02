@@ -618,14 +618,18 @@ function ProgressDots({ total, current, onChange }: { total: number; current: nu
   );
 }
 
+// ─── Module Level Cache to prevent loading delays ─────────────────────────────
+let cachedSlides: Slide[] | null = null;
+let cachedUnitInfo: UnitInfo | null = null;
+
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, standalone = true }: { activeUnitId?: string; onFinishedCycle?: () => void; standalone?: boolean; }) {
-  const [slides, setSlides] = useState<Slide[]>([]);
-  const [unitInfo, setUnitInfo] = useState<UnitInfo>(FALLBACK_UNIT);
+  const [slides, setSlides] = useState<Slide[]>(cachedSlides || []);
+  const [unitInfo, setUnitInfo] = useState<UnitInfo>(cachedUnitInfo || FALLBACK_UNIT);
   const [slideIdx, setSlideIdx] = useState(0);
   const [key, setKey] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedSlides);
   const INTERVAL = 8000;
 
   const goTo = useCallback((i: number) => {
@@ -657,14 +661,16 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
         ]);
 
         // 1. Sidebar fixa como Grupo Lopes
-        setUnitInfo({
+        const newUnitInfo = {
           name: "Grupo Lopes",
           handle: "@lopes_digital",
           gradient: "#FFFFFF",
           ringStart: "#E30613",
           ringEnd: "#E30613",
           navUnits: ["Lopes"]
-        });
+        };
+        cachedUnitInfo = newUnitInfo;
+        setUnitInfo(newUnitInfo);
 
         // 2. Gerar os slides dinamicamente
         const generated: Slide[] = [];
@@ -824,6 +830,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
           });
         }
 
+        cachedSlides = generated;
         setSlides(generated);
       } catch (err) {
         console.error("Erro ao carregar placar:", err);
