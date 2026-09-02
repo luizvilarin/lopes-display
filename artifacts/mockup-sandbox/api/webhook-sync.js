@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Vercel Serverless Function
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   // Apenas aceitar método POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
@@ -63,7 +63,7 @@ export default async function handler(req: any, res: any) {
       // data: payload
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro interno no Webhook:", error);
     return res.status(500).json({ error: 'Erro interno no servidor.', detail: error.message });
   }
