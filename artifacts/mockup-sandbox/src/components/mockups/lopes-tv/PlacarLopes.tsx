@@ -3,6 +3,12 @@ import faviconLopes from "@/assets/favicon-lopes.png";
 import logoBranca from "@/assets/logo-branca.png";
 import logoPreta from "@/assets/logo-preta.png";
 import fogueteImg from "@/assets/foguete-lopes.png";
+import capaPrimeiraVenda from "@/assets/capas/capa-primeira-venda.png";
+import capaProgressao from "@/assets/capas/capa-progressao.png";
+import capaRankingPastas from "@/assets/capas/capa-ranking-pastas.png";
+import capaPodio from "@/assets/capas/capa-podio.png";
+import capaDigital from "@/assets/capas/capa-digital.png";
+import capaSignature from "@/assets/capas/capa-signature.png";
 import { placarService } from "@/services/placarService";
 import type { Pasta, RankingPastaEntry, Pessoa, RankingEntry, ProgressaoCarreira } from "@/types/placar";
 import { SlideReconhecimento } from "./SlideReconhecimento";
@@ -705,7 +711,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
             type: "capa",
             category: "História Lopes",
             title: "Primeira Venda",
-            imageUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+            imageUrl: capaPrimeiraVenda
           });
           pv.forEach((item) => {
             if (item && item.pessoa && item.pessoa.ativo) {
@@ -733,7 +739,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
             type: "capa",
             category: "História Lopes",
             title: "Progressão de Carreira",
-            imageUrl: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+            imageUrl: capaProgressao
           });
           progressoes.forEach((p) => {
             if (p && p.ativo && p.pessoa && p.pessoa.ativo) {
@@ -757,7 +763,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
             type: "capa",
             category: "Metas Lopes",
             title: "Corrida de Pastas",
-            imageUrl: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+            imageUrl: capaRankingPastas
           });
         }
         for (const p of pastas) {
@@ -810,7 +816,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
             type: "capa",
             category: "Metas Lopes",
             title: "Ranking do Mês",
-            imageUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" // placeholder
+            imageUrl: capaPodio
           });
           generated.push({
             id: "reconhecimento-mensal",
