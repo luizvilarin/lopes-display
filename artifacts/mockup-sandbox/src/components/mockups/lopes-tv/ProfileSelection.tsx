@@ -79,12 +79,12 @@ export function ProfileSelection() {
   };
 
   const allProfiles = [
-    ...unidades.map(u => ({
-      id: u.id,
-      name: u.nome,
-      initial: u.nome.substring(0, 2).toUpperCase(),
-      gradient: FALLBACK_GRADIENTS[u.id] || "linear-gradient(135deg, #333 0%, #000 100%)"
-    })),
+    {
+      id: "grupo-lopes",
+      name: "Grupo Lopes",
+      initial: "GL",
+      gradient: "#FFFFFF",
+    },
     {
       id: "admin",
       name: "Administrativo",
@@ -242,11 +242,13 @@ export function ProfileSelection() {
                     <div style={{ width: 44, height: 44, background: "#fff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <img src={faviconLopes} alt="Admin" style={{ height: 24, filter: "brightness(0)" }} />
                     </div>
+                  ) : profile.id === "grupo-lopes" ? (
+                    <img src={faviconLopes} alt={profile.name} style={{ height: 60, filter: "brightness(0) saturate(100%) invert(18%) sepia(85%) saturate(7460%) hue-rotate(352deg) brightness(98%) contrast(106%)" }} />
                   ) : (
                     <img src={faviconLopes} alt={profile.name} style={{ height: 60, filter: "brightness(0) invert(1)" }} />
                   )}
                 </div>
-                <span className="profile-label" style={{ color: profile.id === "admin" ? "#E30613" : undefined, fontWeight: profile.id === "admin" ? 700 : undefined }}>{profile.name}</span>
+                <span className="profile-label" style={{ color: profile.id === "admin" ? "#E30613" : profile.id === "grupo-lopes" ? "#F0F2F8" : undefined, fontWeight: profile.id === "admin" || profile.id === "grupo-lopes" ? 700 : undefined }}>{profile.name}</span>
               </div>
             ))}
           </div>

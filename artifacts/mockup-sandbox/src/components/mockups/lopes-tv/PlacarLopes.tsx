@@ -637,33 +637,17 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
   useEffect(() => {
     const loadData = async () => {
       try {
-        // IDs de unidades válidas (nunca incluem 'Todas' ou vazio)
-        const VALID_UNIT_IDS = ["jd-goias", "marista", "bueno", "oeste"];
-        const resolveUnitId = (raw?: string | null): string | null => {
-          if (!raw || raw === "Todas" || raw.trim() === "") return null;
-          return raw;
-        };
-
-        const rawUnit = propActiveUnitId || localStorage.getItem("lopes_active_unit") || localStorage.getItem("lopes_selected_unit");
-        const activeUnitId: string | null = resolveUnitId(rawUnit);
-        // Para queries que requerem um ID concreto, usa o primeiro unidade válida como fallback
-        const concreteUnitId = activeUnitId || VALID_UNIT_IDS[0];
-
-        const [config, pv, pastas, unidades, progressoes] = await Promise.all([
-          placarService.getConfig(concreteUnitId).catch(err => {
+        const [config, pv, pastas, progressoes] = await Promise.all([
+          placarService.getConfig("lopes").catch(err => {
             console.error("Falha ao carregar config na TV:", err);
             return null;
           }),
-          placarService.getPrimeiraVenda(activeUnitId || undefined).catch(err => {
+          placarService.getPrimeiraVenda().catch(err => {
             console.error("Falha ao carregar primeira venda na TV:", err);
             return null;
           }),
           placarService.getPastas().catch(err => {
             console.error("Falha ao carregar pastas na TV:", err);
-            return [];
-          }),
-          placarService.getUnidades().catch(err => {
-            console.error("Falha ao carregar unidades na TV:", err);
             return [];
           }),
           placarService.getProgressoes().catch(err => {
@@ -672,18 +656,15 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
           })
         ]);
 
-        // 1. Mapear Unidade Ativa para o Sidebar
-        const activeUnit = unidades.find(u => u.id === concreteUnitId) || unidades[0];
-        if (activeUnit) {
-          setUnitInfo({
-            name: activeUnit.nome,
-            handle: activeUnit.handle,
-            gradient: "radial-gradient(circle at 40% 40%, #1a0a2e, #0a0a14)",
-            ringStart: "#FF0080",
-            ringEnd: "#E30613",
-            navUnits: unidades.map(u => u.nome)
-          });
-        }
+        // 1. Sidebar fixa como Grupo Lopes
+        setUnitInfo({
+          name: "Grupo Lopes",
+          handle: "@lopes_digital",
+          gradient: "#FFFFFF",
+          ringStart: "#E30613",
+          ringEnd: "#E30613",
+          navUnits: ["Lopes"]
+        });
 
         // 2. Gerar os slides dinamicamente
         const generated: Slide[] = [];
@@ -945,7 +926,7 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
         <img
           src={s.imageUrl}
           alt={s.title}
-          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", animation: "scalePop 8s linear" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
         />
         {/* ProgressBar overlay na base */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 6, background: "rgba(0,0,0,0.5)" }}>
