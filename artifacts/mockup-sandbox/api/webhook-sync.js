@@ -289,22 +289,40 @@ export default async function handler(req, res) {
       const vgvGlobal = parseFloat(payload.metas.vgv_global);
       
       if (!isNaN(vgvGlobal)) {
-        // Obter configuração atual
-        const { data: currentMetas, error: getErr } = await supabase.from('config_metas').select('*').order('id', { ascending: true }).limit(1);
+        const now = new Date();
+        const monthNames = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+        const periodoStr = `${monthNames[now.getMonth()]} DE ${now.getFullYear()}`;
+
+        // Obter configuração atual do mês
+        const { data: currentMetas, error: getErr } = await supabase
+          .from('config_metas')
+          .select('*')
+          .eq('meta_mensal_periodo', periodoStr)
+          .limit(1);
+          
         if (getErr) throw getErr;
 
         if (currentMetas && currentMetas.length > 0) {
           const metaToUpdate = currentMetas[0];
-          const { error: updErr } = await supabase.from('config_metas').update({ meta_vgv: vgvGlobal }).eq('id', metaToUpdate.id);
+          const { error: updErr } = await supabase.from('config_metas').update({ meta_mensal_realizado: vgvGlobal }).eq('id', metaToUpdate.id);
           if (updErr) throw updErr;
         } else {
+          // Se não houver, pega a última para copiar a meta_mensal_valor, ou usa default
+          const { data: lastMeta } = await supabase.from('config_metas').select('meta_mensal_valor').order('id', { ascending: false }).limit(1);
+          const metaValor = (lastMeta && lastMeta.length > 0) ? lastMeta[0].meta_mensal_valor : 60000000;
+          
           // Inserir nova se não houver
-          const { error: insErr } = await supabase.from('config_metas').insert({ meta_vgv: vgvGlobal });
+          const { error: insErr } = await supabase.from('config_metas').insert({ 
+            meta_mensal_titulo: `Meta Mensal - ${periodoStr}`,
+            meta_mensal_valor: metaValor,
+            meta_mensal_realizado: vgvGlobal,
+            meta_mensal_periodo: periodoStr
+          });
           if (insErr) throw insErr;
         }
         
         resultLog.processed.push('metas');
-        resultLog.metas = { vgv_global_set: vgvGlobal };
+        resultLog.metas = { vgv_global_set: vgvGlobal, periodo: periodoStr };
       }
     }
 
