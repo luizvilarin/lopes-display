@@ -233,7 +233,7 @@ function ImageDropzone({ value, onChange, label, maxWidth = 1024, maxHeight = 57
 function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClose }: { prop: Imovel; categories: string[]; unidades: Unidade[]; activeUnitId: string; onSave: (p: Imovel) => Promise<void>; onClose: () => void }) {
   const [draft, setDraft] = useState<Imovel>({
     ...prop,
-    unidade_id: prop.unidade_id || (activeUnitId === "Todas" ? "jd-goias" : activeUnitId),
+    unidade_id: "Todas",
     category: prop.category || "Geral",
     gallery: prop.gallery || []
   });
@@ -297,10 +297,10 @@ function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClo
 
             <div className="pa-form-row" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <label className="adm-label">Unidade Associada</label>
-              <select className="adm-input" value={draft.unidade_id} onChange={e => up("unidade_id", e.target.value)} style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 10, fontSize: 14 }}>
-                <option value="Todas">Todas as Unidades (Global)</option>
-                {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-              </select>
+              <div style={{ background: "rgba(227,6,19,.08)", border: "1px solid rgba(227,6,19,.2)", color: "var(--text)", padding: "10px 14px", borderRadius: 10, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#E30613", color: "#fff", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, letterSpacing: ".05em" }}>UNIFICADO</span>
+                Todas as Unidades (Lopes Global)
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -466,7 +466,7 @@ function SectionImoveis({ imoveis, onSave, onDelete, activeUnit, unidades, activ
   const openAdd = () => {
     const novo: Imovel = {
       id: 0,
-      unidade_id: activeUnitId === "Todas" ? (unidades[0]?.id || "jd-goias") : activeUnit,
+      unidade_id: "Todas",
       title: "Novo Produto",
       tag: "NOVO",
       tag_color: "#E30613",
