@@ -12,7 +12,6 @@ import type {
 } from "@/types/placar";
 import { Icons } from "@/components/common/Icons";
 import { Slide, DEFAULT_SLIDES } from "@/services/onboardingData";
-import { parseSalesSpreadsheet, type SpreadsheetParseResult, type ParsedMonthData } from "@/services/excelImportService";
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 
@@ -794,16 +793,101 @@ function SecaoRankingsPastas({ pessoas, onChange }: { pessoas: Pessoa[]; onChang
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Seleção de Pastas do Cultura
+  const [showSelectModal, setShowSelectModal] = useState(false);
+  const [culturaLancamentos, setCulturaLancamentos] = useState<Array<{ titulo: string; total_pastas: number }>>([]);
+  const [selectedTitles, setSelectedTitles] = useState<Record<string, boolean>>({});
+  const [loadingCultura, setLoadingCultura] = useState(false);
+
+  const handleOpenSelectModal = async () => {
+    setLoadingCultura(true);
+    setShowSelectModal(true);
+    try {
+      const lancs = await placarService.getCulturaLancamentosDisponiveis();
+      setCulturaLancamentos(lancs);
+      const sel: Record<string, boolean> = {};
+      pastas.forEach(p => {
+        if (p.ativo) {
+          sel[p.titulo.toLowerCase()] = true;
+        }
+      });
+      setSelectedTitles(sel);
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao buscar lançamentos do Cultura.");
+    } finally {
+      setLoadingCultura(false);
+    }
+  };
+
+  const handleToggleTitle = (titulo: string) => {
+    const key = titulo.toLowerCase();
+    setSelectedTitles(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleSelectAll = (check: boolean) => {
+    const updated: Record<string, boolean> = {};
+    culturaLancamentos.forEach(l => {
+      updated[l.titulo.toLowerCase()] = check;
+    });
+    setSelectedTitles(updated);
+  };
+
+  const handleSaveSelectedPastas = async () => {
+    setSaving(true);
+    try {
+      for (const item of culturaLancamentos) {
+        const isChecked = !!selectedTitles[item.titulo.toLowerCase()];
+        const existing = pastas.find(p => p.titulo.toLowerCase() === item.titulo.toLowerCase());
+        
+        if (isChecked) {
+          if (!existing) {
+            await placarService.savePasta({
+              titulo: item.titulo,
+              meta_pastas: 100,
+              ativo: true
+            });
+          } else if (!existing.ativo) {
+            await placarService.savePasta({
+              ...existing,
+              ativo: true
+            });
+          }
+        } else if (existing && existing.ativo) {
+          await placarService.savePasta({
+            ...existing,
+            ativo: false
+          });
+        }
+      }
+
+      // Executa sincronização imediata apenas das pastas selecionadas
+      await placarService.syncPastasFromCultura(true);
+      setShowSelectModal(false);
+      await loadData();
+      onChange();
+      alert("Lançamentos selecionados salvos e sincronizados com sucesso!");
+    } catch (e) {
+      console.error("Erro ao salvar seleção de pastas:", e);
+      alert("Erro ao salvar seleção de pastas.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSync = async () => {
-    if (!confirm("Sincronizar a Fila de Pastas com o Cultura Lopes? (Isso pode demorar alguns segundos)")) return;
+    if (!confirm("Sincronizar dados das pastas ativas com o Cultura Lopes?")) return;
     setIsSyncing(true);
     try {
-      const res = await placarService.syncPastasFromCultura();
+      const res = await placarService.syncPastasFromCultura(true);
       alert(`Sincronização concluída!\nLançamentos Atualizados: ${res.updated_pastas}\nEntradas de Ranking Processadas: ${res.updated_rankings}`);
-      loadData();
+      await loadData();
       onChange();
-    } catch (err) {
-      alert("Erro ao sincronizar Pastas. Verifique o console.");
+    } catch (err: any) {
+      alert("Erro ao sincronizar Pastas: " + (err?.message || "Verifique o console."));
     } finally {
       setIsSyncing(false);
     }
@@ -901,17 +985,25 @@ function SecaoRankingsPastas({ pessoas, onChange }: { pessoas: Pessoa[]; onChang
             <div className="pa-title">Ranking de Pastas Unificado</div>
             <div className="pa-subtitle">Gerencie o ranking de captação de pastas por lançamento (Unificada Lopes)</div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button 
+              className="pa-btn-primary" 
+              onClick={handleOpenSelectModal}
+              disabled={loadingCultura}
+              style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)", border: "none", display: "flex", alignItems: "center", gap: 6 }}
+            >
+              {loadingCultura ? "Carregando..." : "📋 Selecionar Pastas do Cultura"}
+            </button>
             <button 
               className="pa-btn-ghost" 
               onClick={handleSync}
               disabled={isSyncing}
               style={{ borderColor: "rgba(99,102,241,.35)", color: "#818cf8" }}
             >
-              {isSyncing ? "Sincronizando..." : "🔄 Sincronizar Fila de Pastas"}
+              {isSyncing ? "Sincronizando..." : "🔄 Sincronizar Agora"}
             </button>
-            <button className="pa-btn-primary" onClick={() => { setPastaForm({ titulo: "", meta_pastas: 30 }); setShowPastaModal(true); }}>
-              + Novo Lançamento / Pasta
+            <button className="pa-btn-ghost" onClick={() => { setPastaForm({ titulo: "", meta_pastas: 30, ativo: true }); setShowPastaModal(true); }}>
+              + Manual
             </button>
           </div>
         </div>
@@ -1099,6 +1191,108 @@ function SecaoRankingsPastas({ pessoas, onChange }: { pessoas: Pessoa[]; onChang
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
               <button className="pa-btn-ghost" onClick={() => setShowEntryModal(false)}>Cancelar</button>
               <button className="pa-btn-primary" onClick={handleSaveEntry} disabled={saving || !entryForm.pessoa_id}>{saving ? "Salvando…" : "Salvar no Ranking"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSelectModal && (
+        <div className="pa-overlay" onClick={e => e.target === e.currentTarget && setShowSelectModal(false)}>
+          <div className="pa-modal" style={{ maxWidth: 580, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+            <div className="pa-modal-title" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>📁 Selecionar Lançamentos do Cultura</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.4)" }}>
+                {culturaLancamentos.length} encontrados
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginTop: 6, marginBottom: 14 }}>
+              Marque os lançamentos que deseja acompanhar na TV. O sistema atualizará automaticamente o ranking apenas das pastas selecionadas.
+            </p>
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+              <button 
+                type="button"
+                className="pa-btn-ghost" 
+                style={{ padding: "5px 12px", fontSize: 11 }}
+                onClick={() => handleSelectAll(true)}
+              >
+                Marcar Todos
+              </button>
+              <button 
+                type="button"
+                className="pa-btn-ghost" 
+                style={{ padding: "5px 12px", fontSize: 11 }}
+                onClick={() => handleSelectAll(false)}
+              >
+                Desmarcar Todos
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 4, maxHeight: 380 }}>
+              {loadingCultura ? (
+                <div style={{ textAlign: "center", padding: "30px 0", color: "rgba(255,255,255,0.4)" }}>
+                  Buscando lançamentos no Cultura Lopes...
+                </div>
+              ) : culturaLancamentos.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "30px 0", color: "rgba(255,255,255,0.4)" }}>
+                  Nenhum lançamento encontrado na API FilaPasta do Cultura.
+                </div>
+              ) : (
+                culturaLancamentos.map(item => {
+                  const isChecked = !!selectedTitles[item.titulo.toLowerCase()];
+                  return (
+                    <div 
+                      key={item.titulo}
+                      onClick={() => handleToggleTitle(item.titulo)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: isChecked ? "1px solid rgba(99,102,241,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                        background: isChecked ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.03)",
+                        cursor: "pointer",
+                        transition: "all 150ms ease"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <input 
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // tratado pelo div pai
+                          style={{ cursor: "pointer", width: 16, height: 16, accentColor: "#6366f1" }}
+                        />
+                        <span style={{ fontSize: 14, fontWeight: isChecked ? 700 : 500, color: isChecked ? "#fff" : "rgba(255,255,255,0.8)" }}>
+                          {item.titulo}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: 11,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        background: "rgba(255,255,255,0.08)",
+                        color: "rgba(255,255,255,0.6)",
+                        fontWeight: 600
+                      }}>
+                        {item.total_pastas} pastas no Cultura
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+              <button className="pa-btn-ghost" onClick={() => setShowSelectModal(false)}>Cancelar</button>
+              <button 
+                className="pa-btn-primary" 
+                onClick={handleSaveSelectedPastas}
+                disabled={saving || loadingCultura}
+                style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)", border: "none" }}
+              >
+                {saving ? "Salvando e Sincronizando…" : "Salvar e Sincronizar"}
+              </button>
             </div>
           </div>
         </div>
@@ -2733,16 +2927,17 @@ function SecaoReconhecimentoRankings({ pessoas, onChange }: { pessoas: Pessoa[];
     .sort((a, b) => a.posicao - b.posicao);
 
   const handleSyncRankings = async () => {
-    if (!confirm("Sincronizar Ranking Mensal com Cultura Lopes? Os dados atuais serão substituídos pelos do último mês fechado na API.")) return;
+    if (!confirm("Sincronizar Ranking Mensal de Vendas com o Cultura Lopes?")) return;
     setIsSyncing(true);
     try {
-      await placarService.syncVendasFromCultura();
-      alert("Ranking sincronizado com sucesso!");
+      const res = await placarService.syncVendasFromCultura();
+      const vgvFmt = res.total_vgv.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      alert(`Ranking de Vendas sincronizado com sucesso!\n\nCorretores no Top 10: ${res.updated_corretores}\nGestores no Top 5: ${res.updated_gestores}\nVGV Total do Mês: ${vgvFmt}`);
       loadData();
       onChange();
     } catch (err: any) {
       console.error("Erro na sincronização:", err);
-      alert(err.message || "Erro ao sincronizar rankings.");
+      alert(err.message || "Erro ao sincronizar rankings de vendas.");
     } finally {
       setIsSyncing(false);
     }

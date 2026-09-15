@@ -68,6 +68,30 @@ export interface CulturaConfigDashboardVendas {
   created_date: string;
 }
 
+export interface CulturaVendaRegistrada {
+  id: string;
+  corretor: string;
+  gestor: string;
+  valor_venda: number;
+  data_venda: string;
+  status: string;
+  venda_oculta?: boolean;
+  empreendimento?: string;
+  produto?: string;
+  ano_venda?: string;
+  loja?: string;
+  created_date?: string;
+}
+
+export interface CulturaMetaVenda {
+  id: string;
+  valor_meta: number;
+  unidade: string;
+  mes: string;
+  ano: string;
+  tipo?: string;
+}
+
 export const culturaService = {
   getCorretores: async (): Promise<CulturaCorretor[]> => {
     return fetchCultura<CulturaCorretor>("/entities/Corretor?limit=1000");
@@ -87,5 +111,13 @@ export const culturaService = {
 
   getConfigDashboardVendas: async (): Promise<CulturaConfigDashboardVendas[]> => {
     return fetchCultura<CulturaConfigDashboardVendas>("/entities/ConfigDashboardVendas?limit=1");
+  },
+
+  getVendasRegistradas: async (): Promise<CulturaVendaRegistrada[]> => {
+    return fetchCultura<CulturaVendaRegistrada>("/entities/VendaRegistrada?limit=5000");
+  },
+
+  getMetasVendas: async (): Promise<CulturaMetaVenda[]> => {
+    return fetchCultura<CulturaMetaVenda>("/entities/MetaVendas?limit=1000");
   }
 };

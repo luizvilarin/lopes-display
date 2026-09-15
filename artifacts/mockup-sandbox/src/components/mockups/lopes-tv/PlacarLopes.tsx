@@ -638,31 +638,33 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
   }, []);
 
   // Carregar Dados Assíncronos do Supabase
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [config, pv, pastas, progressoes] = await Promise.all([
-          placarService.getConfig("lopes").catch(err => {
-            console.error("Falha ao carregar config na TV:", err);
-            return null;
-          }),
-          placarService.getPrimeiraVenda().catch(err => {
-            console.error("Falha ao carregar primeira venda na TV:", err);
-            return null;
-          }),
-          placarService.getPastas().catch(err => {
-            console.error("Falha ao carregar pastas na TV:", err);
-            return [];
-          }),
-          placarService.getProgressoes().catch(err => {
-            console.error("Falha ao carregar progressões na TV:", err);
-            return [];
-          })
-        ]);
+  const loadData = useCallback(async (showLoadingSpinner: boolean = true) => {
+    if (showLoadingSpinner && !cachedSlides) {
+      setLoading(true);
+    }
+    try {
+      const [config, pv, pastas, progressoes] = await Promise.all([
+        placarService.getConfig("lopes").catch(err => {
+          console.error("Falha ao carregar config na TV:", err);
+          return null;
+        }),
+        placarService.getPrimeiraVenda().catch(err => {
+          console.error("Falha ao carregar primeira venda na TV:", err);
+          return null;
+        }),
+        placarService.getPastas().catch(err => {
+          console.error("Falha ao carregar pastas na TV:", err);
+          return [] as Pasta[];
+        }),
+        placarService.getProgressoes().catch(err => {
+          console.error("Falha ao carregar progressões na TV:", err);
+          return [];
+        })
+      ]);
 
-        // 1. Sidebar fixa como Grupo Lopes
-        const newUnitInfo = {
-          name: "Grupo Lopes",
+      // 1. Sidebar fixa como Grupo Lopes
+      const newUnitInfo = {
+        name: "Grupo Lopes",
           handle: "@lopes_digital",
           gradient: "#FFFFFF",
           ringStart: "#E30613",
@@ -840,10 +842,37 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
       } finally {
         setLoading(false);
       }
+    },
+    []
+  );
+
+  useEffect(() => {
+    loadData();
+  }, [loadData, propActiveUnitId]);
+
+  // Auto-sincronização contínua com o Cultura Lopes a cada 15 minutos em segundo plano
+  useEffect(() => {
+    const checkAndSync = async () => {
+      try {
+        const lastSync = localStorage.getItem("lopes_last_auto_sync");
+        const now = Date.now();
+        const FIFTEEN_MIN = 15 * 60 * 1000;
+        
+        if (!lastSync || now - Number(lastSync) >= FIFTEEN_MIN) {
+          console.log("[Lopes TV] Executando auto-sincronização de 15min com o Cultura...");
+          await placarService.syncAllFromCultura();
+          // Atualiza dados dos slides em background
+          loadData(false);
+        }
+      } catch (err) {
+        console.warn("[Lopes TV] Auto-sync em segundo plano:", err);
+      }
     };
 
-    loadData();
-  }, [propActiveUnitId]);
+    checkAndSync();
+    const interval = setInterval(checkAndSync, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [loadData]);
 
   // Loop de Autoplay
   useEffect(() => {
@@ -856,13 +885,15 @@ export function PlacarLopes({ activeUnitId: propActiveUnitId, onFinishedCycle, s
       const nextIdx = slideIdx + 1;
       if (nextIdx >= slides.length) {
         if (onFinishedCycle) onFinishedCycle();
+        // Recarrega dados em background suavemente ao fim de cada ciclo
+        loadData(false);
         goTo(0);
       } else {
         goTo(nextIdx);
       }
     }, INTERVAL);
     return () => clearInterval(t);
-  }, [slideIdx, goTo, slides, onFinishedCycle]);
+  }, [slideIdx, goTo, slides, onFinishedCycle, loadData]);
 
   // Suporte para Setinhas (Manual Override)
   useEffect(() => {

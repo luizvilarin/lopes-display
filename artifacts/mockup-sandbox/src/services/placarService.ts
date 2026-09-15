@@ -1,6 +1,5 @@
 import { supabase } from "../lib/supabase";
 import type { Unidade, Pessoa, ConfigMetas, RankingEntry, PrimeiraVenda, Pasta, RankingPastaEntry } from "../types/placar";
-import type { ParsedMonthData, ParsedPersonRanking } from "./excelImportService";
 
 export function generateQRCodeUrl(link: string): string {
   if (!link || !link.trim()) return "";
@@ -315,66 +314,20 @@ export const placarService = {
     return new Date().getDate() >= 22;
   },
 
-  syncVendasFromCultura: async (): Promise<{ updated_corretores: number, updated_gestores: number }> => {
+  syncVendasFromCultura: async (): Promise<{ updated_corretores: number, updated_gestores: number, total_vgv: number }> => {
     if (placarService.isWeek4()) {
       throw new Error("Sincronização bloqueada: o resultado final está congelado para a surpresa do pódio (4ª Semana).");
     }
 
     try {
       const { culturaService } = await import('./culturaService');
-      const configs = await culturaService.getConfigDashboardVendas();
+      const vendas = await culturaService.getVendasRegistradas();
       
-      if (!configs || configs.length === 0) {
-        throw new Error("Configuração do Dashboard (ConfigDashboardVendas) não encontrada no Cultura Lopes.");
-      }
-      
-      const config = configs[0];
-      const spreadsheetId = config.spreadsheetId;
-      const sheetName = config.sheetName || "GERAL";
-      
-      if (!spreadsheetId) {
-        throw new Error("O ID da planilha não está configurado na API do Cultura.");
-      }
-
-      // Baixar a planilha (requer que esteja pública para leitura)
-      const exportUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&sheet=${encodeURIComponent(sheetName)}`;
-      const res = await fetch(exportUrl);
-      
-      if (!res.ok) {
-        throw new Error(`Falha ao baixar a planilha: HTTP ${res.status}`);
-      }
-
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("text/html")) {
-        throw new Error("A planilha do Cultura (Google Sheets) está PRIVADA e retornou a página de login. Por favor, torne-a pública com 'Qualquer pessoa com o link pode visualizar'.");
-      }
-
-      const arrayBuffer = await res.arrayBuffer();
-      const XLSX = await import("xlsx");
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      
-      let actualSheetName = sheetName;
-      if (!workbook.Sheets[actualSheetName]) {
-        if (workbook.SheetNames.length > 0) {
-          actualSheetName = workbook.SheetNames[0];
-        } else {
-          throw new Error("Nenhuma aba encontrada na planilha.");
-        }
-      }
-      
-      const sheet = workbook.Sheets[actualSheetName];
-      const rows = XLSX.utils.sheet_to_json<any>(sheet);
-
-      const date = new Date();
-      const currentMonth = date.getMonth();
-      const currentYear = date.getFullYear();
-      
-      const monthNamesToMatch = [
-        "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
-        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO",
-        "JANEIRO", "FEVEREIRO", "MARCO", "ABRIL", "MAIO", "JUNHO",
-        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
-      ];
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const monthNumStr = String(currentMonth + 1).padStart(2, "0");
+      const currentMonthPrefix = `${currentYear}-${monthNumStr}`; // ex: "2026-09"
 
       const normalize = (str: string) => str ? String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
 
@@ -391,90 +344,47 @@ export const placarService = {
 
       const groupedCorretores: Record<string, number> = {};
       const groupedGestores: Record<string, number> = {};
+      let totalVgvMes = 0;
 
-      const extractDateStr = (val: any) => {
-        if (!val) return "";
-        if (typeof val === 'number') {
-          // Tratar data do excel
-          const dateObj = XLSX.SSF.parse_date_code(val);
-          if (dateObj) return `${dateObj.d}/${dateObj.m}/${dateObj.y}`;
-        }
-        return String(val);
-      };
-      
-      const extractNum = (val: any) => {
-        if (typeof val === 'number') return val;
-        if (typeof val === 'string') {
-          const c = val.replace(/[^0-9,-]/g, '').replace(',', '.');
-          return Number(c) || 0;
-        }
-        return 0;
-      };
-
-      for (const row of rows) {
-        // Obter os valores usando os nomes de coluna configurados
-        const mesVal = extractDateStr(row[config.colMes]);
-        const anoVal = extractDateStr(row[config.colAno] || row[config.colData]);
-        const dateVal = extractDateStr(row[config.colData]);
+      for (const v of vendas) {
+        if (!v.data_venda) continue;
         
-        // Verifica se a venda é do mês atual
+        // Verifica se a venda pertence ao mês/ano atual
         let isCurrentMonth = false;
-        
-        // Se temos uma string de data 10/08/2026
-        if (dateVal) {
-          const parts = dateVal.split(/[/.-]/);
-          if (parts.length >= 2) {
-             const m = parseInt(parts[1], 10) - 1;
-             const yPart = parts[2] && parts[2].length === 2 ? `20${parts[2]}` : parts[2];
-             const y = parseInt(yPart || "", 10);
-             if (m === currentMonth && (!y || y === currentYear)) {
-               isCurrentMonth = true;
-             }
-          }
-        }
-        
-        // Se temos colMes, ex: "AGOSTO" ou "08" ou data
-        if (!isCurrentMonth && mesVal) {
-          const mesNorm = normalize(mesVal);
-          const currentMonthNorm = normalize(monthNamesToMatch[currentMonth]);
-          const currentMonthNormNoAccent = normalize(monthNamesToMatch[currentMonth + 12]);
-          if (mesNorm === currentMonthNorm || mesNorm === currentMonthNormNoAccent) {
-            isCurrentMonth = true;
-          } else {
-             // Caso colMes seja a data
-             const parts = mesVal.split(/[/.-]/);
-             if (parts.length >= 2) {
-                const m = parseInt(parts[1], 10) - 1;
-                if (m === currentMonth) isCurrentMonth = true;
-             }
-          }
-        }
-        
-        // Vamos checar pelo menos se um bateu, se bater vamos ler VGV
-        if (!isCurrentMonth) {
-          // Talvez as colunas de datas estejam nulas, podemos tentar ver se há colAno e colMes explicitos?
-          // Para evitar pular vendas válidas, e se for tudo num mês só, podemos tentar parsing geral
-          // Se não houver coluna de data, podemos considerar tudo?
-          if (config.colData || config.colMes) {
-            continue; 
+        if (v.data_venda.startsWith(currentMonthPrefix)) {
+          isCurrentMonth = true;
+        } else {
+          // Trata formato DD/MM/YYYY
+          const parts = v.data_venda.split(/[/.-]/);
+          if (parts.length >= 3) {
+            const m = parseInt(parts[1], 10) - 1;
+            const y = parseInt(parts[2].length === 2 ? `20${parts[2]}` : parts[2], 10);
+            if (m === currentMonth && y === currentYear) {
+              isCurrentMonth = true;
+            }
           }
         }
 
-        // Pega valor da venda
-        const valVGV = extractNum(row[config.colVGV]);
-        if (valVGV <= 0) continue;
+        if (!isCurrentMonth) continue;
 
-        const corretor = row[config.colCorretor];
-        const gestor = row[config.colGestor];
+        // Ignora vendas ocultas ou canceladas/distratadas
+        if (v.venda_oculta) continue;
+        const st = normalize(v.status || "");
+        if (st.includes("distrat") || st.includes("cancel")) continue;
 
-        if (corretor && !isIgnoredName(String(corretor))) {
-          const cName = String(corretor).trim();
-          groupedCorretores[cName] = (groupedCorretores[cName] || 0) + valVGV;
+        const val = Number(v.valor_venda) || 0;
+        if (val <= 0) continue;
+
+        totalVgvMes += val;
+
+        if (v.corretor && !isIgnoredName(v.corretor)) {
+          const cName = v.corretor.trim();
+          groupedCorretores[cName] = (groupedCorretores[cName] || 0) + val;
         }
 
-        if (gestor && !isIgnoredName(String(gestor))) {
-          const gName = String(gestor).trim();
-          groupedGestores[gName] = (groupedGestores[gName] || 0) + valVGV;
+        if (v.gestor && !isIgnoredName(v.gestor)) {
+          const gName = v.gestor.trim();
+          groupedGestores[gName] = (groupedGestores[gName] || 0) + val;
         }
       }
 
@@ -490,7 +400,7 @@ export const placarService = {
           const novaPessoa = await placarService.savePessoa({
             nome,
             cargo,
-            unidade_id: "jd-goias", // fallback unit
+            unidade_id: "jd-goias",
             ativo: true
           });
           dbPessoas.push(novaPessoa);
@@ -507,6 +417,7 @@ export const placarService = {
       ];
       const periodoStr = `${monthNames[currentMonth]} DE ${currentYear}`;
 
+      // Limpa rankings do mês antes de reinserir
       await supabase.from("ranking_entries")
         .delete()
         .eq("periodo", periodoStr)
@@ -515,6 +426,7 @@ export const placarService = {
       let updated_corretores = 0;
       let updated_gestores = 0;
 
+      // Top 10 Corretores
       const corretoresSorted = Object.entries(groupedCorretores)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
@@ -536,6 +448,7 @@ export const placarService = {
         updated_corretores++;
       }
 
+      // Top 5 Gestores
       const gestoresSorted = Object.entries(groupedGestores)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
@@ -557,9 +470,23 @@ export const placarService = {
         updated_gestores++;
       }
 
-      return { updated_corretores, updated_gestores };
+      // Atualiza automaticamente o VGV Realizado do Mês na tabela config_metas
+      try {
+        const existingConfig = await placarService.getConfig();
+        if (existingConfig) {
+          await placarService.saveConfig({
+            meta_mensal_realizado: totalVgvMes,
+            meta_mensal_periodo: periodoStr,
+            meta_mensal_titulo: `Meta Mensal - ${periodoStr}`
+          });
+        }
+      } catch (cfgErr) {
+        console.warn("Aviso ao atualizar meta realizada:", cfgErr);
+      }
+
+      return { updated_corretores, updated_gestores, total_vgv: totalVgvMes };
     } catch (err) {
-      console.error("Erro na sincronização de vendas:", err);
+      console.error("Erro na sincronização de vendas do Cultura:", err);
       throw err;
     }
   },
@@ -648,12 +575,81 @@ export const placarService = {
     localStorage.setItem("lopes_pastas", JSON.stringify(filtered));
   },
 
-  syncPastasFromCultura: async (): Promise<{ updated_pastas: number, updated_rankings: number }> => {
+  // ─── Busca de Lançamentos do Cultura para Seleção ────────────────────────
+  getCulturaLancamentosDisponiveis: async (): Promise<Array<{ titulo: string; total_pastas: number }>> => {
+    try {
+      const { culturaService } = await import('./culturaService');
+      const filaPastas = await culturaService.getFilaPastas();
+      const counts: Record<string, number> = {};
+
+      for (const p of filaPastas) {
+        if (!p.lancamento) continue;
+        const lanc = p.lancamento.trim();
+        if (!lanc) continue;
+        counts[lanc] = (counts[lanc] || 0) + 1;
+      }
+
+      return Object.entries(counts)
+        .map(([titulo, total_pastas]) => ({ titulo, total_pastas }))
+        .sort((a, b) => b.total_pastas - a.total_pastas);
+    } catch (err) {
+      console.error("Erro ao buscar lançamentos disponíveis do Cultura:", err);
+      return [];
+    }
+  },
+
+  // ─── Sincronização da Meta do Mês do Cultura ──────────────────────────────
+  syncMetaFromCultura: async (): Promise<{ meta_valor: number; atualizado: boolean }> => {
+    try {
+      const { culturaService } = await import('./culturaService');
+      const metas = await culturaService.getMetasVendas();
+      const now = new Date();
+      const currentMonthStr = String(now.getMonth() + 1); // ex: "9"
+      const currentYearStr = String(now.getFullYear()); // ex: "2026"
+
+      // Filtra metas do mês e ano atual
+      const metasMes = metas.filter(m => String(m.ano) === currentYearStr && String(m.mes) === currentMonthStr);
+      let totalMeta = 0;
+
+      if (metasMes.length > 0) {
+        totalMeta = metasMes.reduce((acc, m) => acc + (Number(m.valor_meta) || 0), 0);
+      } else {
+        // Fallback: se ainda não houver meta mensal específica, busca a meta anual e divide por 12
+        const metasAnuais = metas.filter(m => String(m.ano) === currentYearStr && m.tipo === "ANUAL");
+        if (metasAnuais.length > 0) {
+          const totalAnual = metasAnuais.reduce((acc, m) => acc + (Number(m.valor_meta) || 0), 0);
+          totalMeta = Math.round(totalAnual / 12);
+        }
+      }
+
+      if (totalMeta > 0) {
+        const monthNames = [
+          "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+          "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
+        ];
+        const periodoStr = `${monthNames[now.getMonth()]} DE ${currentYearStr}`;
+
+        await placarService.saveConfig({
+          meta_mensal_valor: totalMeta,
+          meta_mensal_periodo: periodoStr,
+          meta_mensal_titulo: `Meta Mensal - ${periodoStr}`
+        });
+        return { meta_valor: totalMeta, atualizado: true };
+      }
+
+      return { meta_valor: 0, atualizado: false };
+    } catch (err) {
+      console.error("Erro ao sincronizar metas do Cultura:", err);
+      return { meta_valor: 0, atualizado: false };
+    }
+  },
+
+  syncPastasFromCultura: async (onlyActive: boolean = true): Promise<{ updated_pastas: number, updated_rankings: number }> => {
     try {
       const { culturaService } = await import('./culturaService');
       const filaPastas = await culturaService.getFilaPastas();
       
-      const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const normalize = (str: string) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
 
       const isIgnoredName = (name: string): boolean => {
         const norm = normalize(name);
@@ -665,6 +661,14 @@ export const placarService = {
         ];
         return ignored.some(ignoredName => norm.includes(ignoredName));
       };
+
+      // Pastas atualmente cadastradas no sistema
+      const dbPastas = await placarService.getPastas();
+      const activePastas = onlyActive ? dbPastas.filter(p => p.ativo) : dbPastas;
+
+      if (activePastas.length === 0) {
+        return { updated_pastas: 0, updated_rankings: 0 };
+      }
 
       // Group pastas by lancamento
       const grouped: Record<string, {
@@ -692,8 +696,7 @@ export const placarService = {
         }
       }
 
-      const dbPessoas = await placarService.getPessoas(undefined, false); // Fetch all to check who exists
-      const dbPastas = await placarService.getPastas();
+      const dbPessoas = await placarService.getPessoas(undefined, false);
       
       let updated_pastas = 0;
       let updated_rankings = 0;
@@ -701,15 +704,14 @@ export const placarService = {
       const getOrRegisterPessoa = async (nome: string, cargo: "corretor" | "gestor"): Promise<Pessoa | null> => {
         let match = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
         if (match) {
-          if (!match.ativo) return null; // Ignorar pessoas inativas (arquivadas)
+          if (!match.ativo) return null;
           return match;
         }
-        // Auto-register
         try {
           const novaPessoa = await placarService.savePessoa({
             nome,
             cargo,
-            unidade_id: "jd-goias", // fallback unit
+            unidade_id: "jd-goias",
             ativo: true
           });
           dbPessoas.push(novaPessoa);
@@ -720,26 +722,27 @@ export const placarService = {
         }
       };
 
-      for (const lancamento of Object.keys(grouped)) {
-        // Find or create Pasta
-        let pasta = dbPastas.find(p => p.titulo.toLowerCase() === lancamento.toLowerCase());
-        if (!pasta) {
-          pasta = await placarService.savePasta({
-            titulo: lancamento,
-            meta_pastas: 100, // Default goal
-            ativo: true
-          });
-          updated_pastas++;
-        }
+      // Itera APENAS sobre as pastas que o usuário escolheu acompanhar
+      for (const pasta of activePastas) {
+        // Encontra o grupo no Cultura com matching exato ou normalizado
+        const matchingLancamento = Object.keys(grouped).find(
+          l => l.toLowerCase() === pasta.titulo.toLowerCase() || normalize(l) === normalize(pasta.titulo)
+        );
 
-        // Delete old rankings for this pasta
+        // Deleta rankings anteriores desta pasta específica
         try {
           await supabase.from("ranking_pastas").delete().eq("pasta_id", pasta.id);
         } catch (e) {}
+
+        if (!matchingLancamento || !grouped[matchingLancamento]) {
+          continue;
+        }
+
+        updated_pastas++;
         
         // Insert new rankings - Corretores
-        const corretoresSorted = Object.entries(grouped[lancamento].corretores)
-          .sort((a, b) => b[1] - a[1]); // Sort by count descending
+        const corretoresSorted = Object.entries(grouped[matchingLancamento].corretores)
+          .sort((a, b) => b[1] - a[1]);
 
         let currentPos = 1;
         let lastCount = -1;
@@ -765,8 +768,8 @@ export const placarService = {
         }
 
         // Insert new rankings - Gestores
-        const gestoresSorted = Object.entries(grouped[lancamento].gestores)
-          .sort((a, b) => b[1] - a[1]); // Sort by count descending
+        const gestoresSorted = Object.entries(grouped[matchingLancamento].gestores)
+          .sort((a, b) => b[1] - a[1]);
 
         currentPos = 1;
         lastCount = -1;
@@ -797,6 +800,41 @@ export const placarService = {
       console.error("Erro na sincronização de pastas:", err);
       throw err;
     }
+  },
+
+  // ─── Sincronização Unificada Completa (Automação Total) ───────────────────
+  syncAllFromCultura: async (): Promise<{
+    vendas: { updated_corretores: number; updated_gestores: number; total_vgv: number };
+    metas: { meta_valor: number; atualizado: boolean };
+    pastas: { updated_pastas: number; updated_rankings: number };
+    timestamp: number;
+  }> => {
+    const vendasRes = await placarService.syncVendasFromCultura().catch(err => {
+      console.warn("Aviso ao auto-sincronizar vendas:", err);
+      return { updated_corretores: 0, updated_gestores: 0, total_vgv: 0 };
+    });
+
+    const metasRes = await placarService.syncMetaFromCultura().catch(err => {
+      console.warn("Aviso ao auto-sincronizar metas:", err);
+      return { meta_valor: 0, atualizado: false };
+    });
+
+    const pastasRes = await placarService.syncPastasFromCultura(true).catch(err => {
+      console.warn("Aviso ao auto-sincronizar pastas:", err);
+      return { updated_pastas: 0, updated_rankings: 0 };
+    });
+
+    const nowTs = Date.now();
+    try {
+      localStorage.setItem("lopes_last_auto_sync", String(nowTs));
+    } catch (e) {}
+
+    return {
+      vendas: vendasRes,
+      metas: metasRes,
+      pastas: pastasRes,
+      timestamp: nowTs
+    };
   },
 
   // ─── Ranking de Pastas ────────────────────────────────────────────────────
