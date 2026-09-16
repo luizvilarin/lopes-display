@@ -292,7 +292,11 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
                 <div style={{ position: "relative", zIndex: 2 }}>
                   <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 8, background: p.tag_color || "#E30613", color: "#fff", fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase" }}>{p.tag || "DESTAQUE"}</span>
                   <h2 style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 800, fontSize: 26, color: "#F0F2F8", letterSpacing: "-.02em", margin: "12px 0 6px", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>{p.title}</h2>
-                  <p style={{ color: "rgba(240,242,248,.85)", fontSize: 14, fontWeight: 500, margin: "0 0 18px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>{p.price} · {p.area}</p>
+                  {[p.price !== "—" ? p.price : "", p.area !== "—" ? p.area : ""].filter(Boolean).length > 0 && (
+                    <p style={{ color: "rgba(240,242,248,.85)", fontSize: 14, fontWeight: 500, margin: "0 0 18px", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>
+                      {[p.price !== "—" ? p.price : "", p.area !== "—" ? p.area : ""].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
                   <button className="btn" style={{ background: "rgba(255,255,255,.22)", color: "#fff", padding: "10px 20px", borderRadius: 9999, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.25)" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#E30613"; (e.currentTarget as HTMLElement).style.borderColor = "#E30613"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.22)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.25)"; }}
@@ -345,8 +349,8 @@ function ScreenStreaming({ imoveis, onOpen, config }: { imoveis: Imovel[]; onOpe
                 </div>
                 <div style={{ position: "absolute", bottom: 10, left: 10, right: 10, zIndex: 2 }}>
                   <div style={{ fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, color: "#F0F2F8", lineHeight: 1.25, marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.title}</div>
-                  <div style={{ color: "#E30613", fontWeight: 700, fontSize: 13 }}>{p.price}</div>
-                  <div style={{ color: "rgba(240,242,248,.60)", fontSize: 11, marginTop: 2 }}>{p.area}</div>
+                  {p.price && p.price !== "—" && <div style={{ color: "#E30613", fontWeight: 700, fontSize: 13 }}>{p.price}</div>}
+                  {p.area && p.area !== "—" && <div style={{ color: "rgba(240,242,248,.60)", fontSize: 11, marginTop: 2 }}>{p.area}</div>}
                 </div>
               </div>
             ))}

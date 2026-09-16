@@ -385,8 +385,12 @@ export function StreamingInterface() {
                 {/* Info */}
                 <div style={{ position: "absolute", bottom: 10, left: 10, right: 10, zIndex: 3 }}>
                   <div style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 700, fontSize: 14, color: "#F0F2F8", lineHeight: 1.25, marginBottom: 4 }}>{imovel.title}</div>
-                  <div style={{ color: "#E30613", fontWeight: 700, fontSize: 14, fontFamily: "'Barlow', sans-serif" }}>{imovel.price}</div>
-                  <div style={{ color: "#72788A", fontSize: 12, marginTop: 2 }}>{imovel.area} · {imovel.type}</div>
+                  {imovel.price && imovel.price !== "—" && (
+                    <div style={{ color: "#E30613", fontWeight: 700, fontSize: 14, fontFamily: "'Barlow', sans-serif" }}>{imovel.price}</div>
+                  )}
+                  {imovel.area && imovel.area !== "—" && (
+                    <div style={{ color: "#72788A", fontSize: 12, marginTop: 2 }}>{imovel.area}</div>
+                  )}
                 </div>
               </div>
             ))}

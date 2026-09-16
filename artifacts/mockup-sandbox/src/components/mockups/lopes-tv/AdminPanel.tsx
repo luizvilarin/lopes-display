@@ -233,6 +233,8 @@ function ImageDropzone({ value, onChange, label, maxWidth = 1024, maxHeight = 57
 function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClose }: { prop: Imovel; categories: string[]; unidades: Unidade[]; activeUnitId: string; onSave: (p: Imovel) => Promise<void>; onClose: () => void }) {
   const [draft, setDraft] = useState<Imovel>({
     ...prop,
+    price: prop.price && prop.price !== "—" ? prop.price : "",
+    area: prop.area && prop.area !== "—" ? prop.area : "",
     unidade_id: "Todas",
     category: prop.category || "Geral",
     gallery: prop.gallery || []
@@ -314,6 +316,29 @@ function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClo
                 <datalist id="cat-list">
                   {categories.map(c => <option key={c} value={c} />)}
                 </datalist>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label className="adm-label">Preço / Valor (Opcional)</label>
+                <input
+                  className="adm-input"
+                  type="text"
+                  placeholder="Ex: R$ 850.000 ou Consulte"
+                  value={draft.price === "—" ? "" : (draft.price || "")}
+                  onChange={e => up("price", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="adm-label">Metragem / Área (Opcional)</label>
+                <input
+                  className="adm-input"
+                  type="text"
+                  placeholder="Ex: 110m² a 150m²"
+                  value={draft.area === "—" ? "" : (draft.area || "")}
+                  onChange={e => up("area", e.target.value)}
+                />
               </div>
             </div>
 
@@ -472,6 +497,11 @@ function SectionImoveis({ imoveis, onSave, onDelete, activeUnit, unidades, activ
       tag_color: "#E30613",
       gradient: "linear-gradient(160deg,#1a2744,#2d3f6b)",
       category: "Geral",
+      price: "",
+      area: "",
+      rooms: "—",
+      garage: "—",
+      address: "Geral",
       image_url: "",
       gallery: [],
       video_url: "",
@@ -812,11 +842,20 @@ export function AdminPanel({ activeSection, activeUnitId }: { activeSection: str
 
   const handleSaveImovel = async (draft: Imovel) => {
     try {
-      if (draft.id) {
-        await placarService.updateImovel(draft.id, draft);
+      const cleanDraft: Imovel = {
+        ...draft,
+        price: (draft.price && draft.price.trim()) ? draft.price.trim() : "—",
+        area: (draft.area && draft.area.trim()) ? draft.area.trim() : "—",
+        rooms: (draft.rooms && draft.rooms.trim()) ? draft.rooms.trim() : "—",
+        garage: (draft.garage && draft.garage.trim()) ? draft.garage.trim() : "—",
+        address: (draft.category && draft.category.trim()) ? draft.category.trim() : (draft.address || "Geral")
+      };
+
+      if (cleanDraft.id) {
+        await placarService.updateImovel(cleanDraft.id, cleanDraft);
       } else {
         // Remove id para inserção
-        const { id, ...payload } = draft;
+        const { id, ...payload } = cleanDraft;
         await placarService.saveImovel(payload);
       }
       // Refresh local imoveis list

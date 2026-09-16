@@ -286,9 +286,11 @@ export function PlayerFullscreen() {
             fontWeight: 400,
           }}>{slide.subtitle}</p>
 
-          <div style={{ color: "#E30613", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "clamp(32px, 3.5vw, 48px)", letterSpacing: "-0.02em", marginBottom: 32 }}>
-            {slide.price}
-          </div>
+          {slide.price && slide.price !== "—" && (
+            <div style={{ color: "#E30613", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "clamp(32px, 3.5vw, 48px)", letterSpacing: "-0.02em", marginBottom: 32 }}>
+              {slide.price}
+            </div>
+          )}
 
           {/* Meta info */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const, animationDelay: "200ms" }}>
@@ -296,12 +298,14 @@ export function PlayerFullscreen() {
               { icon: "⬛", label: slide.area },
               { icon: "🛏", label: slide.rooms },
               { icon: "🚗", label: slide.garage },
-            ].map((item, i) => (
-              <div key={i} className="meta-item" style={{ animationDelay: `${i * 80 + 200}ms` }}>
-                <span style={{ fontSize: 16 }}>{item.icon}</span>
-                <span style={{ color: "#B8BDCC", fontSize: 14, fontWeight: 500 }}>{item.label}</span>
-              </div>
-            ))}
+            ]
+              .filter(item => item.label && item.label !== "—")
+              .map((item, i) => (
+                <div key={i} className="meta-item" style={{ animationDelay: `${i * 80 + 200}ms` }}>
+                  <span style={{ fontSize: 16 }}>{item.icon}</span>
+                  <span style={{ color: "#B8BDCC", fontSize: 14, fontWeight: 500 }}>{item.label}</span>
+                </div>
+              ))}
           </div>
         </div>
 

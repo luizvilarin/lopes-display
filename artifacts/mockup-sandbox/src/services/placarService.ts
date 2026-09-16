@@ -95,10 +95,18 @@ const serializeImovelPayload = (i: Partial<Imovel>) => {
     payload.description = desc;
   }
 
-  if (i.price !== undefined) payload.price = i.price;
-  if (i.area !== undefined) payload.area = i.area;
-  if (i.rooms !== undefined) payload.rooms = i.rooms;
-  if (i.garage !== undefined) payload.garage = i.garage;
+  if (i.price !== undefined) {
+    payload.price = (i.price && String(i.price).trim()) ? String(i.price).trim() : "—";
+  }
+  if (i.area !== undefined) {
+    payload.area = (i.area && String(i.area).trim()) ? String(i.area).trim() : "—";
+  }
+  if (i.rooms !== undefined) {
+    payload.rooms = (i.rooms && String(i.rooms).trim()) ? String(i.rooms).trim() : "—";
+  }
+  if (i.garage !== undefined) {
+    payload.garage = (i.garage && String(i.garage).trim()) ? String(i.garage).trim() : "—";
+  }
 
   return payload;
 };
@@ -1032,7 +1040,22 @@ export const placarService = {
     return (data ?? []).map(deserializeImovelRow);
   },
   saveImovel: async (i: Omit<Imovel, "id" | "criado_em">): Promise<Imovel> => {
-    const payload = serializeImovelPayload(i);
+    const payload = serializeImovelPayload({
+      price: "—",
+      area: "—",
+      rooms: "—",
+      garage: "—",
+      address: "Geral",
+      ...i
+    });
+
+    // Garantia absoluta contra violação de constraint NOT NULL no Postgres
+    if (!payload.price || !String(payload.price).trim()) payload.price = "—";
+    if (!payload.area || !String(payload.area).trim()) payload.area = "—";
+    if (!payload.rooms || !String(payload.rooms).trim()) payload.rooms = "—";
+    if (!payload.garage || !String(payload.garage).trim()) payload.garage = "—";
+    if (!payload.address || !String(payload.address).trim()) payload.address = i.category || "Geral";
+
     const { data, error } = await supabase.from("imoveis").insert(payload).select().single();
     if (error) {
       if (error.message?.includes("foreign key") || error.code === "23503") {
@@ -1047,6 +1070,18 @@ export const placarService = {
   },
   updateImovel: async (id: number, patch: Partial<Imovel>): Promise<Imovel> => {
     const payload = serializeImovelPayload(patch);
+    if ("price" in patch && (!payload.price || !String(payload.price).trim())) {
+      payload.price = "—";
+    }
+    if ("area" in patch && (!payload.area || !String(payload.area).trim())) {
+      payload.area = "—";
+    }
+    if ("rooms" in patch && (!payload.rooms || !String(payload.rooms).trim())) {
+      payload.rooms = "—";
+    }
+    if ("garage" in patch && (!payload.garage || !String(payload.garage).trim())) {
+      payload.garage = "—";
+    }
     const { data, error } = await supabase.from("imoveis").update(payload).eq("id", id).select().single();
     if (error) {
       if (error.message?.includes("foreign key") || error.code === "23503") {
