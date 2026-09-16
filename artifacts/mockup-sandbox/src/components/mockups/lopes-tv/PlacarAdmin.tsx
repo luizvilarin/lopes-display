@@ -12,6 +12,7 @@ import type {
 } from "@/types/placar";
 import { Icons } from "@/components/common/Icons";
 import { Slide, DEFAULT_SLIDES } from "@/services/onboardingData";
+import { n8nService } from "@/services/n8nService";
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 
@@ -466,10 +467,87 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
   const [cargoFilter, setCargoFilter] = useState<string>("todos");
   const [unidadeFilter, setUnidadeFilter] = useState<string>("todas");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [apenasSemFoto, setApenasSemFoto] = useState(false);
+
+  // Integração n8n & Alertas WhatsApp
+  const [n8nUrl, setN8nUrl] = useState(() => n8nService.getWebhookUrl());
+  const [showN8nConfig, setShowN8nConfig] = useState(false);
+  const [isTestingN8n, setIsTestingN8n] = useState(false);
+  const [isSendingAlert, setIsSendingAlert] = useState(false);
+  const [n8nFeedback, setN8nFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const handleSaveN8nUrl = () => {
+    n8nService.setWebhookUrl(n8nUrl);
+    setN8nFeedback({ type: "success", msg: "URL do Webhook do n8n salva no navegador!" });
+    setTimeout(() => setN8nFeedback(null), 4000);
+  };
+
+  const handleTestN8n = async () => {
+    if (!n8nUrl.trim()) {
+      setN8nFeedback({ type: "error", msg: "Informe a URL do webhook do n8n." });
+      return;
+    }
+    setIsTestingN8n(true);
+    setN8nFeedback(null);
+    try {
+      const res = await n8nService.testWebhook(n8nUrl.trim());
+      if (res.success) {
+        n8nService.setWebhookUrl(n8nUrl);
+        setN8nFeedback({ type: "success", msg: res.message });
+      } else {
+        setN8nFeedback({ type: "error", msg: res.message });
+      }
+    } catch (e: any) {
+      setN8nFeedback({ type: "error", msg: `Erro de conexão: ${e.message}` });
+    } finally {
+      setIsTestingN8n(false);
+    }
+  };
+
+  const handleTriggerPhotoAlert = async () => {
+    const semFoto = pessoas
+      .filter(p => p.ativo && (!p.foto_url || !p.foto_url.trim()))
+      .map(p => ({
+        id: p.id,
+        nome: p.nome,
+        cargo: p.cargo,
+        unidade_id: p.unidade_id
+      }));
+
+    if (semFoto.length === 0) {
+      alert("Excelente! Todas as pessoas ativas já possuem foto cadastrada.");
+      return;
+    }
+
+    if (!n8nUrl.trim()) {
+      setShowN8nConfig(true);
+      setN8nFeedback({ type: "error", msg: "Configure e salve a URL do Webhook do n8n antes de disparar o alerta." });
+      return;
+    }
+
+    if (!confirm(`Disparar alerta via n8n para WhatsApp com ${semFoto.length} colaboradores sem foto?`)) return;
+
+    setIsSendingAlert(true);
+    setN8nFeedback(null);
+    try {
+      const res = await n8nService.sendPhotoAlert(semFoto, n8nUrl.trim());
+      if (res.success) {
+        setN8nFeedback({ type: "success", msg: res.message });
+      } else {
+        setN8nFeedback({ type: "error", msg: res.message });
+      }
+    } catch (e: any) {
+      setN8nFeedback({ type: "error", msg: `Falha ao enviar: ${e.message}` });
+    } finally {
+      setIsSendingAlert(false);
+    }
+  };
 
   useEffect(() => {
     setUnidadeFilter(activeUnitId === "Todas" ? "todas" : activeUnitId);
   }, [activeUnitId]);
+
+  const totalSemFoto = pessoas.filter(p => p.ativo && (!p.foto_url || !p.foto_url.trim())).length;
 
   const filteredList = pessoas
     .filter(p => {
@@ -478,6 +556,7 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
     })
     .filter(p => (cargoFilter === "todos" ? true : p.cargo === cargoFilter))
     .filter(p => (unidadeFilter === "todas" ? true : p.unidade_id === unidadeFilter))
+    .filter(p => (apenasSemFoto ? (!p.foto_url || !p.foto_url.trim()) : true))
     .sort((a, b) => {
       const nameA = (a.nome || "").toLowerCase();
       const nameB = (b.nome || "").toLowerCase();
@@ -547,6 +626,172 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
             </button>
             <button className="pa-btn-primary" onClick={openAdd}>+ Novo</button>
           </div>
+        </div>
+
+        {/* Card Alerta de Fotos WhatsApp / n8n */}
+        <div style={{
+          background: "linear-gradient(135deg, rgba(37, 211, 102, 0.08) 0%, rgba(18, 140, 126, 0.04) 100%)",
+          border: "1px solid rgba(37, 211, 102, 0.25)",
+          borderRadius: 12,
+          padding: "16px 20px",
+          marginBottom: 20
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: "rgba(37, 211, 102, 0.2)",
+                color: "#25D366",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 18,
+                fontWeight: 700
+              }}>
+                💬
+              </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>Alerta de Fotos WhatsApp (n8n)</span>
+                  {totalSemFoto > 0 ? (
+                    <span style={{
+                      background: "rgba(239, 68, 68, 0.2)",
+                      color: "#f87171",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 12
+                    }}>
+                      📸 {totalSemFoto} sem foto
+                    </span>
+                  ) : (
+                    <span style={{
+                      background: "rgba(34, 197, 94, 0.2)",
+                      color: "#4ade80",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 12
+                    }}>
+                      ✓ 100% com foto
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
+                  Dispara notificação automatizada para seu fluxo n8n que avisa no WhatsApp sobre fotos pendentes para a TV.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                className="pa-btn-ghost"
+                onClick={() => setApenasSemFoto(prev => !prev)}
+                style={{
+                  fontSize: 12,
+                  borderColor: apenasSemFoto ? "#E30613" : "rgba(255,255,255,0.15)",
+                  color: apenasSemFoto ? "#fff" : "rgba(255,255,255,0.7)",
+                  background: apenasSemFoto ? "rgba(227, 6, 19, 0.2)" : "transparent"
+                }}
+              >
+                {apenasSemFoto ? "👁️ Mostrando apenas sem foto" : "Filtrar sem foto"}
+              </button>
+              <button
+                type="button"
+                className="pa-btn-ghost"
+                onClick={() => setShowN8nConfig(prev => !prev)}
+                style={{ fontSize: 12, borderColor: "rgba(255,255,255,0.15)" }}
+              >
+                ⚙️ {showN8nConfig ? "Fechar Config" : "Configurar Webhook"}
+              </button>
+              <button
+                type="button"
+                onClick={handleTriggerPhotoAlert}
+                disabled={isSendingAlert || totalSemFoto === 0}
+                style={{
+                  background: totalSemFoto === 0 ? "rgba(255,255,255,0.1)" : "#25D366",
+                  color: totalSemFoto === 0 ? "rgba(255,255,255,0.4)" : "#000",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: totalSemFoto === 0 ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "all 0.2s"
+                }}
+              >
+                {isSendingAlert ? "Disparando..." : `🚨 Disparar Alerta WhatsApp (${totalSemFoto})`}
+              </button>
+            </div>
+          </div>
+
+          {/* Gaveta de Configuração do Webhook */}
+          {showN8nConfig && (
+            <div style={{
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10
+            }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>
+                URL do Webhook do n8n (POST)
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  className="pa-input"
+                  value={n8nUrl}
+                  onChange={e => setN8nUrl(e.target.value)}
+                  placeholder="https://n8n.seuservidor.com/webhook/alerta-fotos"
+                  style={{ flex: 1, fontSize: 13 }}
+                />
+                <button
+                  type="button"
+                  className="pa-btn-ghost"
+                  onClick={handleSaveN8nUrl}
+                  style={{ whiteSpace: "nowrap", padding: "0 14px" }}
+                >
+                  Salvar
+                </button>
+                <button
+                  type="button"
+                  className="pa-btn-ghost"
+                  onClick={handleTestN8n}
+                  disabled={isTestingN8n}
+                  style={{ whiteSpace: "nowrap", borderColor: "#25D366", color: "#25D366", padding: "0 14px" }}
+                >
+                  {isTestingN8n ? "Testando..." : "Testar Conexão"}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.4 }}>
+                💡 O webhook envia um payload com a lista de colaboradores e um texto formatado em <code>mensagem_whatsapp</code> pronto para envio via Evolution API, Z-API ou Baileys no n8n.
+              </div>
+            </div>
+          )}
+
+          {n8nFeedback && (
+            <div style={{
+              marginTop: 12,
+              padding: "8px 12px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              background: n8nFeedback.type === "success" ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
+              color: n8nFeedback.type === "success" ? "#4ade80" : "#f87171",
+              border: `1px solid ${n8nFeedback.type === "success" ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
+            }}>
+              {n8nFeedback.msg}
+            </div>
+          )}
         </div>
 
         {/* Sub-tabs switcher */}
@@ -655,7 +900,14 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <Avatar pessoa={p} size={32} />
-                          <span style={{ fontWeight: 600 }}>{p.nome}</span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{ fontWeight: 600 }}>{p.nome}</span>
+                            {(!p.foto_url || !p.foto_url.trim()) && (
+                              <span style={{ fontSize: 10, color: "#f87171", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                📸 Sem foto
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td><span className={p.cargo === "gestor" ? "badge-gestor" : "badge-corretor"}>{p.cargo}</span></td>

@@ -47,10 +47,90 @@ export default async function handler(req, res) {
       if (!norm) return true;
       const ignored = [
         "socios", "socio", "socias", "socia", "gerentes", "diretor",
-        "sereno leao", "rafael badra", "deyvid rhussel", "jann costa", 
+        "sereno leao", "rafael badra", "deyvid rhussel", 
         "luziano", "jose soares", "murilo feitosa"
       ];
       return ignored.some(ignoredName => norm.includes(ignoredName));
+    };
+
+    const STOP_WORDS = new Set(["de", "da", "do", "dos", "das", "e", "filho", "junior", "jr", "neto", "sobrinho"]);
+
+    const KNOWN_ALIASES = {
+      "jannerson": "jann",
+      "jannerson silva costa": "jann costa",
+      "jakelline fernanda dos santos": "jakelline fernanda",
+      "sulamita saron dos santos silva costa": "sulamita saron alves cabral de oliveira",
+      "eduardo bueno pereira": "eduardo bueno",
+      "eurico dardeau de albuquerqur filho": "eurico dardeau",
+      "eurico dardeau de albuquerque filho": "eurico dardeau",
+      "iasmin bezerra de oliveira": "yasmin bezerra",
+    };
+
+    const getSignificantTokens = (nome) => {
+      return normalize(nome)
+        .split(/\s+/)
+        .filter(t => t.length > 1 && !STOP_WORDS.has(t));
+    };
+
+    const findPessoaMatch = (nomeCultura, dbPessoas) => {
+      const normCultura = normalize(nomeCultura);
+      if (!normCultura) return null;
+
+      // 1. Match exato normalizado
+      const exact = dbPessoas.find(p => p.ativo && normalize(p.nome) === normCultura);
+      if (exact) return exact;
+
+      // 2. Apelido / Mapeamento conhecido
+      const aliasTarget = KNOWN_ALIASES[normCultura];
+      if (aliasTarget) {
+        const aliasMatch = dbPessoas.find(p => p.ativo && normalize(p.nome).includes(aliasTarget));
+        if (aliasMatch) return aliasMatch;
+      }
+
+      // 3. Comparação por tokens
+      const tokensCultura = getSignificantTokens(nomeCultura);
+      if (tokensCultura.length === 0) return null;
+
+      const firstTokenCultura = tokensCultura[0];
+      const secondTokenCultura = tokensCultura.length > 1 ? tokensCultura[1] : "";
+
+      let bestMatch = null;
+      let highestScore = 0;
+
+      for (const p of dbPessoas) {
+        if (!p.ativo) continue;
+        const pTokens = getSignificantTokens(p.nome);
+        if (pTokens.length === 0) continue;
+
+        const firstTokenP = pTokens[0];
+        const firstMatches = firstTokenCultura === firstTokenP || 
+          (firstTokenCultura.startsWith(firstTokenP) && firstTokenP.length >= 4) ||
+          (firstTokenP.startsWith(firstTokenCultura) && firstTokenCultura.length >= 4);
+
+        if (!firstMatches) continue;
+
+        // Se os dois primeiros nomes batem (ex: "Jakelline Fernanda")
+        if (secondTokenCultura && pTokens.length > 1 && secondTokenCultura === pTokens[1]) {
+          return p;
+        }
+
+        let matchesCount = 0;
+        for (const tc of tokensCultura) {
+          if (pTokens.includes(tc)) matchesCount++;
+        }
+
+        const score = matchesCount / Math.max(tokensCultura.length, pTokens.length);
+        if (matchesCount >= 2 && score > highestScore) {
+          highestScore = score;
+          bestMatch = p;
+        }
+      }
+
+      if (bestMatch && highestScore >= 0.3) {
+        return bestMatch;
+      }
+
+      return null;
     };
 
     // ─────────────────────────────────────────────────────────────────
@@ -96,11 +176,30 @@ export default async function handler(req, res) {
       }
     }
 
-    const { data: dbPessoas } = await supabase.from('pessoas').select('*').eq('ativo', true);
-    const getPessoaId = (nome) => {
-      if (!dbPessoas) return null;
-      const match = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
-      return match ? match.id : null;
+    let { data: dbPessoas } = await supabase.from('pessoas').select('*').eq('ativo', true);
+    if (!dbPessoas) dbPessoas = [];
+
+    const getPessoaId = async (nome, cargo = "corretor") => {
+      let match = findPessoaMatch(nome, dbPessoas);
+      if (match) return match.id;
+
+      // Auto-criação na tabela pessoas para não perder vendas/posições
+      try {
+        console.log(`[Cron Sync] Auto-cadastrando nova pessoa: ${nome} (${cargo})`);
+        const { data: newP, error: pErr } = await supabase.from('pessoas').insert({
+          nome: nome.trim(),
+          cargo: cargo,
+          ativo: true
+        }).select().single();
+
+        if (newP) {
+          dbPessoas.push(newP);
+          return newP.id;
+        }
+      } catch (err) {
+        console.error(`[Cron Sync] Erro ao cadastrar pessoa ${nome}:`, err);
+      }
+      return null;
     };
 
     // Limpa rankings antigos do mês
@@ -114,7 +213,7 @@ export default async function handler(req, res) {
     const corretoresSorted = Object.entries(groupedCorretores).sort((a, b) => b[1] - a[1]).slice(0, 10);
     for (let i = 0; i < corretoresSorted.length; i++) {
       const [nome, val] = corretoresSorted[i];
-      const pId = getPessoaId(nome);
+      const pId = await getPessoaId(nome, "corretor");
       if (pId) {
         newEntries.push({
           pessoa_id: pId,
@@ -131,7 +230,7 @@ export default async function handler(req, res) {
     const gestoresSorted = Object.entries(groupedGestores).sort((a, b) => b[1] - a[1]).slice(0, 5);
     for (let i = 0; i < gestoresSorted.length; i++) {
       const [nome, val] = gestoresSorted[i];
-      const pId = getPessoaId(nome);
+      const pId = await getPessoaId(nome, "gestor");
       if (pId) {
         newEntries.push({
           pessoa_id: pId,
@@ -220,7 +319,7 @@ export default async function handler(req, res) {
         let currentPos = 1; let lastCount = -1;
         for (let i = 0; i < cSorted.length; i++) {
           const [nome, count] = cSorted[i];
-          const pId = getPessoaId(nome);
+          const pId = await getPessoaId(nome, "corretor");
           if (!pId) continue;
           if (count !== lastCount) { currentPos = i + 1; lastCount = count; }
           newPastaEntries.push({ pasta_id: pasta.id, pessoa_id: pId, categoria: "corretor", posicao: currentPos, quantidade_pastas: count, ativo: true });
@@ -230,7 +329,7 @@ export default async function handler(req, res) {
         currentPos = 1; lastCount = -1;
         for (let i = 0; i < gSorted.length; i++) {
           const [nome, count] = gSorted[i];
-          const pId = getPessoaId(nome);
+          const pId = await getPessoaId(nome, "gestor");
           if (!pId) continue;
           if (count !== lastCount) { currentPos = i + 1; lastCount = count; }
           newPastaEntries.push({ pasta_id: pasta.id, pessoa_id: pId, categoria: "gestor", posicao: currentPos, quantidade_pastas: count, ativo: true });
@@ -243,6 +342,85 @@ export default async function handler(req, res) {
       }
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // 4. VERIFICAÇÃO DE FOTOS E DISPARO DE ALERTA N8N
+    // ─────────────────────────────────────────────────────────────────
+    let n8nAlertResult = null;
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
+    if (n8nWebhookUrl && newEntries.length > 0) {
+      try {
+        const rankingPessoaIds = newEntries.map(e => e.pessoa_id);
+        const { data: rankingPessoasCompletas } = await supabase
+          .from('pessoas')
+          .select('id, nome, cargo, foto_url')
+          .in('id', rankingPessoaIds);
+
+        const pessoasSemFoto = (rankingPessoasCompletas || [])
+          .filter(p => !p.foto_url || p.foto_url.trim() === '')
+          .map(p => {
+            const entry = newEntries.find(e => e.pessoa_id === p.id);
+            return {
+              id: p.id,
+              nome: p.nome,
+              cargo: p.cargo,
+              posicao: entry ? entry.posicao : undefined,
+              valor_vgv: entry ? entry.valor : undefined
+            };
+          });
+
+        if (pessoasSemFoto.length > 0) {
+          console.log(`[Cron Sync] Disparando alerta n8n para ${pessoasSemFoto.length} pessoas sem foto...`);
+          const dataHora = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          let msg = `🚨 *Lopes Display — Alerta de Fotos Pendentes* 📸\n`;
+          msg += `_Verificação automática em ${dataHora}_\n\n`;
+          msg += `Identificamos *${pessoasSemFoto.length} pessoas* no ranking que ainda estão *sem foto* na TV:\n\n`;
+
+          const cSem = pessoasSemFoto.filter(p => p.cargo === "corretor");
+          const gSem = pessoasSemFoto.filter(p => p.cargo === "gestor");
+
+          if (cSem.length > 0) {
+            msg += `🏅 *CORRETORES:*\n`;
+            cSem.forEach(p => {
+              msg += `• [${p.posicao}º Lugar] *${p.nome}*\n`;
+            });
+            msg += `\n`;
+          }
+          if (gSem.length > 0) {
+            msg += `👔 *GESTORES:*\n`;
+            gSem.forEach(p => {
+              msg += `• [${p.posicao}º Lugar] *${p.nome}*\n`;
+            });
+            msg += `\n`;
+          }
+          msg += `👉 *Cadastre as fotos no painel:* https://lopes-display.vercel.app/admin`;
+
+          const n8nResp = await fetch(n8nWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'alerta_pessoas_sem_foto',
+              origem: 'Lopes Digital Display Cron',
+              timestamp: new Date().toISOString(),
+              total_sem_foto: pessoasSemFoto.length,
+              pessoas: pessoasSemFoto,
+              mensagem_whatsapp: msg
+            })
+          });
+
+          if (n8nResp.ok) {
+            n8nAlertResult = `Alerta disparado com sucesso para ${pessoasSemFoto.length} pessoas sem foto.`;
+          } else {
+            n8nAlertResult = `Falha ao disparar n8n: HTTP ${n8nResp.status}`;
+          }
+        } else {
+          n8nAlertResult = 'Todas as pessoas do ranking possuem foto cadastrada.';
+        }
+      } catch (n8nErr) {
+        console.warn("[Cron Sync] Erro ao enviar webhook n8n:", n8nErr);
+        n8nAlertResult = `Erro n8n: ${n8nErr.message}`;
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Sincronização Cron executada com sucesso!',
@@ -252,7 +430,8 @@ export default async function handler(req, res) {
         vgv_total_mes: totalVgvMes,
         ranking_vendas_inseridos: newEntries.length,
         pastas_ativas_atualizadas: dbPastas ? dbPastas.length : 0,
-        ranking_pastas_inseridos: rankingsPastasCount
+        ranking_pastas_inseridos: rankingsPastasCount,
+        n8n_alerta: n8nAlertResult
       }
     });
 

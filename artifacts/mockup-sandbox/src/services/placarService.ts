@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import type { Unidade, Pessoa, ConfigMetas, RankingEntry, PrimeiraVenda, Pasta, RankingPastaEntry } from "../types/placar";
+import { n8nService } from "./n8nService";
 
 export function generateQRCodeUrl(link: string): string {
   if (!link || !link.trim()) return "";
@@ -336,10 +337,90 @@ export const placarService = {
         if (!norm) return true;
         const ignored = [
           "socios", "socio", "socias", "socia", "gerentes", "diretor",
-          "sereno leao", "rafael badra", "deyvid rhussel", "jann costa", 
+          "sereno leao", "rafael badra", "deyvid rhussel", 
           "luziano", "jose soares", "murilo feitosa"
         ];
         return ignored.some(ignoredName => norm.includes(ignoredName));
+      };
+
+      const STOP_WORDS = new Set(["de", "da", "do", "dos", "das", "e", "filho", "junior", "jr", "neto", "sobrinho"]);
+
+      const KNOWN_ALIASES: Record<string, string> = {
+        "jannerson": "jann",
+        "jannerson silva costa": "jann costa",
+        "jakelline fernanda dos santos": "jakelline fernanda",
+        "sulamita saron dos santos silva costa": "sulamita saron alves cabral de oliveira",
+        "eduardo bueno pereira": "eduardo bueno",
+        "eurico dardeau de albuquerqur filho": "eurico dardeau",
+        "eurico dardeau de albuquerque filho": "eurico dardeau",
+        "iasmin bezerra de oliveira": "yasmin bezerra",
+      };
+
+      const getSignificantTokens = (nome: string): string[] => {
+        return normalize(nome)
+          .split(/\s+/)
+          .filter(t => t.length > 1 && !STOP_WORDS.has(t));
+      };
+
+      const findPessoaMatch = (nomeCultura: string, dbPessoas: Pessoa[]): Pessoa | null => {
+        const normCultura = normalize(nomeCultura);
+        if (!normCultura) return null;
+
+        // 1. Match exato normalizado
+        const exact = dbPessoas.find(p => p.ativo && normalize(p.nome) === normCultura);
+        if (exact) return exact;
+
+        // 2. Apelido / Mapeamento conhecido
+        const aliasTarget = KNOWN_ALIASES[normCultura];
+        if (aliasTarget) {
+          const aliasMatch = dbPessoas.find(p => p.ativo && normalize(p.nome).includes(aliasTarget));
+          if (aliasMatch) return aliasMatch;
+        }
+
+        // 3. Comparação por tokens
+        const tokensCultura = getSignificantTokens(nomeCultura);
+        if (tokensCultura.length === 0) return null;
+
+        const firstTokenCultura = tokensCultura[0];
+        const secondTokenCultura = tokensCultura.length > 1 ? tokensCultura[1] : "";
+
+        let bestMatch: Pessoa | null = null;
+        let highestScore = 0;
+
+        for (const p of dbPessoas) {
+          if (!p.ativo) continue;
+          const pTokens = getSignificantTokens(p.nome);
+          if (pTokens.length === 0) continue;
+
+          const firstTokenP = pTokens[0];
+          const firstMatches = firstTokenCultura === firstTokenP || 
+            (firstTokenCultura.startsWith(firstTokenP) && firstTokenP.length >= 4) ||
+            (firstTokenP.startsWith(firstTokenCultura) && firstTokenCultura.length >= 4);
+
+          if (!firstMatches) continue;
+
+          // Se os dois primeiros nomes batem (ex: "Jakelline Fernanda")
+          if (secondTokenCultura && pTokens.length > 1 && secondTokenCultura === pTokens[1]) {
+            return p;
+          }
+
+          let matchesCount = 0;
+          for (const tc of tokensCultura) {
+            if (pTokens.includes(tc)) matchesCount++;
+          }
+
+          const score = matchesCount / Math.max(tokensCultura.length, pTokens.length);
+          if (matchesCount >= 2 && score > highestScore) {
+            highestScore = score;
+            bestMatch = p;
+          }
+        }
+
+        if (bestMatch && highestScore >= 0.3) {
+          return bestMatch;
+        }
+
+        return null;
       };
 
       const groupedCorretores: Record<string, number> = {};
@@ -349,12 +430,10 @@ export const placarService = {
       for (const v of vendas) {
         if (!v.data_venda) continue;
         
-        // Verifica se a venda pertence ao mês/ano atual
         let isCurrentMonth = false;
         if (v.data_venda.startsWith(currentMonthPrefix)) {
           isCurrentMonth = true;
         } else {
-          // Trata formato DD/MM/YYYY
           const parts = v.data_venda.split(/[/.-]/);
           if (parts.length >= 3) {
             const m = parseInt(parts[1], 10) - 1;
@@ -367,7 +446,6 @@ export const placarService = {
 
         if (!isCurrentMonth) continue;
 
-        // Ignora vendas ocultas ou canceladas/distratadas
         if (v.venda_oculta) continue;
         const st = normalize(v.status || "");
         if (st.includes("distrat") || st.includes("cancel")) continue;
@@ -391,11 +469,12 @@ export const placarService = {
       const dbPessoas = await placarService.getPessoas(undefined, false);
 
       const getOrRegisterPessoa = async (nome: string, cargo: "corretor" | "gestor"): Promise<Pessoa | null> => {
-        let match = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
+        let match = findPessoaMatch(nome, dbPessoas);
         if (match) {
           if (!match.ativo) return null;
           return match;
         }
+        // Auto-criação obrigatória: se não encontrou correspondência, cadastra a pessoa no banco!
         try {
           const novaPessoa = await placarService.savePessoa({
             nome,
@@ -482,6 +561,32 @@ export const placarService = {
         }
       } catch (cfgErr) {
         console.warn("Aviso ao atualizar meta realizada:", cfgErr);
+      }
+
+      // Verificação automática de pessoas sem foto no ranking para alerta n8n
+      try {
+        const webhookUrl = n8nService.getWebhookUrl();
+        if (webhookUrl) {
+          const freshRankings = await placarService.getRankings();
+          const rankingMensal = freshRankings.filter(r => r.tipo === "mensal" && r.periodo === periodoStr);
+          const pessoasSemFoto = rankingMensal
+            .filter(r => r.pessoa && (!r.pessoa.foto_url || !r.pessoa.foto_url.trim()))
+            .map(r => ({
+              id: r.pessoa_id,
+              nome: r.pessoa!.nome,
+              cargo: (r.pessoa!.cargo as "corretor" | "gestor") || "corretor",
+              posicao: r.posicao,
+              tipo_ranking: `Top ${r.categoria === "corretores" ? 10 : 5} ${r.categoria}`,
+              valor_vgv: r.valor
+            }));
+
+          if (pessoasSemFoto.length > 0) {
+            console.log(`[Placar] Disparando alerta n8n para ${pessoasSemFoto.length} pessoas sem foto...`);
+            await n8nService.sendPhotoAlert(pessoasSemFoto, webhookUrl);
+          }
+        }
+      } catch (alertErr) {
+        console.warn("Aviso ao disparar webhook n8n pós-sync:", alertErr);
       }
 
       return { updated_corretores, updated_gestores, total_vgv: totalVgvMes };
