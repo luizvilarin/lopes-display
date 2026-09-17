@@ -446,6 +446,8 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
   const [modal, setModal] = useState<Partial<Pessoa> | null>(null);
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isDeduplicating, setIsDeduplicating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -460,6 +462,20 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
       alert("Erro ao sincronizar. Verifique o console.");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleDeduplicate = async () => {
+    if (!confirm("Executar unificação inteligente de pessoas duplicadas? O sistema mesclará cadastros redundantes mantendo fotos, histórico e dados de rankings no cadastro principal.")) return;
+    setIsDeduplicating(true);
+    try {
+      const res = await placarService.deduplicatePessoas();
+      alert(`Unificação concluída com sucesso!\n${res.mergedCount} cadastros duplicados foram unificados.`);
+      onChange();
+    } catch (err: any) {
+      alert("Erro ao unificar duplicados: " + (err?.message || "Erro desconhecido"));
+    } finally {
+      setIsDeduplicating(false);
     }
   };
 
@@ -557,6 +573,12 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
     .filter(p => (cargoFilter === "todos" ? true : p.cargo === cargoFilter))
     .filter(p => (unidadeFilter === "todas" ? true : p.unidade_id === unidadeFilter))
     .filter(p => (apenasSemFoto ? (!p.foto_url || !p.foto_url.trim()) : true))
+    .filter(p => {
+      if (!searchTerm.trim()) return true;
+      const term = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const name = (p.nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      return name.includes(term);
+    })
     .sort((a, b) => {
       const nameA = (a.nome || "").toLowerCase();
       const nameB = (b.nome || "").toLowerCase();
@@ -618,8 +640,17 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
           <div style={{ display: "flex", gap: 8 }}>
             <button 
               className="pa-btn-ghost" 
+              onClick={handleDeduplicate}
+              disabled={isDeduplicating || isSyncing}
+              style={{ borderColor: "rgba(16, 185, 129, 0.35)", color: "#10b981", display: "flex", alignItems: "center", gap: 6 }}
+              title="Mesclar cadastros redundantes preservando fotos e dados"
+            >
+              {isDeduplicating ? "Mesclando..." : "🧹 Mesclar Duplicados"}
+            </button>
+            <button 
+              className="pa-btn-ghost" 
               onClick={handleSync}
-              disabled={isSyncing}
+              disabled={isSyncing || isDeduplicating}
               style={{ borderColor: "rgba(99,102,241,.35)", color: "#818cf8" }}
             >
               {isSyncing ? "Sincronizando..." : "🔄 Sincronizar Cultura"}
@@ -829,8 +860,44 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
           background: "rgba(255,255,255,0.03)", 
           padding: 12, 
           borderRadius: 8, 
-          border: "1px solid rgba(255,255,255,0.05)" 
+          border: "1px solid rgba(255,255,255,0.05)",
+          alignItems: "flex-end"
         }}>
+          {/* Busca por Nome */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 220px", minWidth: 200 }}>
+            <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600, textTransform: "uppercase" }}>Buscar por Nome</label>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input 
+                type="text"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Filtrar por nome do colaborador..."
+                className="pa-input"
+                style={{ padding: "6px 30px 6px 12px", fontSize: 13, height: 34, width: "100%" }}
+              />
+              {searchTerm && (
+                <button 
+                  type="button" 
+                  onClick={() => setSearchTerm("")}
+                  style={{ 
+                    position: "absolute", 
+                    right: 8, 
+                    background: "none", 
+                    border: "none", 
+                    color: "rgba(255,255,255,0.5)", 
+                    cursor: "pointer", 
+                    fontSize: 12, 
+                    padding: "2px 6px",
+                    borderRadius: 4
+                  }}
+                  title="Limpar busca"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Cargo */}
           <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 150 }}>
             <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600, textTransform: "uppercase" }}>Cargo</label>

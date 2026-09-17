@@ -237,7 +237,8 @@ function PropertyModal({ prop, categories, unidades, activeUnitId, onSave, onClo
     area: prop.area && prop.area !== "—" ? prop.area : "",
     unidade_id: "Todas",
     category: prop.category || "Geral",
-    gallery: prop.gallery || []
+    gallery: prop.gallery || [],
+    description: (prop.description || "").replace(/__(BANNER|MATERIALS|GALLERY)__:[\s\S]*?(?=(\n__(BANNER|MATERIALS|GALLERY)__:|$))/g, "").trim()
   });
   const [saving, setSaving] = useState(false);
   const [newGalUrl, setNewGalUrl] = useState("");

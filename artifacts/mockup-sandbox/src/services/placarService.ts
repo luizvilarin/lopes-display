@@ -55,12 +55,16 @@ export const MOCK_UNIDADES: Unidade[] = [
 // ─── Imóvel Payload Serializer & Deserializer ─────────────────────────────────
 
 const serializeImovelPayload = (i: Partial<Imovel>) => {
-  let desc = i.description || "";
-  if (i.banner_url) {
-    desc = desc ? `${desc}\n__BANNER__:${i.banner_url}` : `__BANNER__:${i.banner_url}`;
+  let rawDesc = i.description || "";
+  // Limpa quaisquer tags pré-existentes para não duplicar nem poluir a descrição humana
+  let cleanUserDesc = rawDesc.replace(/__(BANNER|MATERIALS|GALLERY)__:[\s\S]*?(?=(\n__(BANNER|MATERIALS|GALLERY)__:|$))/g, "").trim();
+
+  let desc = cleanUserDesc;
+  if (i.banner_url && i.banner_url.trim()) {
+    desc = desc ? `${desc}\n__BANNER__:${i.banner_url.trim()}` : `__BANNER__:${i.banner_url.trim()}`;
   }
-  if (i.materials_url) {
-    desc = desc ? `${desc}\n__MATERIALS__:${i.materials_url}` : `__MATERIALS__:${i.materials_url}`;
+  if (i.materials_url && i.materials_url.trim()) {
+    desc = desc ? `${desc}\n__MATERIALS__:${i.materials_url.trim()}` : `__MATERIALS__:${i.materials_url.trim()}`;
   }
   if (i.gallery && Array.isArray(i.gallery) && i.gallery.length > 0) {
     desc = desc ? `${desc}\n__GALLERY__:${JSON.stringify(i.gallery)}` : `__GALLERY__:${JSON.stringify(i.gallery)}`;
@@ -112,40 +116,37 @@ const serializeImovelPayload = (i: Partial<Imovel>) => {
 };
 
 const deserializeImovelRow = (row: any): Imovel => {
-  let cleanDesc = row.description || "";
+  const fullDesc = row.description || "";
   let gallery: string[] = row.gallery || [];
   let bannerUrl: string | undefined = row.banner_url || undefined;
   let materialsUrl: string | undefined = undefined;
 
-  if (cleanDesc.includes("__MATERIALS__:")) {
-    const parts = cleanDesc.split("__MATERIALS__:");
-    const subParts = (parts[1] || "").split("\n__GALLERY__:");
-    const bannerParts = subParts[0].split("\n__BANNER__:");
-    materialsUrl = bannerParts[0].trim();
-    if (bannerParts[1]) bannerUrl = bannerParts[1].trim();
-    cleanDesc = parts[0].trim();
-    if (subParts[1]) {
-      try {
-        gallery = JSON.parse(subParts[1]);
-      } catch (e) {}
-    }
-  } else if (cleanDesc.includes("__BANNER__:")) {
-    const parts = cleanDesc.split("__BANNER__:");
-    const subParts = (parts[1] || "").split("\n__GALLERY__:");
-    bannerUrl = subParts[0].trim();
-    cleanDesc = parts[0].trim();
-    if (subParts[1]) {
-      try {
-        gallery = JSON.parse(subParts[1]);
-      } catch (e) {}
-    }
-  } else if (cleanDesc.includes("__GALLERY__:")) {
-    const parts = cleanDesc.split("__GALLERY__:");
-    cleanDesc = parts[0].trim();
-    try {
-      gallery = JSON.parse(parts[1]);
-    } catch (e) {}
+  // 1. Extrai __BANNER__:
+  const bannerMatch = fullDesc.match(/__BANNER__:([\s\S]*?)(?=(\n__(BANNER|MATERIALS|GALLERY)__:|$))/);
+  if (bannerMatch && bannerMatch[1]) {
+    bannerUrl = bannerMatch[1].trim();
   }
+
+  // 2. Extrai __MATERIALS__:
+  const materialsMatch = fullDesc.match(/__MATERIALS__:([\s\S]*?)(?=(\n__(BANNER|MATERIALS|GALLERY)__:|$))/);
+  if (materialsMatch && materialsMatch[1]) {
+    materialsUrl = materialsMatch[1].trim();
+  }
+
+  // 3. Extrai __GALLERY__:
+  const galleryMatch = fullDesc.match(/__GALLERY__:([\s\S]*?)(?=(\n__(BANNER|MATERIALS|GALLERY)__:|$))/);
+  if (galleryMatch && galleryMatch[1]) {
+    try {
+      gallery = JSON.parse(galleryMatch[1].trim());
+    } catch (e) {
+      console.warn("Erro ao fazer parse da galeria:", e);
+    }
+  }
+
+  // 4. Limpa todas as tags para obter a descrição humana pura
+  const cleanDesc = fullDesc
+    .replace(/__(BANNER|MATERIALS|GALLERY)__:[\s\S]*?(?=(\n__(BANNER|MATERIALS|GALLERY)__:|$))/g, "")
+    .trim();
   
   // Tenta extrair o link original dos materiais do qr_code_url se não houver tag
   if (!materialsUrl && row.qr_code_url && row.qr_code_url.includes("data=")) {
@@ -184,6 +185,158 @@ const deserializeImovelRow = (row: any): Imovel => {
   };
 };
 
+// ─── Inteligência de Correspondência de Nomes e Desduplicação ─────────────────
+
+export const normalizeName = (str: string) => 
+  str ? String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+
+export const NAME_STOP_WORDS = new Set(["de", "da", "do", "dos", "das", "e", "filho", "junior", "jr", "neto", "sobrinho"]);
+
+export const KNOWN_PERSON_ALIASES: Record<string, string> = {
+  "jannerson": "jann",
+  "jannerson silva costa": "jann costa",
+  "jakelline fernanda dos santos": "jakelline fernanda",
+  "sulamita saron dos santos silva costa": "sulamita saron alves cabral de oliveira",
+  "sulamita cabral": "sulamita saron alves cabral de oliveira",
+  "eduardo bueno pereira": "eduardo bueno",
+  "eurico dardeau de albuquerqur filho": "eurico dardeau",
+  "eurico dardeau de albuquerque filho": "eurico dardeau",
+  "iasmin bezerra de oliveira": "yasmin bezerra",
+};
+
+export const getPersonTokens = (nome: string): string[] => {
+  return normalizeName(nome)
+    .split(/\s+/)
+    .filter(t => t.length > 1 && !NAME_STOP_WORDS.has(t));
+};
+
+export const areDirectCompatiblePersons = (nameA: string, nameB: string, allPeople: Pessoa[]): boolean => {
+  const normA = normalizeName(nameA);
+  const normB = normalizeName(nameB);
+
+  if (!normA || !normB) return false;
+  if (normA === normB) return true;
+
+  if (KNOWN_PERSON_ALIASES[normA] === normB || KNOWN_PERSON_ALIASES[normB] === normA) return true;
+  if (KNOWN_PERSON_ALIASES[normA] && normalizeName(KNOWN_PERSON_ALIASES[normA]) === normB) return true;
+  if (KNOWN_PERSON_ALIASES[normB] && normalizeName(KNOWN_PERSON_ALIASES[normB]) === normA) return true;
+
+  const tA = getPersonTokens(normA);
+  const tB = getPersonTokens(normB);
+  if (tA.length === 0 || tB.length === 0) return false;
+
+  // Primeiro nome deve ser idêntico ou prefixo claro (>= 4 letras)
+  if (tA[0] !== tB[0] && !tA[0].startsWith(tB[0]) && !tB[0].startsWith(tA[0])) return false;
+
+  const [shorter, longer, nameShort] = tA.length <= tB.length ? [tA, tB, nameA] : [tB, tA, nameB];
+  
+  if (!shorter.every(t => longer.includes(t))) {
+    return false;
+  }
+
+  // Se o menor possui apenas 1 token, valida se há ambiguidade na empresa
+  if (shorter.length === 1) {
+    const singleToken = shorter[0];
+    const multiTokenPeople = allPeople.filter(p => {
+      const pTokens = getPersonTokens(p.nome);
+      return pTokens.length > 1 && (pTokens[0] === singleToken || pTokens[0].startsWith(singleToken) || singleToken.startsWith(pTokens[0]));
+    });
+
+    const distinctFamilies = new Set(multiTokenPeople.map(p => {
+      const pToks = getPersonTokens(p.nome);
+      return pToks.slice(0, 2).join(" ");
+    }));
+
+    if (distinctFamilies.size > 1) {
+      return false; // Ambíguo
+    }
+  }
+
+  // Se o menor possui 2 tokens (ex: "Ana Clara"), verifica se há conflito de sobrenomes distintos
+  if (shorter.length === 2) {
+    const prefix = shorter.slice(0, 2).join(" ");
+    const candidates = allPeople.filter(p => {
+      const pToks = getPersonTokens(p.nome);
+      return pToks.length >= 2 && pToks.slice(0, 2).join(" ") === prefix;
+    });
+
+    const candidateSurnames = new Set<string>();
+    candidates.forEach(c => {
+      const cToks = getPersonTokens(c.nome);
+      if (cToks.length > 2) {
+        candidateSurnames.add(cToks.slice(2).join(" "));
+      }
+    });
+
+    if (candidateSurnames.size > 1 && getPersonTokens(nameShort).length === 2) {
+      return false; // Ambíguo
+    }
+  }
+
+  return true;
+};
+
+export const findPessoaMatch = (nomeCultura: string, dbPessoas: Pessoa[], onlyActive: boolean = true): Pessoa | null => {
+  const normCultura = normalizeName(nomeCultura);
+  if (!normCultura) return null;
+
+  const pool = onlyActive ? dbPessoas.filter(p => p.ativo) : dbPessoas;
+
+  // 1. Match exato normalizado
+  const exact = pool.find(p => normalizeName(p.nome) === normCultura);
+  if (exact) return exact;
+
+  // 2. Apelido / Mapeamento conhecido
+  const aliasTarget = KNOWN_PERSON_ALIASES[normCultura];
+  if (aliasTarget) {
+    const aliasMatch = pool.find(p => normalizeName(p.nome).includes(aliasTarget));
+    if (aliasMatch) return aliasMatch;
+  }
+
+  // 3. Comparação inteligente por tokens
+  const tokensCultura = getPersonTokens(nomeCultura);
+  if (tokensCultura.length === 0) return null;
+
+  const firstTokenCultura = tokensCultura[0];
+  const secondTokenCultura = tokensCultura.length > 1 ? tokensCultura[1] : "";
+
+  let bestMatch: Pessoa | null = null;
+  let highestScore = 0;
+
+  for (const p of pool) {
+    const pTokens = getPersonTokens(p.nome);
+    if (pTokens.length === 0) continue;
+
+    const firstTokenP = pTokens[0];
+    const firstMatches = firstTokenCultura === firstTokenP || 
+      (firstTokenCultura.startsWith(firstTokenP) && firstTokenP.length >= 4) ||
+      (firstTokenP.startsWith(firstTokenCultura) && firstTokenCultura.length >= 4);
+
+    if (!firstMatches) continue;
+
+    if (secondTokenCultura && pTokens.length > 1 && secondTokenCultura === pTokens[1]) {
+      return p;
+    }
+
+    let matchesCount = 0;
+    for (const tc of tokensCultura) {
+      if (pTokens.includes(tc)) matchesCount++;
+    }
+
+    const score = matchesCount / Math.max(tokensCultura.length, pTokens.length);
+    if (matchesCount >= 2 && score > highestScore) {
+      highestScore = score;
+      bestMatch = p;
+    }
+  }
+
+  if (bestMatch && highestScore >= 0.3) {
+    return bestMatch;
+  }
+
+  return null;
+};
+
 export const placarService = {
   // ─── Unidades ─────────────────────────────────────────────────────────────
   getUnidades: async (): Promise<Unidade[]> => {
@@ -203,6 +356,15 @@ export const placarService = {
     return data ?? [];
   },
   savePessoa: async (p: Omit<Pessoa, "id" | "criado_em">): Promise<Pessoa> => {
+    // Previne inserção acidental se já existir pessoa equivalente
+    const all = await placarService.getPessoas(undefined, false);
+    const existing = findPessoaMatch(p.nome, all, false);
+    if (existing) {
+      return await placarService.updatePessoa(existing.id, {
+        ...p,
+        ativo: p.ativo !== undefined ? p.ativo : true
+      });
+    }
     const { data, error } = await supabase.from("pessoas").insert(p).select().single();
     if (error) throw error;
     return data;
@@ -225,48 +387,183 @@ export const placarService = {
       
       let added = 0;
       let updated = 0;
-      
-      const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
       for (const c of corretores) {
         if (!c.nome_completo) continue;
         
-        // Match unit based on string
         let unitId = "jd-goias"; // fallback
         if (c.loja) {
-          const matchUnit = unidades.find(u => normalize(u.nome).includes(normalize(c.loja)));
+          const matchUnit = unidades.find(u => normalizeName(u.nome).includes(normalizeName(c.loja)));
           if (matchUnit) unitId = matchUnit.id;
         }
 
         const isActive = c.status_ativo === "Ativo";
         const cargo = (c.cargo && c.cargo.toLowerCase().includes("gestor")) ? "gestor" : "corretor";
 
-        const existing = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(c.nome_completo));
+        // Busca inteligente anti-duplicidade
+        const existing = findPessoaMatch(c.nome_completo, dbPessoas, false);
         if (existing) {
-          // Update only if changed
-          if (existing.ativo !== isActive || existing.cargo !== cargo || existing.unidade_id !== unitId) {
-            await placarService.updatePessoa(existing.id, {
-              ativo: isActive,
-              cargo: cargo,
-              unidade_id: unitId
-            });
+          const patch: Partial<Pessoa> = {};
+          if (existing.ativo !== isActive) patch.ativo = isActive;
+          if (existing.cargo !== cargo) patch.cargo = cargo;
+          if (existing.unidade_id !== unitId) patch.unidade_id = unitId;
+          // Se o nome do Cultura for mais completo que o cadastrado
+          if (c.nome_completo.length > existing.nome.length && !existing.nome.includes(" ")) {
+            patch.nome = c.nome_completo;
+          }
+
+          if (Object.keys(patch).length > 0) {
+            await placarService.updatePessoa(existing.id, patch);
             updated++;
           }
         } else if (isActive) {
-          // Insert new
-          await placarService.savePessoa({
+          // Insere novo apenas se for ativo e não existir match
+          const novo = await placarService.savePessoa({
             nome: c.nome_completo,
             cargo: cargo,
             unidade_id: unitId,
             ativo: true,
             foto_url: ""
           });
+          dbPessoas.push(novo);
           added++;
         }
       }
       return { added, updated };
     } catch (err) {
       console.error("Erro na sincronização:", err);
+      throw err;
+    }
+  },
+
+  deduplicatePessoas: async (): Promise<{ mergedCount: number, clustersCount: number }> => {
+    try {
+      const dbPessoas = await placarService.getPessoas(undefined, false);
+      const { data: rankingEntries } = await supabase.from("ranking_entries").select("*");
+      const { data: primeiraVenda } = await supabase.from("primeira_venda").select("*");
+      const { data: rankingPastas } = await supabase.from("ranking_pastas").select("*");
+      const { data: progressoes } = await supabase.from("progressoes_carreira").select("*");
+
+      const adj = new Map<string, Pessoa[]>();
+      dbPessoas.forEach(p => adj.set(p.id, []));
+
+      for (let i = 0; i < dbPessoas.length; i++) {
+        for (let j = i + 1; j < dbPessoas.length; j++) {
+          const p1 = dbPessoas[i];
+          const p2 = dbPessoas[j];
+          if (areDirectCompatiblePersons(p1.nome, p2.nome, dbPessoas)) {
+            adj.get(p1.id)?.push(p2);
+            adj.get(p2.id)?.push(p1);
+          }
+        }
+      }
+
+      const visited = new Set<string>();
+      const clusters: Pessoa[][] = [];
+
+      dbPessoas.forEach(p => {
+        if (visited.has(p.id)) return;
+        const queue = [p];
+        visited.add(p.id);
+        const component: Pessoa[] = [];
+        while (queue.length > 0) {
+          const curr = queue.shift()!;
+          component.push(curr);
+          const neighbors = adj.get(curr.id) || [];
+          for (const n of neighbors) {
+            if (!visited.has(n.id)) {
+              visited.add(n.id);
+              queue.push(n);
+            }
+          }
+        }
+        if (component.length > 1) {
+          clusters.push(component);
+        }
+      });
+
+      let mergedCount = 0;
+      let clustersProcessed = 0;
+
+      for (const cluster of clusters) {
+        const longestNameMember = [...cluster].sort((a, b) => 
+          getPersonTokens(b.nome).length - getPersonTokens(a.nome).length || b.nome.length - a.nome.length
+        )[0];
+
+        const memberWithPhoto = cluster.find(m => m.foto_url && m.foto_url.trim());
+        const memberWithInsta = cluster.find(m => m.instagram && m.instagram.trim());
+
+        const survivor = memberWithPhoto || longestNameMember;
+
+        const survivorPatch: Partial<Pessoa> = {};
+        if (!survivor.foto_url && memberWithPhoto) {
+          survivorPatch.foto_url = memberWithPhoto.foto_url;
+        }
+        if (!survivor.instagram && memberWithInsta) {
+          survivorPatch.instagram = memberWithInsta.instagram;
+        }
+        if (survivor.nome.length < longestNameMember.nome.length) {
+          survivorPatch.nome = longestNameMember.nome;
+        }
+        if (survivor.ativo === false && cluster.some(m => m.ativo !== false)) {
+          survivorPatch.ativo = true;
+        }
+
+        if (Object.keys(survivorPatch).length > 0) {
+          await placarService.updatePessoa(survivor.id, survivorPatch);
+        }
+
+        const duplicates = cluster.filter(m => m.id !== survivor.id);
+
+        for (const d of duplicates) {
+          // Reatribuição de FKs
+          const dRanking = (rankingEntries || []).filter(r => r.pessoa_id === d.id);
+          for (const r of dRanking) {
+            const existingSurvivorRanking = (rankingEntries || []).find(x => 
+              x.pessoa_id === survivor.id && x.categoria === r.categoria && x.cargo === r.cargo && x.posicao === r.posicao
+            );
+            if (existingSurvivorRanking) {
+              await supabase.from("ranking_entries").delete().eq("id", r.id);
+            } else {
+              await supabase.from("ranking_entries").update({ pessoa_id: survivor.id }).eq("id", r.id);
+            }
+          }
+
+          const dPV = (primeiraVenda || []).filter(pv => pv.pessoa_id === d.id);
+          for (const pv of dPV) {
+            const survivorPV = (primeiraVenda || []).find(x => x.pessoa_id === survivor.id);
+            if (survivorPV) {
+              await supabase.from("primeira_venda").delete().eq("id", pv.id);
+            } else {
+              await supabase.from("primeira_venda").update({ pessoa_id: survivor.id }).eq("id", pv.id);
+            }
+          }
+
+          const dRP = (rankingPastas || []).filter(rp => rp.pessoa_id === d.id);
+          for (const rp of dRP) {
+            const survivorRP = (rankingPastas || []).find(x => x.pessoa_id === survivor.id && x.mes === rp.mes && x.ano === rp.ano);
+            if (survivorRP) {
+              await supabase.from("ranking_pastas").delete().eq("id", rp.id);
+            } else {
+              await supabase.from("ranking_pastas").update({ pessoa_id: survivor.id }).eq("id", rp.id);
+            }
+          }
+
+          const dPC = (progressoes || []).filter(pc => pc.pessoa_id === d.id);
+          for (const pc of dPC) {
+            await supabase.from("progressoes_carreira").update({ pessoa_id: survivor.id }).eq("id", pc.id);
+          }
+
+          await placarService.deletePessoa(d.id);
+          mergedCount++;
+        }
+
+        clustersProcessed++;
+      }
+
+      return { mergedCount, clustersCount: clustersProcessed };
+    } catch (err) {
+      console.error("Erro na desduplicação de pessoas:", err);
       throw err;
     }
   },
@@ -338,10 +635,8 @@ export const placarService = {
       const monthNumStr = String(currentMonth + 1).padStart(2, "0");
       const currentMonthPrefix = `${currentYear}-${monthNumStr}`; // ex: "2026-09"
 
-      const normalize = (str: string) => str ? String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
-
       const isIgnoredName = (name: string): boolean => {
-        const norm = normalize(name);
+        const norm = normalizeName(name);
         if (!norm) return true;
         const ignored = [
           "socios", "socio", "socias", "socia", "gerentes", "diretor",
@@ -351,85 +646,6 @@ export const placarService = {
         return ignored.some(ignoredName => norm.includes(ignoredName));
       };
 
-      const STOP_WORDS = new Set(["de", "da", "do", "dos", "das", "e", "filho", "junior", "jr", "neto", "sobrinho"]);
-
-      const KNOWN_ALIASES: Record<string, string> = {
-        "jannerson": "jann",
-        "jannerson silva costa": "jann costa",
-        "jakelline fernanda dos santos": "jakelline fernanda",
-        "sulamita saron dos santos silva costa": "sulamita saron alves cabral de oliveira",
-        "eduardo bueno pereira": "eduardo bueno",
-        "eurico dardeau de albuquerqur filho": "eurico dardeau",
-        "eurico dardeau de albuquerque filho": "eurico dardeau",
-        "iasmin bezerra de oliveira": "yasmin bezerra",
-      };
-
-      const getSignificantTokens = (nome: string): string[] => {
-        return normalize(nome)
-          .split(/\s+/)
-          .filter(t => t.length > 1 && !STOP_WORDS.has(t));
-      };
-
-      const findPessoaMatch = (nomeCultura: string, dbPessoas: Pessoa[]): Pessoa | null => {
-        const normCultura = normalize(nomeCultura);
-        if (!normCultura) return null;
-
-        // 1. Match exato normalizado
-        const exact = dbPessoas.find(p => p.ativo && normalize(p.nome) === normCultura);
-        if (exact) return exact;
-
-        // 2. Apelido / Mapeamento conhecido
-        const aliasTarget = KNOWN_ALIASES[normCultura];
-        if (aliasTarget) {
-          const aliasMatch = dbPessoas.find(p => p.ativo && normalize(p.nome).includes(aliasTarget));
-          if (aliasMatch) return aliasMatch;
-        }
-
-        // 3. Comparação por tokens
-        const tokensCultura = getSignificantTokens(nomeCultura);
-        if (tokensCultura.length === 0) return null;
-
-        const firstTokenCultura = tokensCultura[0];
-        const secondTokenCultura = tokensCultura.length > 1 ? tokensCultura[1] : "";
-
-        let bestMatch: Pessoa | null = null;
-        let highestScore = 0;
-
-        for (const p of dbPessoas) {
-          if (!p.ativo) continue;
-          const pTokens = getSignificantTokens(p.nome);
-          if (pTokens.length === 0) continue;
-
-          const firstTokenP = pTokens[0];
-          const firstMatches = firstTokenCultura === firstTokenP || 
-            (firstTokenCultura.startsWith(firstTokenP) && firstTokenP.length >= 4) ||
-            (firstTokenP.startsWith(firstTokenCultura) && firstTokenCultura.length >= 4);
-
-          if (!firstMatches) continue;
-
-          // Se os dois primeiros nomes batem (ex: "Jakelline Fernanda")
-          if (secondTokenCultura && pTokens.length > 1 && secondTokenCultura === pTokens[1]) {
-            return p;
-          }
-
-          let matchesCount = 0;
-          for (const tc of tokensCultura) {
-            if (pTokens.includes(tc)) matchesCount++;
-          }
-
-          const score = matchesCount / Math.max(tokensCultura.length, pTokens.length);
-          if (matchesCount >= 2 && score > highestScore) {
-            highestScore = score;
-            bestMatch = p;
-          }
-        }
-
-        if (bestMatch && highestScore >= 0.3) {
-          return bestMatch;
-        }
-
-        return null;
-      };
 
       const groupedCorretores: Record<string, number> = {};
       const groupedGestores: Record<string, number> = {};
@@ -455,7 +671,7 @@ export const placarService = {
         if (!isCurrentMonth) continue;
 
         if (v.venda_oculta) continue;
-        const st = normalize(v.status || "");
+        const st = normalizeName(v.status || "");
         if (st.includes("distrat") || st.includes("cancel")) continue;
 
         const val = Number(v.valor_venda) || 0;
