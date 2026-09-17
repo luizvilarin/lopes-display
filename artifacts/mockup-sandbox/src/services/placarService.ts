@@ -204,6 +204,41 @@ export const KNOWN_PERSON_ALIASES: Record<string, string> = {
   "iasmin bezerra de oliveira": "yasmin bezerra",
 };
 
+/**
+ * Filtro rígido para impedir que diretores e cargos corporativos
+ * entrem no ranking ou no pódio de vendas/pastas
+ */
+export const isIgnoredDirectorOrStaff = (name: string): boolean => {
+  const norm = normalizeName(name);
+  if (!norm) return true;
+
+  // Cargos e títulos corporativos
+  const genericTitles = [
+    "socio", "socios", "socia", "socias",
+    "gerente", "gerentes",
+    "diretor", "diretora", "diretores", "diretoria"
+  ];
+  if (genericTitles.some(t => norm.includes(t))) return true;
+
+  // Os 7 Diretores em qualquer variação de nome/apelido:
+  // 1. Jann Costa / Jannerson
+  if (norm.includes("jann") || norm.includes("jannerson")) return true;
+  // 2. Murilo Feitosa
+  if (norm.includes("murilo")) return true;
+  // 3. Sereno Leão
+  if (norm.includes("sereno")) return true;
+  // 4. Deyvid
+  if (norm.includes("deyvid")) return true;
+  // 5. Rafael Badra
+  if (norm.includes("badra") || norm.includes("rafael badra")) return true;
+  // 6. Luziano
+  if (norm.includes("luziano")) return true;
+  // 7. José Soares
+  if (norm.includes("jose soares") || (norm.includes("jose") && norm.includes("soares"))) return true;
+
+  return false;
+};
+
 export const getPersonTokens = (nome: string): string[] => {
   return normalizeName(nome)
     .split(/\s+/)
@@ -635,16 +670,7 @@ export const placarService = {
       const monthNumStr = String(currentMonth + 1).padStart(2, "0");
       const currentMonthPrefix = `${currentYear}-${monthNumStr}`; // ex: "2026-09"
 
-      const isIgnoredName = (name: string): boolean => {
-        const norm = normalizeName(name);
-        if (!norm) return true;
-        const ignored = [
-          "socios", "socio", "socias", "socia", "gerentes", "diretor",
-          "sereno leao", "rafael badra", "deyvid rhussel", 
-          "luziano", "jose soares", "murilo feitosa"
-        ];
-        return ignored.some(ignoredName => norm.includes(ignoredName));
-      };
+      const isIgnoredName = isIgnoredDirectorOrStaff;
 
 
       const groupedCorretores: Record<string, number> = {};
@@ -978,18 +1004,7 @@ export const placarService = {
       const { culturaService } = await import('./culturaService');
       const filaPastas = await culturaService.getFilaPastas();
       
-      const normalize = (str: string) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
-
-      const isIgnoredName = (name: string): boolean => {
-        const norm = normalize(name);
-        if (!norm) return true;
-        const ignored = [
-          "socios", "socio", "socias", "socia", "gerentes", "diretor",
-          "sereno leao", "rafael badra", "deyvid rhussel", "jann costa", 
-          "luziano", "jose soares", "murilo feitosa"
-        ];
-        return ignored.some(ignoredName => norm.includes(ignoredName));
-      };
+      const isIgnoredName = isIgnoredDirectorOrStaff;
 
       // Pastas atualmente cadastradas no sistema
       const dbPastas = await placarService.getPastas();
@@ -1031,7 +1046,7 @@ export const placarService = {
       let updated_rankings = 0;
 
       const getOrRegisterPessoa = async (nome: string, cargo: "corretor" | "gestor"): Promise<Pessoa | null> => {
-        let match = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
+        let match = findPessoaMatch(nome, dbPessoas, false);
         if (match) {
           if (!match.ativo) return null;
           return match;
@@ -1055,7 +1070,7 @@ export const placarService = {
       for (const pasta of activePastas) {
         // Encontra o grupo no Cultura com matching exato ou normalizado
         const matchingLancamento = Object.keys(grouped).find(
-          l => l.toLowerCase() === pasta.titulo.toLowerCase() || normalize(l) === normalize(pasta.titulo)
+          l => l.toLowerCase() === pasta.titulo.toLowerCase() || normalizeName(l) === normalizeName(pasta.titulo)
         );
 
         // Deleta rankings anteriores desta pasta específica

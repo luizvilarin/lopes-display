@@ -42,12 +42,23 @@ export default async function handler(req, res) {
     const isIgnoredName = (name) => {
       const norm = normalize(name);
       if (!norm) return true;
-      const ignored = [
-        "socios", "socio", "socias", "socia", "gerentes", "diretor",
-        "sereno leao", "rafael badra", "deyvid rhussel", "jann costa", 
-        "luziano", "jose soares", "murilo feitosa"
+      const generic = [
+        "socio", "socios", "socia", "socias",
+        "gerente", "gerentes",
+        "diretor", "diretora", "diretores", "diretoria"
       ];
-      return ignored.some(ignoredName => norm.includes(ignoredName));
+      if (generic.some(t => norm.includes(t))) return true;
+
+      // Os 7 Diretores em qualquer variação:
+      if (norm.includes("jann") || norm.includes("jannerson")) return true;
+      if (norm.includes("murilo")) return true;
+      if (norm.includes("sereno")) return true;
+      if (norm.includes("deyvid")) return true;
+      if (norm.includes("badra") || norm.includes("rafael badra")) return true;
+      if (norm.includes("luziano")) return true;
+      if (norm.includes("jose soares") || (norm.includes("jose") && norm.includes("soares"))) return true;
+
+      return false;
     };
 
     // ─────────────────────────────────────────────────────────────────
