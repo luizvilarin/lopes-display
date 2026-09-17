@@ -438,6 +438,418 @@ function ImageCropper({
   );
 }
 
+// ─── Manual Merge Modal ───────────────────────────────────────────────────────
+
+function ManualMergeModal({
+  selectedPeople,
+  unidades,
+  onClose,
+  onMerged
+}: {
+  selectedPeople: Pessoa[];
+  unidades: Unidade[];
+  onClose: () => void;
+  onMerged: () => void;
+}) {
+  // Inicializa com o primeiro que tiver foto ou o primeiro da lista
+  const defaultSurvivor = selectedPeople.find(p => p.foto_url && p.foto_url.trim()) || selectedPeople[0];
+  const [survivorId, setSurvivorId] = useState<string>(defaultSurvivor?.id || "");
+  const [finalNome, setFinalNome] = useState<string>(defaultSurvivor?.nome || "");
+  const [finalCargo, setFinalCargo] = useState<Cargo>(defaultSurvivor?.cargo || "corretor");
+  const [finalUnidadeId, setFinalUnidadeId] = useState<string>(defaultSurvivor?.unidade_id || (unidades[0]?.id || "jd-goias"));
+  const [finalFotoUrl, setFinalFotoUrl] = useState<string>(
+    selectedPeople.find(p => p.foto_url && p.foto_url.trim())?.foto_url || ""
+  );
+  const [finalInstagram, setFinalInstagram] = useState<string>(
+    selectedPeople.find(p => p.instagram && p.instagram.trim())?.instagram || ""
+  );
+  const [isMerging, setIsMerging] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Quando o usuário escolhe outro registro como principal
+  const handleSelectSurvivor = (p: Pessoa) => {
+    setSurvivorId(p.id);
+    setFinalNome(p.nome);
+    setFinalCargo(p.cargo);
+    setFinalUnidadeId(p.unidade_id);
+    if (p.foto_url && p.foto_url.trim()) {
+      setFinalFotoUrl(p.foto_url);
+    }
+    if (p.instagram && p.instagram.trim()) {
+      setFinalInstagram(p.instagram);
+    }
+  };
+
+  const handleConfirmMerge = async () => {
+    if (!survivorId) {
+      setErrorMsg("Selecione o colaborador principal.");
+      return;
+    }
+    if (!finalNome.trim()) {
+      setErrorMsg("Informe o nome final do colaborador.");
+      return;
+    }
+
+    const duplicateIds = selectedPeople.map(p => p.id).filter(id => id !== survivorId);
+    if (duplicateIds.length === 0) {
+      setErrorMsg("Selecione pelo menos 2 colaboradores para mesclar.");
+      return;
+    }
+
+    setIsMerging(true);
+    setErrorMsg(null);
+    try {
+      await placarService.mergePessoasManual(survivorId, duplicateIds, {
+        nome: finalNome.trim(),
+        cargo: finalCargo,
+        unidade_id: finalUnidadeId,
+        foto_url: finalFotoUrl.trim(),
+        instagram: finalInstagram.trim(),
+        ativo: true
+      });
+      alert(`Mesclagem concluída com sucesso!\n${duplicateIds.length} cadastro(s) unificado(s) em "${finalNome.trim()}".`);
+      onMerged();
+      onClose();
+    } catch (err: any) {
+      console.error("Erro ao mesclar pessoas manualmente:", err);
+      setErrorMsg(err?.message || "Erro desconhecido ao mesclar cadastros.");
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
+  const duplicates = selectedPeople.filter(p => p.id !== survivorId);
+  const peopleWithPhotos = selectedPeople.filter(p => p.foto_url && p.foto_url.trim());
+
+  return (
+    <div className="pa-overlay" onClick={e => e.target === e.currentTarget && !isMerging && onClose()}>
+      <div className="pa-modal" style={{ maxWidth: 720, width: "95%", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+        
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div>
+            <div className="pa-modal-title" style={{ display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+              <span>🔀 Mesclagem Manual de Colaboradores</span>
+              <span style={{ fontSize: 12, background: "rgba(16, 185, 129, 0.15)", color: "#10b981", border: "1px solid rgba(16, 185, 129, 0.3)", padding: "2px 8px", borderRadius: 12 }}>
+                {selectedPeople.length} selecionados
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>
+              Escolha qual registro sobreviverá como principal e ajuste os dados unificados. O histórico dos demais será transferido para ele.
+            </div>
+          </div>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            disabled={isMerging}
+            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 18 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 18 }}>
+          
+          {/* 1. Seleção do Sobrevivente Principal */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8, display: "block" }}>
+              1. Selecione o Perfil Principal (Sobrevivente)
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 }}>
+              {selectedPeople.map(p => {
+                const isSelected = p.id === survivorId;
+                const un = unidades.find(u => u.id === p.unidade_id);
+                return (
+                  <div 
+                    key={p.id}
+                    onClick={() => !isMerging && handleSelectSurvivor(p)}
+                    style={{
+                      border: isSelected ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.1)",
+                      background: isSelected ? "rgba(16, 185, 129, 0.12)" : "rgba(255,255,255,0.03)",
+                      borderRadius: 10,
+                      padding: "12px 14px",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      position: "relative"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        borderRadius: 6,
+                        background: isSelected ? "#10b981" : "rgba(239, 68, 68, 0.2)",
+                        color: isSelected ? "#000" : "#f87171"
+                      }}>
+                        {isSelected ? "👑 Principal (Fica)" : "❌ Será Mesclado"}
+                      </span>
+                      <input 
+                        type="radio" 
+                        name="survivor_radio" 
+                        checked={isSelected} 
+                        onChange={() => handleSelectSurvivor(p)}
+                        style={{ accentColor: "#10b981", cursor: "pointer" }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Avatar pessoa={p} size={36} />
+                      <div style={{ overflow: "hidden" }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {p.nome}
+                        </div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                          {p.cargo} • {un?.nome ?? "—"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. Configuração dos Dados Unificados */}
+          <div style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 10,
+            padding: 16
+          }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, display: "block" }}>
+              2. Configuração do Cadastro Final
+            </label>
+
+            {/* Nome Final */}
+            <div className="pa-form-row" style={{ marginBottom: 12 }}>
+              <label className="pa-label">Nome de Exibição Unificado</label>
+              <input 
+                type="text" 
+                className="pa-input" 
+                value={finalNome} 
+                onChange={e => setFinalNome(e.target.value)}
+                placeholder="Nome completo final do colaborador" 
+              />
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", alignSelf: "center" }}>Usar nome de:</span>
+                {selectedPeople.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setFinalNome(p.nome)}
+                    style={{
+                      background: finalNome === p.nome ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.06)",
+                      border: finalNome === p.nome ? "1px solid #10b981" : "1px solid rgba(255,255,255,0.1)",
+                      color: finalNome === p.nome ? "#10b981" : "rgba(255,255,255,0.7)",
+                      fontSize: 11,
+                      padding: "2px 8px",
+                      borderRadius: 6,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {p.nome}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Cargo e Unidade */}
+            <div className="pa-grid-2" style={{ marginBottom: 12 }}>
+              <div className="pa-form-row">
+                <label className="pa-label">Cargo</label>
+                <select 
+                  className="pa-input pa-select" 
+                  value={finalCargo} 
+                  onChange={e => setFinalCargo(e.target.value as Cargo)}
+                >
+                  <option value="corretor">Corretor</option>
+                  <option value="gestor">Gestor</option>
+                </select>
+              </div>
+
+              <div className="pa-form-row">
+                <label className="pa-label">Unidade</label>
+                <select 
+                  className="pa-input pa-select" 
+                  value={finalUnidadeId} 
+                  onChange={e => setFinalUnidadeId(e.target.value)}
+                >
+                  {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Foto de Perfil */}
+            <div className="pa-form-row" style={{ marginBottom: 12 }}>
+              <label className="pa-label">Foto de Perfil</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 4 }}>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "2px solid rgba(255,255,255,0.2)",
+                  background: finalFotoUrl ? `url(${finalFotoUrl}) center/cover no-repeat` : "rgba(255,255,255,0.05)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "rgba(255,255,255,0.4)",
+                  flexShrink: 0
+                }}>
+                  {!finalFotoUrl && (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  )}
+                </div>
+
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <input 
+                    type="text" 
+                    className="pa-input" 
+                    value={finalFotoUrl} 
+                    onChange={e => setFinalFotoUrl(e.target.value)} 
+                    placeholder="URL da foto (ex: https://i.ibb.co/...)"
+                    style={{ fontSize: 12 }}
+                  />
+
+                  {peopleWithPhotos.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Fotos disponíveis:</span>
+                      {peopleWithPhotos.map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setFinalFotoUrl(p.foto_url || "")}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            background: finalFotoUrl === p.foto_url ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.06)",
+                            border: finalFotoUrl === p.foto_url ? "1px solid #10b981" : "1px solid rgba(255,255,255,0.1)",
+                            padding: "2px 6px",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            fontSize: 11,
+                            color: "#fff"
+                          }}
+                        >
+                          <img src={p.foto_url} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
+                          <span>{p.nome.split(" ")[0]}</span>
+                        </button>
+                      ))}
+                      {finalFotoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setFinalFotoUrl("")}
+                          style={{
+                            background: "rgba(239, 68, 68, 0.15)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                            color: "#f87171",
+                            fontSize: 11,
+                            padding: "2px 6px",
+                            borderRadius: 6,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Remover foto
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Instagram */}
+            <div className="pa-form-row">
+              <label className="pa-label">Instagram Handle</label>
+              <input 
+                type="text" 
+                className="pa-input" 
+                value={finalInstagram} 
+                onChange={e => setFinalInstagram(e.target.value)} 
+                placeholder="Ex: @colaborador_lopes"
+              />
+            </div>
+          </div>
+
+          {/* 3. Resumo da Ação */}
+          <div style={{
+            background: "rgba(99, 102, 241, 0.08)",
+            border: "1px solid rgba(99, 102, 241, 0.2)",
+            borderRadius: 8,
+            padding: "12px 14px",
+            fontSize: 12,
+            lineHeight: 1.5,
+            color: "rgba(255,255,255,0.7)"
+          }}>
+            <div style={{ fontWeight: 700, color: "#818cf8", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>ℹ️</span> Como funcionará a unificação:
+            </div>
+            <div>
+              O perfil <strong>{finalNome}</strong> será mantido como ativo com os dados configurados acima.
+              {duplicates.length > 0 && (
+                <span>
+                  {" "}Todas as vendas do Cultura, posições em rankings (mensal/anual), registros de Primeira Venda e pastas vinculadas a{" "}
+                  <strong>{duplicates.map(d => `"${d.nome}"`).join(", ")}</strong> serão automaticamente transferidas para este perfil. Os cadastros duplicados serão excluídos.
+                </span>
+              )}
+            </div>
+          </div>
+
+          {errorMsg && (
+            <div style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              color: "#f87171",
+              padding: "8px 12px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600
+            }}>
+              {errorMsg}
+            </div>
+          )}
+
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <button 
+            type="button" 
+            className="pa-btn-ghost" 
+            onClick={onClose} 
+            disabled={isMerging}
+          >
+            Cancelar
+          </button>
+          <button 
+            type="button" 
+            className="pa-btn-primary" 
+            onClick={handleConfirmMerge} 
+            disabled={isMerging}
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              borderColor: "transparent",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontWeight: 700
+            }}
+          >
+            {isMerging ? "Mesclando histórico..." : `Confirmar Mesclagem (${selectedPeople.length} pessoas)`}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ─── Section: Pessoas ─────────────────────────────────────────────────────────
 
 function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
@@ -484,6 +896,8 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
   const [unidadeFilter, setUnidadeFilter] = useState<string>("todas");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [apenasSemFoto, setApenasSemFoto] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Integração n8n & Alertas WhatsApp
   const [n8nUrl, setN8nUrl] = useState(() => n8nService.getWebhookUrl());
@@ -585,6 +999,27 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
       return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
     });
 
+  const selectedPeople = pessoas.filter(p => selectedIds.includes(p.id));
+  const allFilteredSelected = filteredList.length > 0 && filteredList.every(p => selectedIds.includes(p.id));
+  const someFilteredSelected = filteredList.some(p => selectedIds.includes(p.id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      const filteredSet = new Set(filteredList.map(p => p.id));
+      setSelectedIds(prev => prev.filter(id => !filteredSet.has(id)));
+    } else {
+      const newSelected = new Set(selectedIds);
+      filteredList.forEach(p => newSelected.add(p.id));
+      setSelectedIds(Array.from(newSelected));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   // Keep listToShow for the subtab badge counts (filtered by unit only)
   const listToShow = activeUnitId === "Todas" ? pessoas : pessoas.filter(p => p.unidade_id === activeUnitId);
 
@@ -637,7 +1072,26 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
             <div className="pa-title">Pessoas</div>
             <div className="pa-subtitle">Corretores e gestores cadastrados — {filteredList.length} exibidos</div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {selectedIds.length > 0 && (
+              <button 
+                className="pa-btn-ghost" 
+                onClick={() => setShowMergeModal(true)}
+                disabled={selectedIds.length < 2}
+                style={{ 
+                  borderColor: selectedIds.length >= 2 ? "#10b981" : "rgba(255,255,255,0.15)", 
+                  color: selectedIds.length >= 2 ? "#10b981" : "rgba(255,255,255,0.4)", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 6,
+                  cursor: selectedIds.length >= 2 ? "pointer" : "not-allowed",
+                  fontWeight: 600
+                }}
+                title={selectedIds.length < 2 ? "Selecione pelo menos 2 colaboradores para mesclar" : "Mesclar selecionados manualmente"}
+              >
+                🔀 Mesclar Selecionados ({selectedIds.length})
+              </button>
+            )}
             <button 
               className="pa-btn-ghost" 
               onClick={handleDeduplicate}
@@ -645,7 +1099,7 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
               style={{ borderColor: "rgba(16, 185, 129, 0.35)", color: "#10b981", display: "flex", alignItems: "center", gap: 6 }}
               title="Mesclar cadastros redundantes preservando fotos e dados"
             >
-              {isDeduplicating ? "Mesclando..." : "🧹 Mesclar Duplicados"}
+              {isDeduplicating ? "Mesclando..." : "🧹 Unificar Automático"}
             </button>
             <button 
               className="pa-btn-ghost" 
@@ -946,6 +1400,18 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
           <table className="pa-table">
             <thead>
               <tr>
+                <th style={{ width: 44, textAlign: "center" }}>
+                  <input 
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    ref={input => {
+                      if (input) input.indeterminate = !allFilteredSelected && someFilteredSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    style={{ cursor: "pointer", width: 16, height: 16, accentColor: "#E30613" }}
+                    title="Selecionar todos os visíveis"
+                  />
+                </th>
                 <th>Pessoa</th>
                 <th>Cargo</th>
                 <th>Unidade</th>
@@ -955,15 +1421,24 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
             <tbody>
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: "32px 0" }}>
+                  <td colSpan={5} style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: "32px 0" }}>
                     Nenhum colaborador {subTab === "ativos" ? "ativo" : "arquivado"} encontrado.
                   </td>
                 </tr>
               ) : (
                 filteredList.map(p => {
                   const un = unidades.find(u => u.id === p.unidade_id);
+                  const isChecked = selectedIds.includes(p.id);
                   return (
-                    <tr key={p.id}>
+                    <tr key={p.id} style={{ background: isChecked ? "rgba(227, 6, 19, 0.08)" : undefined }}>
+                      <td style={{ width: 44, textAlign: "center" }}>
+                        <input 
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectOne(p.id)}
+                          style={{ cursor: "pointer", width: 16, height: 16, accentColor: "#E30613" }}
+                        />
+                      </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <Avatar pessoa={p} size={32} />
@@ -1015,6 +1490,73 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
             </tbody>
           </table>
         </div>
+
+        {/* Barra Flutuante de Seleção / Ação em Massa */}
+        {selectedIds.length > 0 && (
+          <div style={{
+            position: "sticky",
+            bottom: 16,
+            zIndex: 40,
+            background: "rgba(17, 17, 24, 0.95)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(227, 6, 19, 0.4)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
+            borderRadius: 12,
+            padding: "12px 20px",
+            marginTop: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ 
+                background: "#E30613", 
+                color: "#fff", 
+                padding: "3px 10px", 
+                borderRadius: 20, 
+                fontWeight: 700, 
+                fontSize: 13 
+              }}>
+                {selectedIds.length} selecionado{selectedIds.length > 1 ? "s" : ""}
+              </span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
+                {selectedIds.length < 2 
+                  ? "Marque pelo menos mais um colaborador para mesclar cadastros duplicados." 
+                  : `${selectedIds.length} colaboradores prontos para mesclagem.`}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button 
+                type="button" 
+                className="pa-btn-ghost" 
+                onClick={() => setSelectedIds([])}
+                style={{ fontSize: 12, padding: "6px 12px" }}
+              >
+                Desmarcar todos
+              </button>
+              <button
+                type="button"
+                className="pa-btn-primary"
+                onClick={() => setShowMergeModal(true)}
+                disabled={selectedIds.length < 2}
+                style={{ 
+                  background: selectedIds.length >= 2 ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "rgba(255,255,255,0.1)",
+                  borderColor: "transparent",
+                  color: selectedIds.length >= 2 ? "#fff" : "rgba(255,255,255,0.4)",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  cursor: selectedIds.length >= 2 ? "pointer" : "not-allowed"
+                }}
+              >
+                🔀 Mesclar Selecionados ({selectedIds.length})
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {modal !== null && (
@@ -1090,6 +1632,19 @@ function SecaoPessoas({ pessoas, unidades, activeUnitId, onChange }: {
             setCropSrc(null);
           }}
           onCancel={() => setCropSrc(null)}
+        />
+      )}
+
+      {/* Manual Merge Modal */}
+      {showMergeModal && selectedPeople.length >= 2 && (
+        <ManualMergeModal
+          selectedPeople={selectedPeople}
+          unidades={unidades}
+          onClose={() => setShowMergeModal(false)}
+          onMerged={() => {
+            setSelectedIds([]);
+            onChange();
+          }}
         />
       )}
     </>

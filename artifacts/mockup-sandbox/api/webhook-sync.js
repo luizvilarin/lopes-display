@@ -61,6 +61,89 @@ export default async function handler(req, res) {
       return false;
     };
 
+    const STOP_WORDS = new Set(["de", "da", "do", "dos", "das", "e", "filho", "junior", "jr", "neto", "sobrinho"]);
+
+    const KNOWN_ALIASES = {
+      "jannerson": "jann",
+      "jannerson silva costa": "jann costa",
+      "jakelline fernanda dos santos": "jakelline fernanda",
+      "sulamita saron dos santos silva costa": "sulamita saron alves cabral de oliveira",
+      "eduardo bueno pereira": "eduardo bueno",
+      "eurico dardeau de albuquerqur filho": "eurico dardeau",
+      "eurico dardeau de albuquerque filho": "eurico dardeau",
+      "iasmin bezerra de oliveira": "yasmin bezerra",
+      "anderson goncalo rodrigues": "anderson sampa",
+      "anderson goncalo": "anderson sampa",
+      "anderson sampaio": "anderson sampa",
+      "sampa": "anderson sampa",
+    };
+
+    const getSignificantTokens = (nome) => {
+      return normalize(nome)
+        .split(/\s+/)
+        .filter(t => t.length > 1 && !STOP_WORDS.has(t));
+    };
+
+    const findPessoaMatch = (nomeCultura, dbPessoas) => {
+      const normCultura = normalize(nomeCultura);
+      if (!normCultura) return null;
+
+      // 1. Match exato normalizado
+      const exact = dbPessoas.find(p => p.ativo && normalize(p.nome) === normCultura);
+      if (exact) return exact;
+
+      // 2. Apelido / Mapeamento conhecido
+      const aliasTarget = KNOWN_ALIASES[normCultura];
+      if (aliasTarget) {
+        const aliasMatch = dbPessoas.find(p => p.ativo && normalize(p.nome).includes(aliasTarget));
+        if (aliasMatch) return aliasMatch;
+      }
+
+      // 3. Comparação por tokens
+      const tokensCultura = getSignificantTokens(nomeCultura);
+      if (tokensCultura.length === 0) return null;
+
+      const firstTokenCultura = tokensCultura[0];
+      const secondTokenCultura = tokensCultura.length > 1 ? tokensCultura[1] : "";
+
+      let bestMatch = null;
+      let highestScore = 0;
+
+      for (const p of dbPessoas) {
+        if (!p.ativo) continue;
+        const pTokens = getSignificantTokens(p.nome);
+        if (pTokens.length === 0) continue;
+
+        const firstTokenP = pTokens[0];
+        const firstMatches = firstTokenCultura === firstTokenP || 
+          (firstTokenCultura.startsWith(firstTokenP) && firstTokenP.length >= 4) ||
+          (firstTokenP.startsWith(firstTokenCultura) && firstTokenCultura.length >= 4);
+
+        if (!firstMatches) continue;
+
+        if (secondTokenCultura && pTokens.length > 1 && secondTokenCultura === pTokens[1]) {
+          return p;
+        }
+
+        let matchesCount = 0;
+        for (const tc of tokensCultura) {
+          if (pTokens.includes(tc)) matchesCount++;
+        }
+
+        const score = matchesCount / Math.max(tokensCultura.length, pTokens.length);
+        if (matchesCount >= 2 && score > highestScore) {
+          highestScore = score;
+          bestMatch = p;
+        }
+      }
+
+      if (bestMatch && highestScore >= 0.3) {
+        return bestMatch;
+      }
+
+      return null;
+    };
+
     // ─────────────────────────────────────────────────────────────────
     // 1. PROCESSAMENTO DE VENDAS
     // ─────────────────────────────────────────────────────────────────
@@ -122,7 +205,7 @@ export default async function handler(req, res) {
       const { data: dbPessoas } = await supabase.from('pessoas').select('*').eq('ativo', true);
       const getPessoaId = (nome) => {
         if (!dbPessoas) return null;
-        const match = dbPessoas.find(p => p.nome && normalize(p.nome) === normalize(nome));
+        const match = findPessoaMatch(nome, dbPessoas);
         return match ? match.id : null;
       };
 

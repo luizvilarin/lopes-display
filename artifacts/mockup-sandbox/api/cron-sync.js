@@ -75,6 +75,10 @@ export default async function handler(req, res) {
       "eurico dardeau de albuquerqur filho": "eurico dardeau",
       "eurico dardeau de albuquerque filho": "eurico dardeau",
       "iasmin bezerra de oliveira": "yasmin bezerra",
+      "anderson goncalo rodrigues": "anderson sampa",
+      "anderson goncalo": "anderson sampa",
+      "anderson sampaio": "anderson sampa",
+      "sampa": "anderson sampa",
     };
 
     const getSignificantTokens = (nome) => {

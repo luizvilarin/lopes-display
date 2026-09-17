@@ -202,6 +202,10 @@ export const KNOWN_PERSON_ALIASES: Record<string, string> = {
   "eurico dardeau de albuquerqur filho": "eurico dardeau",
   "eurico dardeau de albuquerque filho": "eurico dardeau",
   "iasmin bezerra de oliveira": "yasmin bezerra",
+  "anderson goncalo rodrigues": "anderson sampa",
+  "anderson goncalo": "anderson sampa",
+  "anderson sampaio": "anderson sampa",
+  "sampa": "anderson sampa",
 };
 
 /**
@@ -599,6 +603,87 @@ export const placarService = {
       return { mergedCount, clustersCount: clustersProcessed };
     } catch (err) {
       console.error("Erro na desduplicação de pessoas:", err);
+      throw err;
+    }
+  },
+
+  mergePessoasManual: async (
+    survivorId: string,
+    duplicateIds: string[],
+    survivorPatch: Partial<Pessoa>
+  ): Promise<void> => {
+    try {
+      // 1. Atualiza o sobrevivente com os dados finais decididos no painel
+      if (Object.keys(survivorPatch).length > 0) {
+        await placarService.updatePessoa(survivorId, {
+          ...survivorPatch,
+          ativo: survivorPatch.ativo !== undefined ? survivorPatch.ativo : true
+        });
+      }
+
+      // 2. Busca dados de tabelas com chaves estrangeiras
+      const { data: rankingEntries } = await supabase.from("ranking_entries").select("*");
+      const { data: primeiraVenda } = await supabase.from("primeira_venda").select("*");
+      const { data: rankingPastas } = await supabase.from("ranking_pastas").select("*");
+      const { data: progressoes } = await supabase.from("progressoes_carreira").select("*");
+
+      for (const dupId of duplicateIds) {
+        if (dupId === survivorId) continue;
+
+        // Reatribuição em ranking_entries
+        const dRanking = (rankingEntries || []).filter(r => r.pessoa_id === dupId);
+        for (const r of dRanking) {
+          const existing = (rankingEntries || []).find(x => 
+            x.pessoa_id === survivorId && 
+            x.tipo === r.tipo && 
+            x.categoria === r.categoria && 
+            x.posicao === r.posicao && 
+            x.periodo === r.periodo
+          );
+          if (existing) {
+            await supabase.from("ranking_entries").delete().eq("id", r.id);
+          } else {
+            await supabase.from("ranking_entries").update({ pessoa_id: survivorId }).eq("id", r.id);
+          }
+        }
+
+        // Reatribuição em primeira_venda
+        const dPV = (primeiraVenda || []).filter(pv => pv.pessoa_id === dupId);
+        for (const pv of dPV) {
+          const existing = (primeiraVenda || []).find(x => x.pessoa_id === survivorId);
+          if (existing) {
+            await supabase.from("primeira_venda").delete().eq("id", pv.id);
+          } else {
+            await supabase.from("primeira_venda").update({ pessoa_id: survivorId }).eq("id", pv.id);
+          }
+        }
+
+        // Reatribuição em ranking_pastas
+        const dRP = (rankingPastas || []).filter(rp => rp.pessoa_id === dupId);
+        for (const rp of dRP) {
+          const existing = (rankingPastas || []).find(x => 
+            x.pessoa_id === survivorId && 
+            x.pasta_id === rp.pasta_id &&
+            x.categoria === rp.categoria
+          );
+          if (existing) {
+            await supabase.from("ranking_pastas").delete().eq("id", rp.id);
+          } else {
+            await supabase.from("ranking_pastas").update({ pessoa_id: survivorId }).eq("id", rp.id);
+          }
+        }
+
+        // Reatribuição em progressoes_carreira
+        const dPC = (progressoes || []).filter(pc => pc.pessoa_id === dupId);
+        for (const pc of dPC) {
+          await supabase.from("progressoes_carreira").update({ pessoa_id: survivorId }).eq("id", pc.id);
+        }
+
+        // Exclui o cadastro redundante
+        await placarService.deletePessoa(dupId);
+      }
+    } catch (err) {
+      console.error("Erro na mesclagem manual de pessoas:", err);
       throw err;
     }
   },
